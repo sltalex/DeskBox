@@ -252,6 +252,10 @@
     <Content Include="Assets\WidgetTitleIcons\*.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Assets\Tree\*.svg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
     <Content Include="Assets\Store\*.png" />
     <EmbeddedResource Include="Assets\Cities\cities.json" />
     <EmbeddedResource Include="Strings\zh-CN.json" />

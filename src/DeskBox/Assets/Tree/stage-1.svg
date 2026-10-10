@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="220" viewBox="0 0 260 220">
+  <defs>
+    <linearGradient id="stem"><stop stop-color="#b6d875"/><stop offset=".42" stop-color="#83b857"/><stop offset="1" stop-color="#3e7d4c"/></linearGradient>
+    <radialGradient id="leaf" cx=".3" cy=".24" r=".85"><stop stop-color="#e5f5a0"/><stop offset=".32" stop-color="#b8e777"/><stop offset=".68" stop-color="#74bd56"/><stop offset="1" stop-color="#35824c"/></radialGradient>
+    <radialGradient id="leaf2" cx=".28" cy=".2" r=".9"><stop stop-color="#d0ef8b"/><stop offset=".45" stop-color="#8fd45f"/><stop offset="1" stop-color="#3c8d50"/></radialGradient>
+  </defs>
+  <path d="M120 188C125 173 123 148 126 137Q129 131 133 138C131 160 136 177 140 188Q131 194 120 188Z" fill="url(#stem)"/>
+  <path d="M127 154Q124 168 128 181" fill="none" stroke="#d0e891" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+  <path d="M129 145C103 151 81 134 84 110C104 102 134 115 129 145Z" fill="#477f49" opacity=".22" transform="translate(1 3)"/>
+  <path d="M129 143C102 149 78 129 83 106C108 99 135 113 129 143Z" fill="url(#leaf)"/>
+  <path d="M132 137C126 109 148 93 176 96C182 121 161 146 132 137Z" fill="url(#leaf2)"/>
+  <path d="M129 141Q108 132 94 117M133 136Q148 116 166 106" fill="none" stroke="#edf9b8" stroke-width="2.2" stroke-linecap="round" opacity=".52"/>
+  <path d="M91 110Q104 108 113 114M144 107Q153 101 163 102" fill="none" stroke="#f5ffd2" stroke-width="4" stroke-linecap="round" opacity=".52"/>
+  <ellipse cx="125" cy="169" rx="1.5" ry="2.2" fill="#344b31"/>
+  <ellipse cx="134" cy="169" rx="1.5" ry="2.2" fill="#344b31"/>
+  <path d="M127 175Q130 178 133 174" fill="none" stroke="#344b31" stroke-width="1.5" stroke-linecap="round"/>
+  <ellipse cx="122" cy="173" rx="2.2" ry="1.3" fill="#eda88c" opacity=".8"/>
+  <ellipse cx="137" cy="173" rx="2.2" ry="1.3" fill="#eda88c" opacity=".8"/>
+</svg>
