@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "channel": "stable",
+  "version": "1.5.6",
+  "releaseDate": "2026-10-10",
+  "mandatory": false,
+  "downloadUrl": "https://github.com/sltalex/DeskBox/releases/download/v1.5.6/DeskBox_Setup_1.5.6_x64.exe",
+  "manualDownloadUrl": "https://github.com/sltalex/DeskBox/releases",
+  "sha256": "849D981CE84B397A285EB810D3836D72EA16DF2D9C623A3BFEBCB92358A7DD76",
+  "size": 44735301,
+  "releaseNotesUrl": "https://github.com/sltalex/DeskBox/releases/tag/v1.5.6",
+  "summary": {
+    "zh-CN": "sltalex/DeskBox 首次发布 x64 直发版，更新源已迁移至本仓库；本次暂无 ARM64 安装包。",
+    "en-US": "The first x64 direct release from sltalex/DeskBox uses this repository as its update source; ARM64 is not available yet."
+  }
+}
