@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "channel": "stable",
-  "version": "1.5.6",
+  "version": "2026101001",
   "releaseDate": "2026-10-10",
   "mandatory": false,
-  "downloadUrl": "https://github.com/sltalex/DeskBox/releases/download/v1.5.6/DeskBox_Setup_1.5.6_x64.exe",
+  "downloadUrl": "https://github.com/sltalex/DeskBox/releases/download/v2026101001/DeskBox_Setup_2026101001_x64.exe",
   "manualDownloadUrl": "https://github.com/sltalex/DeskBox/releases",
-  "sha256": "849D981CE84B397A285EB810D3836D72EA16DF2D9C623A3BFEBCB92358A7DD76",
-  "size": 44735301,
-  "releaseNotesUrl": "https://github.com/sltalex/DeskBox/releases/tag/v1.5.6",
+  "sha256": "15D30C3575CF8E253FE162D84FED096EB2F399D1AE17C8E188397562BF0C640D",
+  "size": 44575187,
+  "releaseNotesUrl": "https://github.com/sltalex/DeskBox/releases/tag/v2026101001",
   "summary": {
-    "zh-CN": "sltalex/DeskBox 首次发布 x64 直发版，更新源已迁移至本仓库；本次暂无 ARM64 安装包。",
-    "en-US": "The first x64 direct release from sltalex/DeskBox uses this repository as its update source; ARM64 is not available yet."
+    "zh-CN": "DeskBox 2026101001 首次发布 x64 Full Native AOT 直发版，新增五阶段立体树形种树格子；本次暂无 ARM64 安装包。",
+    "en-US": "DeskBox 2026101001 is the first x64 Full Native AOT direct release with five shaded Tree growth stages; ARM64 is not available yet."
   }
 }
