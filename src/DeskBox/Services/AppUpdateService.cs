@@ -447,7 +447,43 @@ public sealed partial class AppUpdateService : IAppUpdateService
             normalized = normalized[..suffixIndex];
         }
 
+        if (TryNormalizeCompactDateVersion(normalized, out string compactDateVersion))
+        {
+            normalized = compactDateVersion;
+        }
+
         return Version.TryParse(normalized, out version!);
+    }
+
+    private static bool TryNormalizeCompactDateVersion(string value, out string normalized)
+    {
+        normalized = value;
+        if (value.Length != 10 || !value.All(char.IsAsciiDigit))
+        {
+            return false;
+        }
+
+        if (!int.TryParse(value.AsSpan(0, 4), out int year) ||
+            !int.TryParse(value.AsSpan(4, 2), out int month) ||
+            !int.TryParse(value.AsSpan(6, 2), out int day) ||
+            !int.TryParse(value.AsSpan(8, 2), out int revision) ||
+            month is < 1 or > 12 ||
+            day is < 1 or > 31)
+        {
+            return false;
+        }
+
+        try
+        {
+            _ = new DateOnly(year, month, day);
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            return false;
+        }
+
+        normalized = $"{year}.{month}.{day}.{revision}";
+        return true;
     }
 
     public static bool IsManifestUsable(AppUpdateManifest? manifest)

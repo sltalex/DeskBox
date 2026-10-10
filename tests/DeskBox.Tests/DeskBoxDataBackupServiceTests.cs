@@ -980,7 +980,7 @@ public sealed class DeskBoxDataBackupServiceTests : IDisposable
             WriteEntry(
                 archive,
                 "manifest.json",
-                "{\"schemaVersion\":1,\"kind\":\"manual\",\"createdAtUtc\":\"2026-07-01T00:00:00Z\",\"appVersion\":\"99.0.0\"}");
+                "{\"schemaVersion\":1,\"kind\":\"manual\",\"createdAtUtc\":\"2026-07-01T00:00:00Z\",\"appVersion\":\"9999.0.0\"}");
             WriteEntry(archive, "data/settings.json", "{}");
         }
 

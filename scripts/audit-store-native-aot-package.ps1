@@ -228,9 +228,6 @@ $forbiddenPatterns = @(
     '(^|/)deskbox_search_core(?:\.|$)',
     '\.pdb$',
     '(^|/)(?:coreclr|clrjit|hostfxr|hostpolicy)\.dll$',
-    'donation-wechat',
-    'wechat-qrcode',
-    'Assets/Support/',
     'store-assets-html'
 )
 $forbiddenFiles = @(

@@ -6,10 +6,10 @@
     <!-- Keep the compile-time SDK modern while declaring the supported Win10 floor explicitly. -->
     <SupportedOSPlatformVersion>10.0.19044.0</SupportedOSPlatformVersion>
     <RootNamespace>DeskBox</RootNamespace>
-    <Version>1.5.6</Version>
-    <AssemblyVersion>1.5.6.0</AssemblyVersion>
-    <FileVersion>1.5.6.0</FileVersion>
-    <InformationalVersion>1.5.6</InformationalVersion>
+    <Version>2026101001</Version>
+    <AssemblyVersion>2026.10.10.1</AssemblyVersion>
+    <FileVersion>2026.10.10.1</FileVersion>
+    <InformationalVersion>2026101001</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
@@ -219,14 +219,6 @@
   </Target>
 
   <ItemGroup>
-    <!--
-      Microsoft.WinUI.props adds every file below Assets as Content before this
-      project is evaluated. Remove the Direct-only support images first, then
-      opt them back in only for Direct builds so Store packaging cannot inherit
-      them through the SDK wildcard.
-    -->
-    <Content Remove="Assets\wechat-qrcode.jpg" />
-    <Content Remove="Assets\Support\*.png" />
     <Content Include="Assets\deskbox.ico">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -245,9 +237,6 @@
     <Content Include="Assets\deskbox-tray-dark.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Assets\wechat-qrcode.jpg" Condition="'$(DeskBoxDistribution)' != 'Store'">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="Assets\SettingsNavIcons\*.svg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -264,10 +253,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Assets\Store\*.png" />
-    <Content Include="Assets\Support\*.png" Condition="'$(DeskBoxDistribution)' != 'Store'">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-    </Content>
     <EmbeddedResource Include="Assets\Cities\cities.json" />
     <EmbeddedResource Include="Strings\zh-CN.json" />
     <EmbeddedResource Include="Strings\zh-TW.json" />
