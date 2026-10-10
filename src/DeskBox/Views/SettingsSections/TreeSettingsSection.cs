@@ -7,7 +7,7 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace DeskBox.Views.SettingsSections;
 
-public sealed class TreeSettingsSection : UserControl
+public sealed partial class TreeSettingsSection : UserControl
 {
     private readonly TreeCounterService _counter = TreeCounterService.Instance;
     private readonly DispatcherQueue _uiQueue = DispatcherQueue.GetForCurrentThread();

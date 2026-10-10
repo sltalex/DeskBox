@@ -9,7 +9,7 @@ using Microsoft.UI.Xaml.Media.Imaging;
 namespace DeskBox.Controls.WidgetContents;
 
 /// <summary>Five softly shaded illustrations of the same growing tree.</summary>
-public sealed class TreeWidgetContent : UserControl, IDisposable
+public sealed partial class TreeWidgetContent : UserControl, IDisposable
 {
     private readonly LocalizationService _localization;
     private readonly TreeCounterService _counter = TreeCounterService.Instance;

@@ -3,14 +3,22 @@ param(
     [ValidateSet("x64", "ARM64")]
     [string]$Platform = "x64",
 
-    [string]$DotNetPath = ""
+    [string]$DotNetPath = "",
+
+    [string]$ArtifactRoot = ""
 )
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$artifactRoot = [System.IO.Path]::GetFullPath((Join-Path $repoRoot ".artifacts\aot-retail"))
+$defaultArtifactRoot = [System.IO.Path]::GetFullPath((Join-Path $repoRoot ".artifacts\aot-retail"))
+$artifactRoot = if ([string]::IsNullOrWhiteSpace($ArtifactRoot)) {
+    $defaultArtifactRoot
+}
+else {
+    [System.IO.Path]::GetFullPath($ArtifactRoot)
+}
 $runtimeIdentifier = if ($Platform -eq "ARM64") { "win-arm64" } else { "win-x64" }
 $expectedMachine = if ($Platform -eq "ARM64") { 0xAA64 } else { 0x8664 }
 $runRoot = [System.IO.Path]::GetFullPath((Join-Path $artifactRoot $runtimeIdentifier))
