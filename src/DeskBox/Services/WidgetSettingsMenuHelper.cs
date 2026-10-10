@@ -27,6 +27,7 @@ internal static class WidgetSettingsMenuHelper
         WidgetKind.Weather => "WeatherSettings",
         WidgetKind.Glance => "GlanceSettings",
         WidgetKind.Search => "SearchSettings",
+        WidgetKind.Tree => "TreeSettings",
         _ => null
     };
 
@@ -43,6 +44,7 @@ internal static class WidgetSettingsMenuHelper
         WidgetKind.Weather => "Widget.Settings.Weather",
         WidgetKind.Glance => "Widget.Settings.Glance",
         WidgetKind.Search => "Widget.Settings.Search",
+        WidgetKind.Tree => "Tree.Title",
         _ => "Common.Configure"
     };
 

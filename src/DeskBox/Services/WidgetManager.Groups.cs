@@ -703,6 +703,7 @@ public sealed partial class WidgetManager
             WidgetKind.Glance => "Glance.Title",
             WidgetKind.Tags => "Tags.Title",
             WidgetKind.SystemMonitor => "SystemMonitor.Title",
+            WidgetKind.Tree => "Tree.Title",
             _ => null
         };
         if (!string.IsNullOrWhiteSpace(localizationKey))

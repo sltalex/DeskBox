@@ -1,4 +1,23 @@
 {
+  "Tree.Stage.1": "初生树苗",
+  "Tree.Stage.2": "细干幼树",
+  "Tree.Stage.3": "分枝小树",
+  "Tree.Stage.4": "茂盛中树",
+  "Tree.Stage.5": "结果大树",
+  "Tree.TodayGrowth": "今日按键 {0:N0} · 累计能量 {1:N0}",
+  "Tree.NextStage": "下一阶段 {0:N0} 能量",
+  "Tree.TodayFruit": "今日按键 {0:N0} · 待收获 {1:N0} · 已收获 {2:N0}",
+  "Tree.NextFruit": "下颗果实 {0:N0}/{1:N0} · 点击树冠收获",
+  "Tree.Settings.Intro": "按键估算：1 次有效按键 = 1 点能量，默认每天参考目标 12,000。只统计次数，不读取输入内容；关闭功能或暂停后停止统计。",
+  "Tree.Settings.Goal": "每日参考目标（按键估算）",
+  "Tree.Settings.Save": "保存目标",
+  "Tree.Settings.Pause": "暂停统计",
+  "Tree.Settings.Reset": "重置种树数据…",
+  "Tree.Settings.ResetTitle": "重置种树进度？",
+  "Tree.Settings.ResetBody": "累计能量、果实和收获记录将清零，无法撤销。",
+  "Tree.Settings.ResetConfirm": "重置",
+  "Tree.Settings.Cancel": "取消",
+  "Tree.Settings.Status": "第 {0} 阶段 · 累计 {1:N0} 能量 · 今日 {2:N0} 次 · 待收获 {3:N0} · 已收获 {4:N0}",
   "Settings.AutoStart.Mode.Title": "启动方式",
   "Settings.AutoStart.Mode.Description": "标准方式可在 Windows“启动应用”中管理；计划任务尝试更早启动。",
   "Settings.AutoStart.Mode.Standard": "标准（推荐）",
@@ -2752,5 +2771,8 @@
   "Onboarding.Feature.Weather": "实时天气和 7 天预报，自动定位",
   "Onboarding.Feature.Music": "控制媒体播放，并从封面提取背景色",
   "Onboarding.Step2.Note": "默认是「移动」,来源位置不留副本,可在设置中改为复制。选中格子后按 Ctrl+V 也能粘贴;反过来,把文件从格子拖到微信、浏览器或资源管理器,拖出去的就是真实文件。",
-  "Onboarding.Step3.Hint": "如果这个键与其他软件冲突,以后可以在设置中重录。"
+  "Onboarding.Step3.Hint": "如果这个键与其他软件冲突,以后可以在设置中重录。",
+  "Tree.Title": "种树",
+  "WidgetContent.Tree.StatusLabel": "已实现",
+  "WidgetContent.Tree.StatusDescription": "按键能量培育小树，不读取输入内容"
 }

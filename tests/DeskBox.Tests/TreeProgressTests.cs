@@ -1,0 +1,122 @@
+using DeskBox.Services;
+using DeskBox.Core.Persistence;
+
+namespace DeskBox.Tests;
+
+public sealed class TreeProgressTests
+{
+    private static readonly DateTime Day = new(2026, 10, 10, 12, 0, 0);
+
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(35999, 1)]
+    [InlineData(36000, 2)]
+    [InlineData(107999, 2)]
+    [InlineData(108000, 3)]
+    [InlineData(215999, 3)]
+    [InlineData(216000, 4)]
+    [InlineData(359999, 4)]
+    [InlineData(360000, 5)]
+    public void EnergyAloneDeterminesTheFiveStages(long energy, int expected)
+    {
+        Assert.Equal(expected, TreeProgress.StageFor(energy, 12000));
+    }
+
+    [Fact]
+    public void MatureOverflowBecomesFruitWithoutReusingGrowthEnergy()
+    {
+        var tree = new TreeProgress();
+        tree.AddEnergy(359999, Day);
+        tree.AddEnergy(6002, Day);
+        Assert.Equal(5, tree.Stage);
+        Assert.Equal(2, tree.FruitInventory);
+        Assert.Equal(1, tree.FruitEnergy);
+        Assert.Equal(2, tree.Harvest());
+        Assert.Equal(0, tree.Harvest());
+        Assert.Equal(2, tree.HarvestedFruit);
+    }
+
+    [Fact]
+    public void ChangedGoalKeepsMatureStageAndUnpickedFruit()
+    {
+        var tree = new TreeProgress();
+        tree.AddEnergy(363500, Day);
+        tree.SetGoal(20000);
+        Assert.Equal(5, tree.Stage);
+        Assert.Equal(1, tree.FruitInventory);
+        Assert.Equal(500, tree.FruitEnergy);
+        tree.AddEnergy(4500, Day.AddDays(1));
+        Assert.Equal(4500, tree.TodayKeys);
+        Assert.Equal(2, tree.FruitInventory);
+        Assert.Equal(0, tree.FruitEnergy);
+    }
+
+    [Fact]
+    public void NonDivisibleDailyGoalRoundsFruitCostUp()
+    {
+        var tree = new TreeProgress();
+        tree.SetGoal(12001);
+        Assert.Equal(36003, 3L * tree.DailyGoal);
+        Assert.Equal(3001, tree.FruitCost);
+        tree.AddEnergy(360030, Day);
+        tree.AddEnergy(3000, Day);
+        Assert.Equal(0, tree.FruitInventory);
+        tree.AddEnergy(1, Day);
+        Assert.Equal(1, tree.FruitInventory);
+    }
+
+    [Fact]
+    public void PausingAndCrossingDaysPreservesGrowth()
+    {
+        var tree = new TreeProgress();
+        tree.AddEnergy(10, Day);
+        tree.Paused = true;
+        tree.AddEnergy(10, Day);
+        Assert.Equal(10, tree.TotalEnergy);
+        tree.Paused = false;
+        tree.AddEnergy(5, Day.AddDays(1));
+        Assert.Equal(5, tree.TodayKeys);
+        Assert.Equal(15, tree.TotalEnergy);
+    }
+
+    [Fact]
+    public void KeyFilterExcludesRepeatModifiersShortcutsAndInjection()
+    {
+        var filter = new TreeKeyFilter();
+        Assert.False(filter.Process(0x11, true, false)); // Ctrl
+        Assert.False(filter.Process(0x41, true, false)); // Ctrl+A
+        Assert.False(filter.Process(0x41, false, false));
+        Assert.False(filter.Process(0x11, false, false));
+        Assert.True(filter.Process(0x41, true, false));
+        Assert.False(filter.Process(0x41, true, false)); // auto-repeat
+        Assert.False(filter.Process(0x41, false, false));
+        Assert.True(filter.Process(0x41, true, false));
+        Assert.False(filter.Process(0x42, true, true));
+        Assert.False(filter.Process(0x70, true, false)); // F1
+    }
+
+    [Fact]
+    public void ProgressSurvivesRestartAndRecoversFromDamagedPrimary()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "deskbox-tree-test-" + Guid.NewGuid().ToString("N"));
+        string path = Path.Combine(directory, "progress.json");
+        try
+        {
+            var store = new TreeProgressFileStore(path);
+            var state = new TreeProgress();
+            state.AddEnergy(360001, Day);
+            store.Save(state);
+            state.AddEnergy(3000, Day.AddDays(1));
+            store.Save(state);
+            Assert.Equal(1, new TreeProgressFileStore(path).Load().FruitInventory);
+            File.WriteAllText(path, "{broken");
+            TreeProgress recovered = new TreeProgressFileStore(path).Load();
+            Assert.Equal(360001, recovered.TotalEnergy);
+            Assert.Equal(1, recovered.FruitEnergy);
+        }
+        finally
+        {
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+}

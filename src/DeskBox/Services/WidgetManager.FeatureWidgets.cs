@@ -373,6 +373,7 @@ public sealed partial class WidgetManager
             WidgetKind.Weather => "Weather.Title",
             WidgetKind.Search => "Search.Title",
             WidgetKind.Glance => "Glance.Title",
+            WidgetKind.Tree => "Tree.Title",
             WidgetKind.Tags => "Tags.Title",
             WidgetKind.SystemMonitor => "SystemMonitor.Title",
             _ => string.Empty
@@ -422,6 +423,7 @@ public sealed partial class WidgetManager
                 WidgetKind.Weather => 200,
                 WidgetKind.Search => 280,
                 WidgetKind.Glance => 360,
+                WidgetKind.Tree => 300,
                 _ => Math.Max(_settingsService.Settings.DefaultWidgetWidth, 320)
             },
             Height = kind switch
@@ -430,6 +432,7 @@ public sealed partial class WidgetManager
                 WidgetKind.Weather => 200,
                 WidgetKind.Search => 90,
                 WidgetKind.Glance => 260,
+                WidgetKind.Tree => 340,
                 _ => Math.Max(_settingsService.Settings.DefaultWidgetHeight, 360)
             }
         };

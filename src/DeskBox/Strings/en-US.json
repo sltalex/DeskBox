@@ -1,4 +1,23 @@
 {
+  "Tree.Stage.1": "Seedling",
+  "Tree.Stage.2": "Young tree",
+  "Tree.Stage.3": "Branching tree",
+  "Tree.Stage.4": "Lush tree",
+  "Tree.Stage.5": "Fruit tree",
+  "Tree.TodayGrowth": "Today {0:N0} keys · {1:N0} energy",
+  "Tree.NextStage": "Next stage at {0:N0} energy",
+  "Tree.TodayFruit": "Today {0:N0} · Ready {1:N0} · Picked {2:N0}",
+  "Tree.NextFruit": "Next fruit {0:N0}/{1:N0} · Tap crown to harvest",
+  "Tree.Settings.Intro": "Keyboard estimate: one valid press gives one energy. The default daily reference goal is 12,000. Only counts are saved, never typed text.",
+  "Tree.Settings.Goal": "Daily reference goal (estimated keystrokes)",
+  "Tree.Settings.Save": "Save goal",
+  "Tree.Settings.Pause": "Pause counting",
+  "Tree.Settings.Reset": "Reset tree data…",
+  "Tree.Settings.ResetTitle": "Reset tree progress?",
+  "Tree.Settings.ResetBody": "Energy, fruit and harvest records will be erased. This cannot be undone.",
+  "Tree.Settings.ResetConfirm": "Reset",
+  "Tree.Settings.Cancel": "Cancel",
+  "Tree.Settings.Status": "Stage {0} · {1:N0} energy · {2:N0} today · {3:N0} ready · {4:N0} picked",
   "Settings.AutoStart.Mode.Title": "Startup method",
   "Settings.AutoStart.Mode.Description": "Standard is managed in Windows Startup apps; a scheduled task can attempt an earlier start.",
   "Settings.AutoStart.Mode.Standard": "Standard (recommended)",
@@ -2752,5 +2771,8 @@
   "Onboarding.Feature.Weather": "Real-time weather and 7-day forecast with auto location",
   "Onboarding.Feature.Music": "Control media playback with artwork-derived colors",
   "Onboarding.Step2.Note": "Move is the default, so nothing is left behind — switch to copy in Settings. Select the widget and press Ctrl+V to paste, or drag back out to chat apps or a browser to get real files.",
-  "Onboarding.Step3.Hint": "If the shortcut conflicts with another app, you can record a new one later in Settings."
+  "Onboarding.Step3.Hint": "If the shortcut conflicts with another app, you can record a new one later in Settings.",
+  "Tree.Title": "Grow a tree",
+  "WidgetContent.Tree.StatusLabel": "Implemented",
+  "WidgetContent.Tree.StatusDescription": "Grow a tree from keypress energy without reading text"
 }

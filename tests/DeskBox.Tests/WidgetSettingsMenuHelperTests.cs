@@ -14,6 +14,7 @@ public sealed class WidgetSettingsMenuHelperTests
     [InlineData(WidgetKind.Music, "MusicSettings")]
     [InlineData(WidgetKind.Weather, "WeatherSettings")]
     [InlineData(WidgetKind.Glance, "GlanceSettings")]
+    [InlineData(WidgetKind.Tree, "TreeSettings")]
     [InlineData(WidgetKind.Search, "SearchSettings")]
     public void GetSettingsSectionTag_Returns_Expected_Tag(WidgetKind kind, string expectedTag)
     {
