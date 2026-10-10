@@ -161,10 +161,8 @@ private void OnLanguageChanged()
     {
         RefreshSelectionProperties(refreshLocalizedOptions: true);
         OnPropertyChanged(nameof(DistributionChannelText));
-        OnPropertyChanged(nameof(OfficialWebsiteDisplayText));
         OnPropertyChanged(nameof(OpenSourceRepositoryDisplayText));
         OnPropertyChanged(nameof(UpdateDownloadActionText));
-        OnPropertyChanged(nameof(StoreSupportCardVisibility));
         if (!IsCheckingForUpdates && !IsDownloadingUpdate)
         {
             if (_appUpdateService.LastCheckResult is not null)

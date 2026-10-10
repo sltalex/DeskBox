@@ -2384,6 +2384,7 @@ public sealed partial class DeskBoxDataBackupService
         string snapshotDataDirectory = Path.Combine(snapshotRoot, "data");
         try
         {
+            TreeCounterService.FlushIfStarted();
             await CreateDataSnapshotAsync(
                 snapshotDataDirectory, cancellationToken, requireSettings);
             ValidateRestoreData(snapshotDataDirectory, requireSettings);

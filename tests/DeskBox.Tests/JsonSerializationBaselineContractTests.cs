@@ -13,7 +13,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
         Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void ProductionInventory_IsFrozenAtThirtyEightFilesAndNinetyCalls()
+    public void ProductionInventory_IsFrozenAtThirtySevenFilesAndEightySixCalls()
     {
         var expected = new Dictionary<string, int>(StringComparer.Ordinal)
         {
@@ -37,7 +37,6 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             ["src/DeskBox/Services/DesktopAutoOrganizationSuppressionRegistry.cs"] = 2,
             ["src/DeskBox/Services/DesktopOrganizationHistoryStore.cs"] = 2,
             ["src/DeskBox/Services/DesktopOrganizationRecoveryStore.cs"] = 2,
-            ["src/DeskBox/Services/FeedbackService.cs"] = 4,
             ["src/DeskBox/Services/GlanceImageService.cs"] = 2,
             ["src/DeskBox/Services/GlanceWidgetStore.cs"] = 7,
             ["src/DeskBox/Services/LocalizationService.cs"] = 1,
@@ -51,6 +50,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             ["src/DeskBox/Services/SyncRevisionsStore.cs"] = 2,
             ["src/DeskBox/Services/SyncStateStore.cs"] = 2,
             ["src/DeskBox/Services/TodoWidgetStore.cs"] = 3,
+            ["src/DeskBox/Services/TreeProgressFileStore.cs"] = 2,
             ["src/DeskBox/Services/WeatherService.cs"] = 5,
             ["src/DeskBox/Services/WidgetFileStackSettings.cs"] = 7,
             ["src/DeskBox/Services/WidgetLayoutStore.cs"] = 2,
@@ -77,7 +77,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
         }
 
         Assert.Equal(38, actual.Count);
-        Assert.Equal(90, actual.Values.Sum());
+        Assert.Equal(88, actual.Values.Sum());
 
         string[] expectedContextOwners =
         [
@@ -98,7 +98,6 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             "src/DeskBox/Services/DeskBoxDiagnosticsBundleService.cs",
             "src/DeskBox/Services/DesktopOrganizationHistoryStore.cs",
             "src/DeskBox/Services/DesktopOrganizationRecoveryStore.cs",
-            "src/DeskBox/Services/FeedbackService.cs",
             "src/DeskBox/Services/GlanceImageService.cs",
             "src/DeskBox/Services/GlanceWidgetStore.cs",
             "src/DeskBox/Services/LocalizationService.cs",
@@ -110,6 +109,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             "src/DeskBox/Services/SyncRevisionsStore.cs",
             "src/DeskBox/Services/SyncStateStore.cs",
             "src/DeskBox/Services/TodoWidgetStore.cs",
+            "src/DeskBox/Services/TreeProgressFileStore.cs",
             "src/DeskBox/Services/WeatherService.cs",
             "src/DeskBox/Services/WidgetFileStackSettings.cs",
             "src/DeskBox/Services/WidgetLayoutStore.cs",

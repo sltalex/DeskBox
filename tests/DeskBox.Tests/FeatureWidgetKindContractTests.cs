@@ -23,7 +23,8 @@ public sealed class FeatureWidgetKindContractTests
                 WidgetKind.Music,
                 WidgetKind.Weather,
                 WidgetKind.Search,
-                WidgetKind.Glance
+                WidgetKind.Glance,
+                WidgetKind.Tree
             },
             FeatureWidgetSettings.FeatureKinds);
     }
@@ -35,6 +36,18 @@ public sealed class FeatureWidgetKindContractTests
         Assert.False(FeatureWidgetSettings.IsFeatureWidget(WidgetKind.Tags));
         Assert.False(FeatureWidgetSettings.IsFeatureWidget(WidgetKind.SystemMonitor));
         Assert.False(FeatureWidgetSettings.IsFeatureWidget(WidgetKind.Productivity));
+    }
+
+    [Fact]
+    public void TreeIsEnabledByDefaultButExplicitDisableIsPreserved()
+    {
+        var settings = new AppSettings();
+        Assert.True(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.Tree));
+        FeatureWidgetSettings.Normalize(settings);
+        Assert.True(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.Tree));
+
+        FeatureWidgetSettings.SetEnabled(settings, WidgetKind.Tree, false);
+        Assert.False(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.Tree));
     }
 
     [Fact]

@@ -174,6 +174,9 @@ public sealed class AppUpdateServiceTests : IDisposable
     [InlineData("1.2.1", "1.2.1", false)]
     [InlineData("1.2.1", "1.2.0", false)]
     [InlineData("1.2.1", "not-a-version", false)]
+    [InlineData("1.5.6", "2026101001", true)]
+    [InlineData("2026101001", "2026101001", false)]
+    [InlineData("2026101001", "2026101101", true)]
     public void IsRemoteVersionNewer_ComparesSemanticVersionPrefix(string currentVersion, string remoteVersion, bool expected)
     {
         Assert.Equal(expected, AppUpdateService.IsRemoteVersionNewer(currentVersion, remoteVersion));

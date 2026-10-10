@@ -134,7 +134,19 @@ public sealed class WidgetContentFactory
             IsFeatureWidget: true,
             SettingsSectionTag: "GlanceSettings",
             ChromeCategory: WidgetChromeCategory.Display,
-            DefaultChromeMode: WidgetChromeMode.Overlay)
+            DefaultChromeMode: WidgetChromeMode.Overlay),
+        new(
+            WidgetKind.Tree,
+            "Tree",
+            "\uE8F1",
+            WidgetContentStage.Implemented,
+            CanShowInCreateEntry: false,
+            WidgetContentAvailability.Available,
+            "WidgetContent.Tree.StatusLabel",
+            "WidgetContent.Tree.StatusDescription",
+            HasSettingsPage: true,
+            IsFeatureWidget: true,
+            SettingsSectionTag: "TreeSettings")
     ];
 
     private static readonly IReadOnlyDictionary<WidgetKind, WidgetContentDescriptor> Descriptors =
@@ -277,6 +289,7 @@ public sealed class WidgetContentFactory
             new WeatherWidgetContentProvider(),
             new GlanceWidgetContentProvider(),
             new SearchWidgetContentProvider(),
+            new TreeWidgetContentProvider(),
             new PlaceholderWidgetContentProvider(WidgetKind.Tags),
             new PlaceholderWidgetContentProvider(WidgetKind.SystemMonitor)
         ];

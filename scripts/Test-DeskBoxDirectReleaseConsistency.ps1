@@ -21,6 +21,27 @@ function Read-RequiredMatch {
     return $match.Groups[1].Value
 }
 
+function Get-VersionInfoFromDisplayVersion {
+    param([string]$DisplayVersion)
+
+    if ($DisplayVersion -match '^(?<year>\d{4})(?<month>\d{2})(?<day>\d{2})(?<revision>\d{2})$') {
+        [int]$year = $Matches.year
+        [int]$month = $Matches.month
+        [int]$day = $Matches.day
+        [int]$revision = $Matches.revision
+        try {
+            $null = [DateTime]::new($year, $month, $day)
+        }
+        catch {
+            throw "Compact display version '$DisplayVersion' does not contain a valid calendar date."
+        }
+
+        return "$year.$month.$day.$revision"
+    }
+
+    return "$DisplayVersion.0"
+}
+
 $csproj = Join-Path $root 'src\DeskBox\DeskBox.csproj'
 $packageManifest = Join-Path $root 'src\DeskBox\Package.appxmanifest'
 $x64Installer = Join-Path $root 'installer\DeskBox.iss'
@@ -33,14 +54,15 @@ $x64Version = Read-RequiredMatch $x64Installer '#define MyAppVersion "([^"]+)"' 
 $x64VersionInfo = Read-RequiredMatch $x64Installer '#define MyAppVersionInfo "([^"]+)"' 'x64 installer file version'
 $arm64Version = Read-RequiredMatch $arm64Installer '#define MyAppVersion "([^"]+)"' 'ARM64 installer version'
 $arm64VersionInfo = Read-RequiredMatch $arm64Installer '#define MyAppVersionInfo "([^"]+)"' 'ARM64 installer file version'
+$expectedVersionInfo = Get-VersionInfoFromDisplayVersion $projectVersion
 
 $checks = @(
     @{ Name = 'x64 installer'; Actual = $x64Version; Expected = $projectVersion }
     @{ Name = 'ARM64 installer'; Actual = $arm64Version; Expected = $projectVersion }
-    @{ Name = 'project file version'; Actual = $projectVersionInfo; Expected = "$projectVersion.0" }
-    @{ Name = 'package version'; Actual = $packageVersionInfo; Expected = "$projectVersion.0" }
-    @{ Name = 'x64 installer file version'; Actual = $x64VersionInfo; Expected = "$projectVersion.0" }
-    @{ Name = 'ARM64 installer file version'; Actual = $arm64VersionInfo; Expected = "$projectVersion.0" }
+    @{ Name = 'project file version'; Actual = $projectVersionInfo; Expected = $expectedVersionInfo }
+    @{ Name = 'package version'; Actual = $packageVersionInfo; Expected = $expectedVersionInfo }
+    @{ Name = 'x64 installer file version'; Actual = $x64VersionInfo; Expected = $expectedVersionInfo }
+    @{ Name = 'ARM64 installer file version'; Actual = $arm64VersionInfo; Expected = $expectedVersionInfo }
 )
 
 if (-not [string]::IsNullOrWhiteSpace($ExpectedVersion)) {

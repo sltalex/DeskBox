@@ -117,6 +117,7 @@ public static class WidgetTitleIconKindNames
             WidgetKind.Tags => Tags,
             WidgetKind.Search => Search,
             WidgetKind.SystemMonitor => SystemMonitor,
+            WidgetKind.Tree => Default,
             _ => Default
         };
     }

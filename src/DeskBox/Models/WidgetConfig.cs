@@ -239,7 +239,10 @@ public enum WidgetKind
     Productivity,
 
     /// <summary>At-a-glance background, time and date widget.</summary>
-    Glance
+    Glance,
+
+    /// <summary>Keyboard-energy tree widget.</summary>
+    Tree
 }
 
 public sealed class WidgetKindJsonConverter : JsonConverter<WidgetKind>

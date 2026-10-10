@@ -14,7 +14,6 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Shapes;
 using System.Runtime.InteropServices;
-using Windows.System;
 using WinRT.Interop;
 
 namespace DeskBox.Views;
@@ -126,18 +125,6 @@ public sealed partial class SettingsWindow
     private void ShowOnboardingButton_Click(object sender, RoutedEventArgs e)
     {
         App.Current.ShowOnboarding();
-    }
-
-    private async void ShowAboutMeButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (SettingsRoot.XamlRoot is null)
-        {
-            return;
-        }
-
-        AboutMeDialog.XamlRoot = SettingsRoot.XamlRoot;
-        AboutMeDialog.CloseButtonText = _localizationService.T("Settings.Dialog.AboutMeClose");
-        await AboutMeDialog.ShowAsync();
     }
 
     private void CleanupManagedStorageButton_Click(object sender, RoutedEventArgs e)

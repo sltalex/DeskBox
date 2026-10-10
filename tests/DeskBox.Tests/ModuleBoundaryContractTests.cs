@@ -469,10 +469,6 @@ public sealed class ModuleBoundaryContractTests
         ["src/DeskBox/Services/DesktopOrganizationRecoveryStore.cs"] = 2,
         ["src/DeskBox/Services/DesktopOrganizationTransaction.cs"] = 1,
         ["src/DeskBox/Services/DirectStartupTaskBackend.cs"] = 2,
-        // 2 = the anonymous client-id persist plus the #449 success-only
-        // cooldown persist; both are app-state tmp+move atomic writes, not
-        // user-file mutations.
-        ["src/DeskBox/Services/FeedbackService.cs"] = 2,
         ["src/DeskBox/Services/FileService.CaseOnlyRename.cs"] = 2,
         ["src/DeskBox/Services/FileService.TransferProgress.cs"] = 4,
         ["src/DeskBox/Services/FileService.cs"] = 9,
@@ -502,7 +498,6 @@ public sealed class ModuleBoundaryContractTests
         ["src/DeskBox/ViewModels/TodoWidgetViewModel.DetailAndAttachments.cs"] = 1,
         ["src/DeskBox/Views/ContentWidgetWindow.NativeDragDrop.cs"] = 1,
         ["src/DeskBox/Views/SearchPopupWindow.xaml.cs"] = 2,
-        ["src/DeskBox/Views/SettingsWindow.Feedback.cs"] = 1,
     };
 
     private static readonly string[] LegacyModelsUiExpectedFiles =

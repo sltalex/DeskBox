@@ -1090,6 +1090,11 @@ public partial class App : Application
                 // widget group; the reverse order is handled per-window at show.
                 WidgetManager.AuxiliaryWindowProvider = GetRaisedBandAuxiliaryWindowHandles;
             });
+            RunOptionalStartupStep("tree-counter", () =>
+            {
+                SettingsService.SettingsChanged += OnTreeFeatureSettingsChanged;
+                OnTreeFeatureSettingsChanged();
+            });
             MarkStartupProgress();
             // Non-null past this point: the critical step above rethrows on
             // failure, so the launch never reaches here without a manager.
@@ -4564,11 +4569,22 @@ public partial class App : Application
         }
     }
 
+    private void OnTreeFeatureSettingsChanged()
+    {
+        TreeCounterService.Instance.SetEnabled(
+            FeatureWidgetSettings.IsEnabled(SettingsService.Settings, WidgetKind.Tree));
+    }
+
     private async Task<bool> ShutdownCoreAsync()
     {
         Interlocked.Exchange(ref s_shutdownRequested, 1);
         TimeSpan shutdownGrace = TimeSpan.FromSeconds(15);
         return await _shutdownSequence.RunAsync(
+            ShutdownStep.Sync("tree-counter", () =>
+            {
+                SettingsService.SettingsChanged -= OnTreeFeatureSettingsChanged;
+                TreeCounterService.Instance.Dispose();
+            }),
             ShutdownStep.Sync("backup-subscriptions", () =>
             {
                 SettingsService.SettingsChanged -= OnBackupSettingsChanged;

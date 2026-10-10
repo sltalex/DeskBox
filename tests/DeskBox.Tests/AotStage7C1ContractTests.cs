@@ -23,41 +23,17 @@ public sealed class AotStage7C1ContractTests
     }
 
     [Fact]
-    public void StoreBuild_ExcludesDonationQrAssets()
+    public void BuildDefinitions_DoNotReferenceRemovedDonationAssets()
     {
         string project = Read("src/DeskBox/DeskBox.csproj");
         string storeAudit = Read("scripts/audit-store-native-aot-package.ps1");
         string about = Read("src/DeskBox/ViewModels/SettingsViewModel.AboutAndUpdates.cs");
 
-        Assert.Contains(
-            "<Content Remove=\"Assets\\wechat-qrcode.jpg\" />",
-            project,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "<Content Remove=\"Assets\\Support\\*.png\" />",
-            project,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "<Content Include=\"Assets\\wechat-qrcode.jpg\" Condition=\"'$(DeskBoxDistribution)' != 'Store'\">",
-            project,
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "<Content Include=\"Assets\\Support\\*.png\" Condition=\"'$(DeskBoxDistribution)' != 'Store'\">",
-            project,
-            StringComparison.Ordinal);
-        // Direct payloads must actually carry the support QR images: without
-        // explicit copy metadata the files never reach the publish directory
-        // and the support dialog renders empty placeholders.
-        Assert.Contains(
-            "<CopyToPublishDirectory>Always</CopyToPublishDirectory>",
-            project,
-            StringComparison.Ordinal);
-        Assert.Contains("'wechat-qrcode'", storeAudit, StringComparison.Ordinal);
-        Assert.Contains("'Assets/Support/'", storeAudit, StringComparison.Ordinal);
-        Assert.Contains(
-            "DonationQrCodeVisibility",
-            about,
-            StringComparison.Ordinal);
+        Assert.DoesNotContain("wechat-qrcode", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("Assets\\Support", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("wechat-qrcode", storeAudit, StringComparison.Ordinal);
+        Assert.DoesNotContain("Assets/Support/", storeAudit, StringComparison.Ordinal);
+        Assert.DoesNotContain("DonationQrCodeVisibility", about, StringComparison.Ordinal);
     }
 
     [Fact]

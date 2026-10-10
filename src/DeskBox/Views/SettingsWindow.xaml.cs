@@ -117,6 +117,7 @@ public sealed partial class SettingsWindow : Window
             ["WeatherSettings"] = new("WeatherSettings", "Settings.Weather.Title", "FeatureWidgets", "FeatureWidgets"),
             ["GlanceSettings"] = new("GlanceSettings", "Glance.Settings.Title", "FeatureWidgets", "FeatureWidgets"),
             ["SearchSettings"] = new("SearchSettings", "Settings.Search.Title", "FeatureWidgets", "FeatureWidgets"),
+            ["TreeSettings"] = new("TreeSettings", "Tree.Title", "FeatureWidgets", "FeatureWidgets"),
             ["AppearanceMaterialSettings"] = new("AppearanceMaterialSettings", "Settings.Material.Title", "Appearance", "Appearance"),
             ["AppearanceDensitySettings"] = new("AppearanceDensitySettings", "Settings.Density.Title", "Appearance", "Appearance"),
             ["AppearanceWindowSettings"] = new("AppearanceWindowSettings", "Settings.Group.AppVisual.Title", "Appearance", "Appearance"),
@@ -648,18 +649,8 @@ public sealed partial class SettingsWindow : Window
             ChangePathButton.HorizontalAlignment = isNarrow ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
             CleanupStorageButton.HorizontalAlignment = isNarrow ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
         }
-        if (AboutRightPanel is not null)
+        if (UpdateActionsPanel is not null)
         {
-            Grid.SetRow(AboutRightPanel, isNarrow ? 1 : 0);
-            Grid.SetColumn(AboutRightPanel, isNarrow ? 0 : 2);
-            Grid.SetColumnSpan(AboutRightPanel, isNarrow ? 3 : 1);
-            AboutRightPanel.Margin = isNarrow ? new Thickness(0, 10, 0, 0) : new Thickness(0);
-            AboutRightPanel.HorizontalAlignment = isNarrow ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
-            AboutInfoActionsPanel.HorizontalAlignment = isNarrow ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
-            AboutInfoActionsPanel.Orientation = isNarrow ? Orientation.Vertical : Orientation.Horizontal;
-            AboutMeButton.HorizontalAlignment = isNarrow ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
-            AboutWebsiteButton.HorizontalAlignment = isNarrow ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
-            StoreSupportButton.HorizontalAlignment = isNarrow ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
             UpdateActionsPanel.HorizontalAlignment = isNarrow ? HorizontalAlignment.Stretch : HorizontalAlignment.Right;
             UpdateActionsPanel.Orientation = isNarrow ? Orientation.Vertical : Orientation.Horizontal;
             OneClickUpdateButton.HorizontalAlignment = isNarrow ? HorizontalAlignment.Stretch : HorizontalAlignment.Left;
