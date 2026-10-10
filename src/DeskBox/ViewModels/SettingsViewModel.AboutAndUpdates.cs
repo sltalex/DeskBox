@@ -308,6 +308,15 @@ public partial class SettingsViewModel
             UpdateStatusText = _localizationService.T("Settings.Update.Status.UpToDate");
             UpdateDetailText = BuildUpToDateDetailText(result);
         }
+        else if (result.Status == AppUpdateCheckStatus.ArchitectureUnavailable)
+        {
+            _availableUpdateManifest = null;
+            _downloadedUpdateInstallerPath = null;
+            _showManualUpdateFallback = false;
+            _lastUpdateDownloadFailed = false;
+            UpdateStatusText = _localizationService.T("Settings.Update.Status.ArchitectureUnavailable");
+            UpdateDetailText = _localizationService.T("Settings.Update.Detail.ArchitectureUnavailable");
+        }
         else if (result.Status == AppUpdateCheckStatus.InvalidManifest)
         {
             _availableUpdateManifest = null;
@@ -413,8 +422,8 @@ public partial class SettingsViewModel
 
     internal static string GetManualUpdateDownloadUrl(AppUpdateManifest? manifest)
     {
-        // This action is labelled "Official download". Older manifests may
-        // carry a direct cloud-drive link; let the website offer those mirrors.
+        // Always open this repository's release page, even if older manifests
+        // contain a cloud-drive link or an unrelated manual-download URL.
         return AppUpdateService.DefaultManualDownloadUrl;
     }
 

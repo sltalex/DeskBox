@@ -2263,7 +2263,7 @@ public partial class App : Application
         {
             SetUpdateAvailableReminder(result.Manifest);
         }
-        else if (result.Status == AppUpdateCheckStatus.UpToDate)
+        else if (result.Status is AppUpdateCheckStatus.UpToDate or AppUpdateCheckStatus.ArchitectureUnavailable)
         {
             ClearUpdateAvailableReminder();
         }

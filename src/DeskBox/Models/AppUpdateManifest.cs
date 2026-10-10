@@ -158,6 +158,7 @@ public enum AppUpdateCheckStatus
 {
     UpToDate,
     UpdateAvailable,
+    ArchitectureUnavailable,
     InvalidManifest,
     Failed
 }

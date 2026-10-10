@@ -12,9 +12,9 @@ namespace DeskBox.Services;
 
 public sealed partial class AppUpdateService : IAppUpdateService
 {
-    public const string DefaultManifestUrl = "https://deskbox.fun/update/stable.json";
-    public const string DefaultGitHubLatestReleaseApiUrl = "https://api.github.com/repos/Tianyu199509/DeskBox/releases/latest";
-    public const string DefaultManualDownloadUrl = "https://deskbox.fun/download";
+    public const string DefaultManifestUrl = "https://raw.githubusercontent.com/sltalex/DeskBox/main/update/stable.json";
+    public const string DefaultGitHubLatestReleaseApiUrl = "https://api.github.com/repos/sltalex/DeskBox/releases/latest";
+    public const string DefaultManualDownloadUrl = "https://github.com/sltalex/DeskBox/releases";
 
     private readonly HttpClient _httpClient;
     private readonly string _manifestUrl;
@@ -60,13 +60,13 @@ public sealed partial class AppUpdateService : IAppUpdateService
     public async Task<AppUpdateCheckResult> CheckForUpdatesAsync(string currentVersion, CancellationToken cancellationToken = default)
     {
         var manifestResult = await CheckManifestForUpdatesAsync(currentVersion, cancellationToken);
-        if (manifestResult.Status is AppUpdateCheckStatus.UpdateAvailable or AppUpdateCheckStatus.UpToDate)
+        if (manifestResult.Status is AppUpdateCheckStatus.UpdateAvailable or AppUpdateCheckStatus.UpToDate or AppUpdateCheckStatus.ArchitectureUnavailable)
         {
             return SetLastCheckResult(manifestResult);
         }
 
         var githubResult = await CheckGitHubLatestReleaseForUpdatesAsync(currentVersion, cancellationToken);
-        if (githubResult.Status is AppUpdateCheckStatus.UpdateAvailable or AppUpdateCheckStatus.UpToDate)
+        if (githubResult.Status is AppUpdateCheckStatus.UpdateAvailable or AppUpdateCheckStatus.UpToDate or AppUpdateCheckStatus.ArchitectureUnavailable)
         {
             return SetLastCheckResult(githubResult);
         }
@@ -86,28 +86,37 @@ public sealed partial class AppUpdateService : IAppUpdateService
                 stream,
                 AppUpdateJsonContext.Default.UpdateManifest,
                 cancellationToken);
-            if (manifest is null ||
-                !TrySelectInstallerForArchitecture(
-                    manifest,
-                    CurrentInstallerArchitectureSuffix) ||
-                !IsManifestUsable(manifest) ||
-                string.IsNullOrWhiteSpace(manifest.Sha256))
-            {
-                return new AppUpdateCheckResult(
-                    AppUpdateCheckStatus.InvalidManifest,
-                    currentVersion,
-                    manifest,
-                    "The update manifest is missing installer metadata for this processor architecture.");
-            }
-
-            return IsRemoteVersionNewer(currentVersion, manifest.Version)
-                ? new AppUpdateCheckResult(AppUpdateCheckStatus.UpdateAvailable, currentVersion, manifest)
-                : new AppUpdateCheckResult(AppUpdateCheckStatus.UpToDate, currentVersion, manifest);
+            return EvaluateManifestForArchitecture(manifest, currentVersion, CurrentInstallerArchitectureSuffix);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JsonException or IOException)
         {
             return new AppUpdateCheckResult(AppUpdateCheckStatus.Failed, currentVersion, errorMessage: ex.Message);
         }
+    }
+
+    internal static AppUpdateCheckResult EvaluateManifestForArchitecture(
+        AppUpdateManifest? manifest,
+        string currentVersion,
+        string architectureSuffix)
+    {
+        if (!IsManifestUsable(manifest) || !TryParseVersion(manifest!.Version, out _))
+        {
+            return new AppUpdateCheckResult(AppUpdateCheckStatus.InvalidManifest, currentVersion, manifest);
+        }
+
+        if (!IsRemoteVersionNewer(currentVersion, manifest.Version))
+        {
+            return new AppUpdateCheckResult(AppUpdateCheckStatus.UpToDate, currentVersion, manifest);
+        }
+
+        if (!TrySelectInstallerForArchitecture(manifest, architectureSuffix))
+        {
+            return new AppUpdateCheckResult(AppUpdateCheckStatus.ArchitectureUnavailable, currentVersion, manifest);
+        }
+
+        return string.IsNullOrWhiteSpace(manifest.Sha256)
+            ? new AppUpdateCheckResult(AppUpdateCheckStatus.InvalidManifest, currentVersion, manifest)
+            : new AppUpdateCheckResult(AppUpdateCheckStatus.UpdateAvailable, currentVersion, manifest);
     }
 
     private async Task<AppUpdateCheckResult> CheckGitHubLatestReleaseForUpdatesAsync(string currentVersion, CancellationToken cancellationToken)
@@ -123,6 +132,14 @@ public sealed partial class AppUpdateService : IAppUpdateService
                 AppUpdateJsonContext.Default.GitHubRelease,
                 cancellationToken);
             var manifest = await CreateManifestFromGitHubReleaseAsync(release, cancellationToken);
+            if (manifest is null && release is not null &&
+                IsRemoteVersionNewer(currentVersion, release.TagName) &&
+                release.Assets.Any(asset => IsInstallerAssetName(asset.Name, "x64") ||
+                    IsInstallerAssetName(asset.Name, "arm64")) &&
+                !release.Assets.Any(IsInstallerAsset))
+            {
+                return new AppUpdateCheckResult(AppUpdateCheckStatus.ArchitectureUnavailable, currentVersion);
+            }
             if (!IsManifestUsable(manifest) || string.IsNullOrWhiteSpace(manifest!.Sha256))
             {
                 return new AppUpdateCheckResult(
@@ -458,11 +475,6 @@ public sealed partial class AppUpdateService : IAppUpdateService
             return false;
         }
 
-        if (IsHostOrSubdomain(uri, "deskbox.fun"))
-        {
-            return true;
-        }
-
         // GitHub hosts third-party repositories, so trusting the whole domain
         // would let a tampered manifest point at any attacker repository with
         // a matching hash. Only this project's own release downloads count;
@@ -471,14 +483,8 @@ public sealed partial class AppUpdateService : IAppUpdateService
         // which therefore must never be trusted as a manifest origin itself.
         return string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase) &&
             uri.AbsolutePath.StartsWith(
-                "/Tianyu199509/DeskBox/releases/download/",
+                "/sltalex/DeskBox/releases/download/",
                 StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsHostOrSubdomain(Uri uri, string domain)
-    {
-        return uri.Host.Equals(domain, StringComparison.OrdinalIgnoreCase) ||
-            uri.Host.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase);
     }
 
     internal static bool TrySelectInstallerForArchitecture(
