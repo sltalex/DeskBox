@@ -3,6 +3,7 @@ namespace DeskBox.Services;
 /// <summary>One machine's aggregate tree state. No individual key or text is retained.</summary>
 public sealed class TreeProgress
 {
+    public const long StageEnergyInterval = 36_000;
     public int DailyGoal { get; set; } = 12000;
     public bool Paused { get; set; }
     public string LocalDay { get; set; } = string.Empty;
@@ -13,10 +14,10 @@ public sealed class TreeProgress
     public long FruitInventory { get; set; }
     public long HarvestedFruit { get; set; }
 
-    public long MaturityThreshold => 30L * DailyGoal;
+    public long MaturityThreshold => 4 * StageEnergyInterval;
     public double MaturityPercentage => Math.Clamp(100.0 * TotalEnergy / MaturityThreshold, 0, 100);
     public int FruitCost => (DailyGoal + 3) / 4;
-    public int Stage => Math.Max(HighestStage, StageFor(TotalEnergy, DailyGoal));
+    public int Stage => Math.Max(HighestStage, StageFor(TotalEnergy));
 
     public void RollDay(DateTime localNow)
     {
@@ -24,21 +25,21 @@ public sealed class TreeProgress
         if (LocalDay != day) { LocalDay = day; TodayKeys = 0; }
     }
 
-    public static int StageFor(long energy, int goal) => energy >= 30L * goal ? 5
-        : energy >= 18L * goal ? 4
-        : energy >= 9L * goal ? 3
-        : energy >= 3L * goal ? 2 : 1;
+    public static int StageFor(long energy) => energy >= 4 * StageEnergyInterval ? 5
+        : energy >= 3 * StageEnergyInterval ? 4
+        : energy >= 2 * StageEnergyInterval ? 3
+        : energy >= StageEnergyInterval ? 2 : 1;
 
     public void AddEnergy(int amount, DateTime localNow)
     {
         if (amount <= 0 || Paused) return;
         RollDay(localNow);
         long before = TotalEnergy;
-        bool wasMature = HighestStage == 5 || StageFor(before, DailyGoal) == 5;
+        bool wasMature = HighestStage == 5 || StageFor(before) == 5;
         TotalEnergy = checked(TotalEnergy + amount);
         TodayKeys = checked(TodayKeys + amount);
-        if (StageFor(TotalEnergy, DailyGoal) > HighestStage)
-            HighestStage = StageFor(TotalEnergy, DailyGoal);
+        if (StageFor(TotalEnergy) > HighestStage)
+            HighestStage = StageFor(TotalEnergy);
         if (HighestStage == 5)
         {
             long fruitGain = wasMature ? amount : Math.Max(0, TotalEnergy - MaturityThreshold);
@@ -52,7 +53,7 @@ public sealed class TreeProgress
     {
         if (goal < 1 || goal > 1000000) throw new ArgumentOutOfRangeException(nameof(goal));
         DailyGoal = goal;
-        HighestStage = Math.Max(HighestStage, StageFor(TotalEnergy, goal));
+        HighestStage = Math.Max(HighestStage, StageFor(TotalEnergy));
         if (HighestStage == 5)
         {
             FruitInventory = checked(FruitInventory + FruitEnergy / FruitCost);

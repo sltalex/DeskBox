@@ -12,7 +12,7 @@ public sealed class TreeSettingsSection : UserControl
     private readonly TreeCounterService _counter = TreeCounterService.Instance;
     private readonly DispatcherQueue _uiQueue = DispatcherQueue.GetForCurrentThread();
     private readonly ToggleSwitch _enable = new() { OnContent = "", OffContent = "" };
-    private readonly ToggleSwitch _pause = new() { OnContent = "", OffContent = "" };
+    private readonly ToggleSwitch _pause = new();
     private readonly TextBlock _title = new() { FontSize = 24, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
     private SettingsViewModel? _viewModel;
     private LocalizationService? _localization;
@@ -59,7 +59,9 @@ public sealed class TreeSettingsSection : UserControl
         if (_localization is null) return;
         _title.Text = _localization.T("Tree.Title");
         _enable.Header = _localization.T("Tree.Settings.Enable");
-        _pause.Header = _localization.T("Tree.Settings.Pause");
+        _pause.Header = _localization.T("Tree.Settings.StatisticsStatus");
+        _pause.OnContent = _localization.T("Tree.Settings.StatisticsPaused");
+        _pause.OffContent = _localization.T("Tree.Settings.StatisticsRunning");
     }
 
     private void OnChanged()

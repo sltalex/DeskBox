@@ -12,24 +12,24 @@ public sealed class TreeProgressTests
     [InlineData(0, 1)]
     [InlineData(35999, 1)]
     [InlineData(36000, 2)]
-    [InlineData(107999, 2)]
-    [InlineData(108000, 3)]
-    [InlineData(215999, 3)]
-    [InlineData(216000, 4)]
-    [InlineData(359999, 4)]
-    [InlineData(360000, 5)]
+    [InlineData(71999, 2)]
+    [InlineData(72000, 3)]
+    [InlineData(107999, 3)]
+    [InlineData(108000, 4)]
+    [InlineData(143999, 4)]
+    [InlineData(144000, 5)]
     public void EnergyAloneDeterminesTheFiveStages(long energy, int expected)
     {
-        Assert.Equal(expected, TreeProgress.StageFor(energy, 12000));
+        Assert.Equal(expected, TreeProgress.StageFor(energy));
     }
 
     [Theory]
     [InlineData(0, 0)]
-    [InlineData(36000, 10)]
-    [InlineData(108000, 30)]
-    [InlineData(216000, 60)]
-    [InlineData(360000, 100)]
-    [InlineData(363000, 100)]
+    [InlineData(36000, 25)]
+    [InlineData(72000, 50)]
+    [InlineData(108000, 75)]
+    [InlineData(144000, 100)]
+    [InlineData(147000, 100)]
     public void MaturityBarShowsOnlyOverallPercentage(long energy, double expected)
     {
         var tree = new TreeProgress { TotalEnergy = energy };
@@ -40,7 +40,7 @@ public sealed class TreeProgressTests
     public void MatureOverflowBecomesFruitWithoutReusingGrowthEnergy()
     {
         var tree = new TreeProgress();
-        tree.AddEnergy(359999, Day);
+        tree.AddEnergy(143999, Day);
         tree.AddEnergy(6002, Day);
         Assert.Equal(5, tree.Stage);
         Assert.Equal(2, tree.FruitInventory);
@@ -54,7 +54,7 @@ public sealed class TreeProgressTests
     public void ChangedGoalKeepsMatureStageAndUnpickedFruit()
     {
         var tree = new TreeProgress();
-        tree.AddEnergy(363500, Day);
+        tree.AddEnergy(147500, Day);
         tree.SetGoal(20000);
         Assert.Equal(5, tree.Stage);
         Assert.Equal(1, tree.FruitInventory);
@@ -70,9 +70,9 @@ public sealed class TreeProgressTests
     {
         var tree = new TreeProgress();
         tree.SetGoal(12001);
-        Assert.Equal(36003, 3L * tree.DailyGoal);
+        Assert.Equal(144000L, tree.MaturityThreshold);
         Assert.Equal(3001, tree.FruitCost);
-        tree.AddEnergy(360030, Day);
+        tree.AddEnergy((int)tree.MaturityThreshold, Day);
         tree.AddEnergy(3000, Day);
         Assert.Equal(0, tree.FruitInventory);
         tree.AddEnergy(1, Day);
@@ -129,14 +129,14 @@ public sealed class TreeProgressTests
         {
             var store = new TreeProgressFileStore(path);
             var state = new TreeProgress();
-            state.AddEnergy(360001, Day);
+            state.AddEnergy(144001, Day);
             store.Save(state);
             state.AddEnergy(3000, Day.AddDays(1));
             store.Save(state);
             Assert.Equal(1, new TreeProgressFileStore(path).Load().FruitInventory);
             File.WriteAllText(path, "{broken");
             TreeProgress recovered = new TreeProgressFileStore(path).Load();
-            Assert.Equal(360001, recovered.TotalEnergy);
+            Assert.Equal(144001, recovered.TotalEnergy);
             Assert.Equal(1, recovered.FruitEnergy);
         }
         finally
