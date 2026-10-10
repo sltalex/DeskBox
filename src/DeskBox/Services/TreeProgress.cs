@@ -14,6 +14,7 @@ public sealed class TreeProgress
     public long HarvestedFruit { get; set; }
 
     public long MaturityThreshold => 30L * DailyGoal;
+    public double MaturityPercentage => Math.Clamp(100.0 * TotalEnergy / MaturityThreshold, 0, 100);
     public int FruitCost => (DailyGoal + 3) / 4;
     public int Stage => Math.Max(HighestStage, StageFor(TotalEnergy, DailyGoal));
 

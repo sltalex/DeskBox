@@ -4,6 +4,8 @@
   "Tree.Stage.3": "分枝小树",
   "Tree.Stage.4": "茂盛中树",
   "Tree.Stage.5": "结果大树",
+  "Tree.FruitStats": "待收获 {0:N0} · 已收获 {1:N0}（点击树冠收获）",
+  "Tree.Settings.Enable": "启动种树",
   "Tree.TodayGrowth": "今日按键 {0:N0} · 累计能量 {1:N0}",
   "Tree.NextStage": "下一阶段 {0:N0} 能量",
   "Tree.TodayFruit": "今日按键 {0:N0} · 待收获 {1:N0} · 已收获 {2:N0}",

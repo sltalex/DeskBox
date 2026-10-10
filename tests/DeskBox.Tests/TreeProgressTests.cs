@@ -1,5 +1,6 @@
 using DeskBox.Services;
 using DeskBox.Core.Persistence;
+using System.Runtime.InteropServices;
 
 namespace DeskBox.Tests;
 
@@ -20,6 +21,19 @@ public sealed class TreeProgressTests
     public void EnergyAloneDeterminesTheFiveStages(long energy, int expected)
     {
         Assert.Equal(expected, TreeProgress.StageFor(energy, 12000));
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(36000, 10)]
+    [InlineData(108000, 30)]
+    [InlineData(216000, 60)]
+    [InlineData(360000, 100)]
+    [InlineData(363000, 100)]
+    public void MaturityBarShowsOnlyOverallPercentage(long energy, double expected)
+    {
+        var tree = new TreeProgress { TotalEnergy = energy };
+        Assert.Equal(expected, tree.MaturityPercentage);
     }
 
     [Fact]
@@ -93,6 +107,17 @@ public sealed class TreeProgressTests
         Assert.True(filter.Process(0x41, true, false));
         Assert.False(filter.Process(0x42, true, true));
         Assert.False(filter.Process(0x70, true, false)); // F1
+    }
+
+    [Fact]
+    public void KeyboardHookObserverExceptionDoesNotEscapeCallbackBoundary()
+    {
+        var wrongThread = new COMException("Wrong UI thread", unchecked((int)0x8001010E));
+        Exception? reported = null;
+        TreeCounterService.NotifyChangedSafely(
+            () => throw wrongThread,
+            error => reported = error);
+        Assert.Same(wrongThread, reported);
     }
 
     [Fact]

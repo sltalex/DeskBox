@@ -39,6 +39,18 @@ public sealed class FeatureWidgetKindContractTests
     }
 
     [Fact]
+    public void TreeIsEnabledByDefaultButExplicitDisableIsPreserved()
+    {
+        var settings = new AppSettings();
+        Assert.True(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.Tree));
+        FeatureWidgetSettings.Normalize(settings);
+        Assert.True(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.Tree));
+
+        FeatureWidgetSettings.SetEnabled(settings, WidgetKind.Tree, false);
+        Assert.False(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.Tree));
+    }
+
+    [Fact]
     public void DescriptorTable_DeclaresEachKindOnce()
     {
         WidgetKind[] kinds = WidgetContentFactory.DescriptorList

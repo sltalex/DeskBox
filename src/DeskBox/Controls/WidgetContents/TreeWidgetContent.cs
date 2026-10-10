@@ -17,9 +17,9 @@ public sealed class TreeWidgetContent : UserControl, IDisposable
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly Canvas _drawing = new() { Width = 260, Height = 220, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock _stage = new() { FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center };
-    private readonly TextBlock _stats = new() { FontSize = 12, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Center };
-    private readonly ProgressBar _progress = new() { Height = 8, Margin = new Thickness(16, 8, 16, 4) };
-    private readonly TextBlock _hint = new() { FontSize = 11, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly TextBlock _fruitStats = new() { FontSize = 12, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly ProgressBar _progress = new() { Height = 18 };
+    private readonly TextBlock _percent = new() { FontSize = 11, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     private readonly SolidColorBrush _brown = new(ColorHelper.FromArgb(255, 142, 91, 58));
     private readonly SolidColorBrush _green = new(ColorHelper.FromArgb(255, 100, 172, 94));
     private readonly SolidColorBrush _light = new(ColorHelper.FromArgb(255, 156, 205, 105));
@@ -38,11 +38,13 @@ public sealed class TreeWidgetContent : UserControl, IDisposable
     {
         _localization = localization;
         var stack = new StackPanel { Spacing = 2, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var progressRow = new Grid { Margin = new Thickness(16, 8, 16, 4) };
+        progressRow.Children.Add(_progress);
+        progressRow.Children.Add(_percent);
         stack.Children.Add(_drawing);
         stack.Children.Add(_stage);
-        stack.Children.Add(_stats);
-        stack.Children.Add(_progress);
-        stack.Children.Add(_hint);
+        stack.Children.Add(_fruitStats);
+        stack.Children.Add(progressRow);
         Content = stack;
         _drawing.Tapped += (_, args) =>
         {
@@ -87,20 +89,12 @@ public sealed class TreeWidgetContent : UserControl, IDisposable
             _effectTicks = 3;
         _lastHarvested = p.HarvestedFruit;
         _stage.Text = _localization.T($"Tree.Stage.{p.Stage}");
-        if (p.Stage < 5)
-        {
-            long next = p.Stage switch { 1 => 3L * p.DailyGoal, 2 => 9L * p.DailyGoal, 3 => 18L * p.DailyGoal, _ => 30L * p.DailyGoal };
-            long prior = p.Stage switch { 1 => 0, 2 => 3L * p.DailyGoal, 3 => 9L * p.DailyGoal, _ => 18L * p.DailyGoal };
-            _progress.Value = Math.Clamp((double)(p.TotalEnergy - prior) * 100 / Math.Max(1, next - prior), 0, 100);
-            _stats.Text = _localization.Format("Tree.TodayGrowth", p.TodayKeys, p.TotalEnergy);
-            _hint.Text = _localization.Format("Tree.NextStage", next);
-        }
-        else
-        {
-            _progress.Value = 100.0 * p.FruitEnergy / p.FruitCost;
-            _stats.Text = _localization.Format("Tree.TodayFruit", p.TodayKeys, p.FruitInventory, p.HarvestedFruit);
-            _hint.Text = _localization.Format("Tree.NextFruit", p.FruitEnergy, p.FruitCost);
-        }
+        _fruitStats.Visibility = p.Stage == 5 ? Visibility.Visible : Visibility.Collapsed;
+        if (p.Stage == 5)
+            _fruitStats.Text = _localization.Format("Tree.FruitStats", p.FruitInventory, p.HarvestedFruit);
+        double percentage = p.MaturityPercentage;
+        _progress.Value = percentage;
+        _percent.Text = $"{percentage:0}%";
         if (_lastStage != p.Stage || _lastFruitInventory != p.FruitInventory || _lastDrawnTheme != ActualTheme)
         {
             Draw(p);

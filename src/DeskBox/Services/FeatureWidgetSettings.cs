@@ -143,6 +143,7 @@ public static class FeatureWidgetSettings
             WidgetKind.Weather => false,
             WidgetKind.Search => false,
             WidgetKind.Glance => false,
+            WidgetKind.Tree => true,
             _ => false
         };
     }

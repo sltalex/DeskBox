@@ -87,7 +87,7 @@ public sealed partial class SettingsWindow
                 searchSettings.Configure(_searchSettingsViewModel, _localizationService, _hWnd);
                 break;
             case TreeSettingsSection treeSettings:
-                treeSettings.Configure(_localizationService);
+                treeSettings.Configure(ViewModel, _localizationService);
                 break;
             case FileWidgetSettingsSection fileSettings:
                 fileSettings.FileStack = _fileStackSettingsViewModel;

@@ -127,23 +127,34 @@ public sealed class TreeCounterService : IDisposable
 
     private IntPtr HookCallback(int code, IntPtr message, IntPtr dataPointer)
     {
-        Volatile.Write(ref _callbackTicks, Environment.TickCount64);
         IntPtr hook = _hook;
         if (code < 0) return Win32Helper.CallNextHookEx(hook, code, message, dataPointer);
-        bool down = message == Win32Helper.WM_KEYDOWN || message == Win32Helper.WM_SYSKEYDOWN;
-        bool up = message == Win32Helper.WM_KEYUP || message == Win32Helper.WM_SYSKEYUP;
-        if (down || up)
+        try
         {
-            Win32Helper.KBDLLHOOKSTRUCT data = Marshal.PtrToStructure<Win32Helper.KBDLLHOOKSTRUCT>(dataPointer);
-            bool changed = false;
-            lock (_gate)
+            Volatile.Write(ref _callbackTicks, Environment.TickCount64);
+            bool down = message == Win32Helper.WM_KEYDOWN || message == Win32Helper.WM_SYSKEYDOWN;
+            bool up = message == Win32Helper.WM_KEYUP || message == Win32Helper.WM_SYSKEYUP;
+            if (down || up)
             {
-                if (_enabled && !_progress.Paused && _filter.Process((int)data.vkCode, down, (data.flags & Win32Helper.LLKHF_INJECTED) != 0))
-                { _progress.AddEnergy(1, DateTime.Now); changed = true; }
+                Win32Helper.KBDLLHOOKSTRUCT data = Marshal.PtrToStructure<Win32Helper.KBDLLHOOKSTRUCT>(dataPointer);
+                bool changed = false;
+                lock (_gate)
+                {
+                    if (_enabled && !_progress.Paused && _filter.Process((int)data.vkCode, down, (data.flags & Win32Helper.LLKHF_INJECTED) != 0))
+                    { _progress.AddEnergy(1, DateTime.Now); changed = true; }
+                }
+                if (changed)
+                    NotifyChangedSafely(Changed, ex => App.Log($"[Tree] Keyboard hook observer failed: {ex}"));
             }
-            if (changed) Changed?.Invoke();
         }
+        catch (Exception ex) { App.Log($"[Tree] Keyboard hook callback failed: {ex}"); }
         return Win32Helper.CallNextHookEx(hook, code, message, dataPointer);
+    }
+
+    internal static void NotifyChangedSafely(Action? listener, Action<Exception> reportError)
+    {
+        try { listener?.Invoke(); }
+        catch (Exception ex) { reportError(ex); }
     }
 
     private void CheckHook()
