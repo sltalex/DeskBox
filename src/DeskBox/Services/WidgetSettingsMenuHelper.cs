@@ -28,6 +28,7 @@ internal static class WidgetSettingsMenuHelper
         WidgetKind.Glance => "GlanceSettings",
         WidgetKind.Search => "SearchSettings",
         WidgetKind.Tree => "TreeSettings",
+        WidgetKind.SystemMonitor => "FeatureWidgets",
         _ => null
     };
 
@@ -45,6 +46,7 @@ internal static class WidgetSettingsMenuHelper
         WidgetKind.Glance => "Widget.Settings.Glance",
         WidgetKind.Search => "Widget.Settings.Search",
         WidgetKind.Tree => "Tree.Title",
+        WidgetKind.SystemMonitor => "SystemMonitor.Title",
         _ => "Common.Configure"
     };
 

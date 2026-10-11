@@ -608,7 +608,12 @@ public sealed partial class WidgetManager
                 WidgetKind.Tree,
                 async _ => await CreateSingletonContentFeatureWidgetAsync(WidgetKind.Tree),
                 (enabled, reveal) => SetContentFeatureWidgetEnabledAsync(WidgetKind.Tree, enabled, reveal),
-                () => HideAndCloseFeatureWidgetAsync(WidgetKind.Tree))
+                () => HideAndCloseFeatureWidgetAsync(WidgetKind.Tree)),
+            new(
+                WidgetKind.SystemMonitor,
+                async _ => await CreateSingletonContentFeatureWidgetAsync(WidgetKind.SystemMonitor),
+                (enabled, reveal) => SetContentFeatureWidgetEnabledAsync(WidgetKind.SystemMonitor, enabled, reveal),
+                () => HideAndCloseFeatureWidgetAsync(WidgetKind.SystemMonitor))
         ];
 
         return handlers.ToDictionary(handler => handler.WidgetKind);
@@ -676,6 +681,14 @@ public sealed partial class WidgetManager
                     request.CancellationToken)),
             new(
                 WidgetKind.Tree,
+                async request => await CreateContentWidgetFromConfigAsync(
+                    request.Config,
+                    request.KeepPreparedForAnimation,
+                    request.RevealAfterCreate,
+                    request.ShowRaisedWhileInitializing,
+                    request.CancellationToken)),
+            new(
+                WidgetKind.SystemMonitor,
                 async request => await CreateContentWidgetFromConfigAsync(
                     request.Config,
                     request.KeepPreparedForAnimation,
@@ -2385,6 +2398,7 @@ public sealed partial class WidgetManager
             WidgetKind.Weather => (200, 200),
             WidgetKind.Glance => (360, 260),
             WidgetKind.Tree => (300, 340),
+            WidgetKind.SystemMonitor => (380, 320),
             _ => (
                 _settingsService.Settings.DefaultWidgetWidth,
                 _settingsService.Settings.DefaultWidgetHeight)

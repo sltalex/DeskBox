@@ -323,6 +323,20 @@ finally {
 }
 
 $deskBoxProjectAssetsPath = Join-Path $buildArtifactsDir "obj\DeskBox\project.assets.json"
+$temperatureProbeProject = Join-Path $repoRoot "src\DeskBox.TemperatureProbe\DeskBox.TemperatureProbe.csproj"
+$temperatureProbePublishDir = Join-Path $publishDir "TemperatureProbe"
+$temperatureProbeArguments = @(
+    "publish", $temperatureProbeProject,
+    "--configuration", "Release",
+    "--runtime", $runtimeIdentifier,
+    "--self-contained", "true",
+    "--output", $temperatureProbePublishDir,
+    "-v:minimal"
+)
+& $dotnet @temperatureProbeArguments 2>&1 | Tee-Object -FilePath $logPath -Append
+if ($LASTEXITCODE -ne 0) {
+    throw "Temperature probe self-contained publish failed. See '$logPath'."
+}
 $windowsAppRuntimeInsightsResource = Copy-WindowsAppRuntimeInsightsResource `
     -AssetsPath $deskBoxProjectAssetsPath `
     -NativePlatform ($runtimeIdentifier.Substring(4)) `
@@ -390,7 +404,12 @@ $requiredFiles = @(
     "Microsoft.WindowsAppRuntime.dll",
     "Microsoft.WindowsAppRuntime.Insights.Resource.dll",
     $installManifestName,
-    "ThirdParty/Everything/LICENSE.txt"
+    "ThirdParty/Everything/LICENSE.txt",
+    "ThirdParty/LibreHardwareMonitor/NOTICE.md",
+    "ThirdParty/LibreHardwareMonitor/MPL-2.0.txt",
+    "TemperatureProbe/DeskBox.TemperatureProbe.exe",
+    "TemperatureProbe/LibreHardwareMonitorLib.dll",
+    "TemperatureProbe/licenses/HidSharp-LICENSE.txt"
 )
 foreach ($requiredFile in $requiredFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $publishDir $requiredFile) -PathType Leaf)) {
@@ -423,7 +442,10 @@ $forbiddenNames = @(
     "DeskBox.Updater.deps.json",
     "DeskBox.Updater.runtimeconfig.json"
 )
-$forbiddenFiles = @($publishedFiles | Where-Object { $_.Name -in $forbiddenNames -or $_.Extension -eq ".pdb" })
+$forbiddenFiles = @($publishedFiles | Where-Object {
+    $_.Extension -eq ".pdb" -or
+    ($_.DirectoryName -eq $publishDir -and $_.Name -in $forbiddenNames)
+})
 if ($forbiddenFiles.Count -gt 0) {
     throw "AOT retail output contains forbidden managed/JIT/symbol files: $($forbiddenFiles.Name -join ', ')."
 }
@@ -515,6 +537,7 @@ $summary = [ordered]@{
     deploymentProfile = "full"
     smokeHarnessEnabled = $false
     selfContained = $true
+    temperatureProbeRuntime = "self-contained .NET JIT; main DeskBox executable is Native AOT"
     windowsAppSdkSelfContained = $true
     windowsAppRuntimeInsightsResource = $windowsAppRuntimeInsightsResource
     gitCommit = $sourceSnapshotBefore.GitCommit

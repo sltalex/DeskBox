@@ -45,9 +45,21 @@ public sealed class ContentWidgetWindowFactoryTests : IDisposable
         Assert.True(WidgetRegistry.Default.CanCreateWindow(WidgetKind.Music));
     }
 
+    [Fact]
+    public void CreateContentWindowPlan_ReturnsMonitorAdapterForCreatableMonitorKind()
+    {
+        var config = CreateConfig("monitor-window", WidgetKind.SystemMonitor);
+        var factory = CreateFactory();
+
+        var plan = factory.CreateContentWindowPlan(config);
+
+        Assert.IsType<SystemMonitorWidgetContentAdapter>(plan.Content);
+        Assert.True(factory.CanCreateContentWindow(WidgetKind.SystemMonitor));
+        Assert.True(WidgetRegistry.Default.CanCreateWindow(WidgetKind.SystemMonitor));
+    }
+
     [Theory]
     [InlineData(WidgetKind.Tags)]
-    [InlineData(WidgetKind.SystemMonitor)]
     public void CreateContentWindowPlan_ReturnsPlaceholderForFutureKinds(WidgetKind widgetKind)
     {
         var config = CreateConfig("future-window", widgetKind);

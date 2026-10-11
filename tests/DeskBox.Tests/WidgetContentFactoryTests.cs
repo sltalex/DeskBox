@@ -12,7 +12,7 @@ public sealed class WidgetContentFactoryTests
     [InlineData(WidgetKind.Todo, "Todo", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]
     [InlineData(WidgetKind.Tags, "Tags", WidgetContentStage.Placeholder, false, WidgetContentAvailability.Planned)]
     [InlineData(WidgetKind.Music, "Music", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]
-    [InlineData(WidgetKind.SystemMonitor, "System Monitor", WidgetContentStage.Placeholder, false, WidgetContentAvailability.Planned)]
+    [InlineData(WidgetKind.SystemMonitor, "System Monitor", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]
     [InlineData(WidgetKind.Search, "Search", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]
     [InlineData(WidgetKind.Glance, "Glance", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]
     [InlineData(WidgetKind.Tree, "Tree", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]
@@ -124,6 +124,7 @@ public sealed class WidgetContentFactoryTests
             WidgetKind.Todo,
             WidgetKind.Music,
             WidgetKind.Weather,
+            WidgetKind.SystemMonitor,
             WidgetKind.Search,
             WidgetKind.Glance,
             WidgetKind.Tree
@@ -142,7 +143,7 @@ public sealed class WidgetContentFactoryTests
     [InlineData(WidgetKind.Todo, true, false, false, true, false)]
     [InlineData(WidgetKind.Tags, false, true, false, false, true)]
     [InlineData(WidgetKind.Music, true, false, false, true, false)]
-    [InlineData(WidgetKind.SystemMonitor, false, true, false, false, true)]
+    [InlineData(WidgetKind.SystemMonitor, true, false, false, true, false)]
     [InlineData(WidgetKind.Search, true, false, false, true, false)]
     [InlineData(WidgetKind.Glance, true, false, false, true, false)]
     [InlineData(WidgetKind.Tree, true, false, false, true, false)]
@@ -188,7 +189,6 @@ public sealed class WidgetContentFactoryTests
 
     [Theory]
     [InlineData(WidgetKind.Tags)]
-    [InlineData(WidgetKind.SystemMonitor)]
     public void CanCreatePlaceholderContent_ForFutureWidgetKinds(WidgetKind widgetKind)
     {
         var factory = TestServices.CreateWidgetContentFactory();
@@ -354,7 +354,6 @@ public sealed class WidgetContentFactoryTests
 
     [Theory]
     [InlineData(WidgetKind.Tags)]
-    [InlineData(WidgetKind.SystemMonitor)]
     public void CreateDetachedContent_ReturnsPlaceholderForFutureKinds(WidgetKind widgetKind)
     {
         var factory = TestServices.CreateWidgetContentFactory();

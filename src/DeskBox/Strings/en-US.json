@@ -367,8 +367,8 @@
   "WidgetContent.Tags.StatusDescription": "File tagging",
   "WidgetContent.Music.StatusLabel": "Implemented",
   "WidgetContent.Music.StatusDescription": "System media control, progress, and playback motion",
-  "WidgetContent.SystemMonitor.StatusLabel": "Coming soon",
-  "WidgetContent.SystemMonitor.StatusDescription": "CPU, memory, network monitoring",
+  "WidgetContent.SystemMonitor.StatusLabel": "Available",
+  "WidgetContent.SystemMonitor.StatusDescription": "Live CPU, memory, disk, network and temperature metrics",
   "Common.Desktop": "Desktop",
   "Common.CurrentLocation": "Current location",
   "Common.Items": "items",
@@ -2779,5 +2779,16 @@
   "Onboarding.Step3.Hint": "If the shortcut conflicts with another app, you can record a new one later in Settings.",
   "Tree.Title": "Grow a tree",
   "WidgetContent.Tree.StatusLabel": "Implemented",
-  "WidgetContent.Tree.StatusDescription": "Grow a tree from keypress energy without reading text"
+  "WidgetContent.Tree.StatusDescription": "Grow a tree from keypress energy without reading text",
+  "SystemMonitor.Cpu": "CPU",
+  "SystemMonitor.Memory": "Memory",
+  "SystemMonitor.CpuTemperature": "CPU temp",
+  "SystemMonitor.GpuTemperature": "GPU temp",
+  "SystemMonitor.DiskTemperature": "Disk temp",
+  "SystemMonitor.Disks": "Fixed disks · capacity / I/O",
+  "SystemMonitor.LastMinute": "Last 60 seconds",
+  "SystemMonitor.Network": "Network",
+  "SystemMonitor.Download": "Down",
+  "SystemMonitor.Upload": "Up",
+  "SystemMonitor.Unavailable": "Unavailable"
 }

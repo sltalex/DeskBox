@@ -22,6 +22,7 @@ public sealed class FeatureWidgetKindContractTests
                 WidgetKind.Todo,
                 WidgetKind.Music,
                 WidgetKind.Weather,
+                WidgetKind.SystemMonitor,
                 WidgetKind.Search,
                 WidgetKind.Glance,
                 WidgetKind.Tree
@@ -34,7 +35,7 @@ public sealed class FeatureWidgetKindContractTests
     {
         Assert.False(FeatureWidgetSettings.IsFeatureWidget(WidgetKind.File));
         Assert.False(FeatureWidgetSettings.IsFeatureWidget(WidgetKind.Tags));
-        Assert.False(FeatureWidgetSettings.IsFeatureWidget(WidgetKind.SystemMonitor));
+        Assert.True(FeatureWidgetSettings.IsFeatureWidget(WidgetKind.SystemMonitor));
         Assert.False(FeatureWidgetSettings.IsFeatureWidget(WidgetKind.Productivity));
     }
 
@@ -48,6 +49,15 @@ public sealed class FeatureWidgetKindContractTests
 
         FeatureWidgetSettings.SetEnabled(settings, WidgetKind.Tree, false);
         Assert.False(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.Tree));
+    }
+
+    [Fact]
+    public void SystemMonitorIsDisabledByDefault()
+    {
+        var settings = new AppSettings();
+        Assert.False(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.SystemMonitor));
+        FeatureWidgetSettings.Normalize(settings);
+        Assert.False(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.SystemMonitor));
     }
 
     [Fact]

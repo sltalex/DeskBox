@@ -424,6 +424,7 @@ public sealed partial class WidgetManager
                 WidgetKind.Search => 280,
                 WidgetKind.Glance => 360,
                 WidgetKind.Tree => 300,
+                WidgetKind.SystemMonitor => 380,
                 _ => Math.Max(_settingsService.Settings.DefaultWidgetWidth, 320)
             },
             Height = kind switch
@@ -433,6 +434,7 @@ public sealed partial class WidgetManager
                 WidgetKind.Search => 90,
                 WidgetKind.Glance => 260,
                 WidgetKind.Tree => 340,
+                WidgetKind.SystemMonitor => 320,
                 _ => Math.Max(_settingsService.Settings.DefaultWidgetHeight, 360)
             }
         };

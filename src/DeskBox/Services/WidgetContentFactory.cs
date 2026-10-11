@@ -101,11 +101,14 @@ public sealed class WidgetContentFactory
             WidgetKind.SystemMonitor,
             "System Monitor",
             "\uE9D9",
-            WidgetContentStage.Placeholder,
+            WidgetContentStage.Implemented,
             CanShowInCreateEntry: false,
-            WidgetContentAvailability.Planned,
+            WidgetContentAvailability.Available,
             "WidgetContent.SystemMonitor.StatusLabel",
             "WidgetContent.SystemMonitor.StatusDescription",
+            HasSettingsPage: true,
+            IsFeatureWidget: true,
+            SettingsSectionTag: "FeatureWidgets",
             ChromeCategory: WidgetChromeCategory.Display,
             DefaultChromeMode: WidgetChromeMode.Overlay),
         new(
@@ -291,7 +294,7 @@ public sealed class WidgetContentFactory
             new SearchWidgetContentProvider(),
             new TreeWidgetContentProvider(),
             new PlaceholderWidgetContentProvider(WidgetKind.Tags),
-            new PlaceholderWidgetContentProvider(WidgetKind.SystemMonitor)
+            new SystemMonitorWidgetContentProvider()
         ];
 
         return providers.ToDictionary(provider => provider.WidgetKind);

@@ -303,6 +303,68 @@
     <Copy SourceFiles="@(DeskBoxUpdaterOutput)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
   </Target>
 
+  <PropertyGroup>
+    <DeskBoxTemperatureProbeRid Condition="'$(EverythingSdkArchitecture)' == 'ARM64'">win-arm64</DeskBoxTemperatureProbeRid>
+    <DeskBoxTemperatureProbeRid Condition="'$(DeskBoxTemperatureProbeRid)' == ''">win-x64</DeskBoxTemperatureProbeRid>
+  </PropertyGroup>
+
+  <Target Name="BuildDeskBoxTemperatureProbe" AfterTargets="Build"
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(Configuration)' == 'Debug' and '$(PublishAot)' != 'true'">
+    <MSBuild Projects="..\DeskBox.TemperatureProbe\DeskBox.TemperatureProbe.csproj"
+             Targets="Restore;Build"
+             Properties="Configuration=Debug;Platform=AnyCPU;RuntimeIdentifier=$(DeskBoxTemperatureProbeRid);SelfContained=false" />
+    <ItemGroup>
+      <DeskBoxTemperatureProbeFile Include="..\DeskBox.TemperatureProbe\bin\Debug\net10.0-windows\$(DeskBoxTemperatureProbeRid)\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DeskBoxTemperatureProbeFile)"
+          DestinationFiles="@(DeskBoxTemperatureProbeFile->'$(TargetDir)TemperatureProbe\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Release probe is self-contained so it also works beside Native AOT and
+       inside Store packages without relying on an installed .NET runtime. -->
+  <Target Name="PublishDeskBoxTemperatureProbeForStore"
+          BeforeTargets="_ComputeAppxPackagePayload"
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(DeskBoxDistribution)' == 'Store'">
+    <PropertyGroup>
+      <DeskBoxTemperatureProbePublishDir>$(IntermediateOutputPath)temperature-probe\$(DeskBoxTemperatureProbeRid)\</DeskBoxTemperatureProbePublishDir>
+    </PropertyGroup>
+    <MSBuild Projects="..\DeskBox.TemperatureProbe\DeskBox.TemperatureProbe.csproj"
+             Targets="Restore;Publish"
+             Properties="Configuration=Release;Platform=AnyCPU;RuntimeIdentifier=$(DeskBoxTemperatureProbeRid);SelfContained=true;PublishDir=$(MSBuildProjectDirectory)\$(DeskBoxTemperatureProbePublishDir)" />
+    <ItemGroup>
+      <DeskBoxTemperatureProbePublishedFile Include="$(DeskBoxTemperatureProbePublishDir)**\*" />
+      <AppxPackagePayload Include="@(DeskBoxTemperatureProbePublishedFile)" Condition="'$(DeskBoxDistribution)' == 'Store'">
+        <TargetPath>TemperatureProbe\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+      </AppxPackagePayload>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="PublishDeskBoxTemperatureProbeForDirect"
+          AfterTargets="Publish"
+          Condition="'$(DesignTimeBuild)' != 'true' and '$(DeskBoxDistribution)' != 'Store' and '$(PublishAot)' != 'true'">
+    <MSBuild Projects="..\DeskBox.TemperatureProbe\DeskBox.TemperatureProbe.csproj"
+             Targets="Restore;Publish"
+             Properties="Configuration=Release;Platform=AnyCPU;RuntimeIdentifier=$(DeskBoxTemperatureProbeRid);SelfContained=true;PublishDir=$(IntermediateOutputPath)temperature-probe\$(DeskBoxTemperatureProbeRid)\" />
+    <ItemGroup>
+      <DeskBoxTemperatureProbePublishedFile Include="$(IntermediateOutputPath)temperature-probe\$(DeskBoxTemperatureProbeRid)\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(DeskBoxTemperatureProbePublishedFile)"
+          DestinationFiles="@(DeskBoxTemperatureProbePublishedFile->'$(PublishDir)TemperatureProbe\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+  <ItemGroup>
+    <None Include="..\..\ThirdParty\LibreHardwareMonitor\NOTICE.md"
+          Link="ThirdParty\LibreHardwareMonitor\NOTICE.md"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\ThirdParty\LibreHardwareMonitor\MPL-2.0.txt"
+          Link="ThirdParty\LibreHardwareMonitor\MPL-2.0.txt"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <Target Name="PublishDeskBoxUpdater" AfterTargets="Publish" Condition="'$(DesignTimeBuild)' != 'true' and '$(DeskBoxDistribution)' != 'Store'">
     <MSBuild
       Projects="..\DeskBox.Updater\DeskBox.Updater.csproj"

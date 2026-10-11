@@ -14,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{9B4FA3FD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeskBox.Tests", "tests\DeskBox.Tests\DeskBox.Tests.csproj", "{C55DB014-39AB-442B-BF03-CE3E1BFE1ADE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeskBox.TemperatureProbe", "src\DeskBox.TemperatureProbe\DeskBox.TemperatureProbe.csproj", "{1D307F2B-6E44-4D82-9B99-717B302AFFC1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -46,6 +48,14 @@ Global
 		{C55DB014-39AB-442B-BF03-CE3E1BFE1ADE}.Release|x64.Build.0 = Release|Any CPU
 		{C55DB014-39AB-442B-BF03-CE3E1BFE1ADE}.Release|ARM64.ActiveCfg = Release|Any CPU
 		{C55DB014-39AB-442B-BF03-CE3E1BFE1ADE}.Release|ARM64.Build.0 = Release|Any CPU
+		{1D307F2B-6E44-4D82-9B99-717B302AFFC1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1D307F2B-6E44-4D82-9B99-717B302AFFC1}.Debug|x64.Build.0 = Debug|Any CPU
+		{1D307F2B-6E44-4D82-9B99-717B302AFFC1}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{1D307F2B-6E44-4D82-9B99-717B302AFFC1}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{1D307F2B-6E44-4D82-9B99-717B302AFFC1}.Release|x64.ActiveCfg = Release|Any CPU
+		{1D307F2B-6E44-4D82-9B99-717B302AFFC1}.Release|x64.Build.0 = Release|Any CPU
+		{1D307F2B-6E44-4D82-9B99-717B302AFFC1}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{1D307F2B-6E44-4D82-9B99-717B302AFFC1}.Release|ARM64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{C55DB014-39AB-442B-BF03-CE3E1BFE1ADE} = {9B4FA3FD-08FD-4A97-8340-0416A90A4C3C}

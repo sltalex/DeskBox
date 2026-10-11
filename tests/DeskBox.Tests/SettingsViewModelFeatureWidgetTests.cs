@@ -23,6 +23,7 @@ public sealed class FeatureWidgetEntryFactoryTests
             WidgetKind.Todo,
             WidgetKind.Music,
             WidgetKind.Weather,
+            WidgetKind.SystemMonitor,
             WidgetKind.Search,
             WidgetKind.Glance,
             WidgetKind.Tree
@@ -34,6 +35,6 @@ public sealed class FeatureWidgetEntryFactoryTests
             Assert.True(entry.IsAvailable);
         });
         Assert.DoesNotContain(entries, entry =>
-            entry.Kind is WidgetKind.Tags or WidgetKind.SystemMonitor);
+            entry.Kind is WidgetKind.Tags);
     }
 }

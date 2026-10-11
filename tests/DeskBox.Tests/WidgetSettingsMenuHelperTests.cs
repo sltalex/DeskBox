@@ -16,6 +16,7 @@ public sealed class WidgetSettingsMenuHelperTests
     [InlineData(WidgetKind.Glance, "GlanceSettings")]
     [InlineData(WidgetKind.Tree, "TreeSettings")]
     [InlineData(WidgetKind.Search, "SearchSettings")]
+    [InlineData(WidgetKind.SystemMonitor, "FeatureWidgets")]
     public void GetSettingsSectionTag_Returns_Expected_Tag(WidgetKind kind, string expectedTag)
     {
         Assert.Equal(expectedTag, WidgetSettingsMenuHelper.GetSettingsSectionTag(kind));
@@ -23,7 +24,6 @@ public sealed class WidgetSettingsMenuHelperTests
 
     [Theory]
     [InlineData(WidgetKind.Tags)]
-    [InlineData(WidgetKind.SystemMonitor)]
     [InlineData(WidgetKind.Productivity)]
     public void GetSettingsSectionTag_Returns_Null_For_Unmapped_Kinds(WidgetKind kind)
     {
@@ -40,12 +40,12 @@ public sealed class WidgetSettingsMenuHelperTests
         Assert.Equal("Widget.Settings.Weather", WidgetSettingsMenuHelper.GetLocalizationKey(WidgetKind.Weather));
         Assert.Equal("Widget.Settings.Glance", WidgetSettingsMenuHelper.GetLocalizationKey(WidgetKind.Glance));
         Assert.Equal("Widget.Settings.Search", WidgetSettingsMenuHelper.GetLocalizationKey(WidgetKind.Search));
+        Assert.Equal("SystemMonitor.Title", WidgetSettingsMenuHelper.GetLocalizationKey(WidgetKind.SystemMonitor));
     }
 
     [Fact]
     public void GetLocalizationKey_Falls_Back_To_Configure_For_Unknown_Kinds()
     {
         Assert.Equal("Common.Configure", WidgetSettingsMenuHelper.GetLocalizationKey(WidgetKind.Tags));
-        Assert.Equal("Common.Configure", WidgetSettingsMenuHelper.GetLocalizationKey(WidgetKind.SystemMonitor));
     }
 }
