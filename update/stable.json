@@ -6,8 +6,8 @@
   "mandatory": false,
   "downloadUrl": "https://github.com/sltalex/DeskBox/releases/download/v2026101001/DeskBox_Setup_2026101001_x64.exe",
   "manualDownloadUrl": "https://github.com/sltalex/DeskBox/releases",
-  "sha256": "15D30C3575CF8E253FE162D84FED096EB2F399D1AE17C8E188397562BF0C640D",
-  "size": 44575187,
+  "sha256": "BC187D151D6D778ABEFB7DD1149E36BC3594734BFE4A3584561EC8EA27F0EDDE",
+  "size": 71751572,
   "releaseNotesUrl": "https://github.com/sltalex/DeskBox/releases/tag/v2026101001",
   "summary": {
     "zh-CN": "DeskBox 2026101001 首次发布 x64 Full Native AOT 直发版，新增五阶段立体树形种树格子；本次暂无 ARM64 安装包。",
