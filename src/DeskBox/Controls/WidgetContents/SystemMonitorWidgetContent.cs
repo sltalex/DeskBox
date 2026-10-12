@@ -20,7 +20,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     private readonly TextBlock _diskTemperature = Value(13);
     private readonly TextBlock _download = Value(12);
     private readonly TextBlock _upload = Value(12);
-    private readonly StackPanel _disks = new() { Orientation = Orientation.Horizontal, Spacing = 5 };
+    private readonly StackPanel _disks = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
     private readonly Canvas _cpuChart = Chart();
     private readonly Canvas _memoryChart = Chart();
     private readonly Canvas _networkChart = Chart();
@@ -231,9 +231,9 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
             content.Children.Add(rates);
             var card = new Border
             {
-                Width = 145,
+                Width = 132,
                 Height = 54,
-                Padding = new Thickness(5, 3, 5, 3),
+                Padding = new Thickness(4, 3, 4, 3),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(6),
                 Child = content
