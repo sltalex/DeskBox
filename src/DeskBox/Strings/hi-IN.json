@@ -23,6 +23,8 @@
   "Tree.Settings.ResetConfirm": "Reset",
   "Tree.Settings.Cancel": "Cancel",
   "Tree.Settings.Status": "Stage {0} · {1:N0} energy · {2:N0} today · {3:N0} ready · {4:N0} picked",
+  "Tree.Settings.Progress": "Current energy: {0:N0} · Next upgrade: {1:0}% ({2:N0} remaining)",
+  "Tree.Settings.ProgressComplete": "Current energy: {0:N0} · Highest stage reached",
   "Tree.Title": "पेड़ उगाएँ",
   "WidgetContent.Tree.StatusLabel": "उपलब्ध",
   "WidgetContent.Tree.StatusDescription": "टाइप किए गए पाठ को पढ़े बिना कीस्ट्रोक से पेड़ उगाएँ",

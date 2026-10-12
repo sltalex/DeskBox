@@ -18,6 +18,11 @@ public sealed class TreeProgress
     public double MaturityPercentage => Math.Clamp(100.0 * TotalEnergy / MaturityThreshold, 0, 100);
     public int FruitCost => (DailyGoal + 3) / 4;
     public int Stage => Math.Max(HighestStage, StageFor(TotalEnergy));
+    public long NextStageThreshold => Stage >= 5 ? MaturityThreshold : (long)Stage * StageEnergyInterval;
+    public long NextStageRemainingEnergy => Math.Max(0, NextStageThreshold - TotalEnergy);
+    public double NextStagePercentage => Stage >= 5
+        ? 100
+        : Math.Clamp(100.0 * (TotalEnergy - (long)(Stage - 1) * StageEnergyInterval) / StageEnergyInterval, 0, 100);
 
     public void RollDay(DateTime localNow)
     {

@@ -36,6 +36,22 @@ public sealed class TreeProgressTests
         Assert.Equal(expected, tree.MaturityPercentage);
     }
 
+    [Theory]
+    [InlineData(0, 0, 36000, 36000)]
+    [InlineData(18000, 50, 36000, 18000)]
+    [InlineData(36000, 0, 72000, 36000)]
+    [InlineData(54000, 50, 72000, 18000)]
+    [InlineData(143999, 99.99722222222222, 144000, 1)]
+    [InlineData(144000, 100, 144000, 0)]
+    public void NextStageProgressReportsCurrentStageWindow(
+        long energy, double expectedPercentage, long expectedThreshold, long expectedRemaining)
+    {
+        var tree = new TreeProgress { TotalEnergy = energy };
+        Assert.Equal(expectedPercentage, tree.NextStagePercentage);
+        Assert.Equal(expectedThreshold, tree.NextStageThreshold);
+        Assert.Equal(expectedRemaining, tree.NextStageRemainingEnergy);
+    }
+
     [Fact]
     public void MatureOverflowBecomesFruitWithoutReusingGrowthEnergy()
     {

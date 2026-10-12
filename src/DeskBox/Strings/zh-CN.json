@@ -23,6 +23,8 @@
   "Tree.Settings.ResetConfirm": "重置",
   "Tree.Settings.Cancel": "取消",
   "Tree.Settings.Status": "第 {0} 阶段 · 累计 {1:N0} 能量 · 今日 {2:N0} 次 · 待收获 {3:N0} · 已收获 {4:N0}",
+  "Tree.Settings.Progress": "当前能量：{0:N0} · 下次升级进度：{1:0}%（还需 {2:N0}）",
+  "Tree.Settings.ProgressComplete": "当前能量：{0:N0} · 已达到最高阶段",
   "Settings.AutoStart.Mode.Title": "启动方式",
   "Settings.AutoStart.Mode.Description": "标准方式可在 Windows“启动应用”中管理；计划任务尝试更早启动。",
   "Settings.AutoStart.Mode.Standard": "标准（推荐）",

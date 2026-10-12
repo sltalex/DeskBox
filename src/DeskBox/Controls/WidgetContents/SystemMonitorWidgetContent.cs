@@ -11,6 +11,7 @@ namespace DeskBox.Controls.WidgetContents;
 /// <summary>Compact, live-only monitor. No per-second samples are persisted.</summary>
 public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposable
 {
+    private const double ChartWidth = 214;
     private readonly LocalizationService _localization;
     private readonly TextBlock _cpu = Value();
     private readonly TextBlock _memory = Value();
@@ -43,6 +44,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         primary.ColumnDefinitions.Add(new ColumnDefinition());
         primary.Children.Add(PrimaryMetric("SystemMonitor.Cpu", "\uE950", _cpu));
         var memoryMetric = PrimaryMetric("SystemMonitor.Memory", "\uE7F4", _memory);
+        memoryMetric.Margin = new Thickness(0, 0, 8, 0);
         Grid.SetColumn(memoryMetric, 1);
         primary.Children.Add(memoryMetric);
         root.Children.Add(primary);
@@ -117,7 +119,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
 
     private Grid ChartRow(string key, string glyph, Canvas canvas)
     {
-        var grid = new Grid { ColumnSpacing = 8 };
+        var grid = new Grid { ColumnSpacing = 8, Margin = new Thickness(0, 0, 8, 0) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(62) });
         grid.ColumnDefinitions.Add(new ColumnDefinition());
         var label = IconLabel(_localization.T(key), glyph);
@@ -268,7 +270,8 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         double?[]? second = secondary?.ToArray();
         int count = Math.Max(first.Length, second?.Length ?? 0);
         if (count == 0) return;
-        const double width = 230, height = 20;
+        const double height = 20;
+        double width = ChartWidth;
         double slot = width / count;
         bool paired = second is not null;
         double barWidth = Math.Max(1, paired ? (slot - 2) / 2 : slot - 1);
@@ -303,7 +306,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     private string Percent(double? value) => value.HasValue ? $"{value.Value:0}%" : _localization.T("SystemMonitor.Unavailable");
     private string Temperature(double? value) => value.HasValue ? $"{value.Value:0.#} °C" : _localization.T("SystemMonitor.Unavailable");
     private static string FormatSize(long bytes) => $"{bytes / 1073741824d:0.#} GB";
-    private static Canvas Chart() => new() { Height = 21, MinWidth = 230, IsHitTestVisible = false };
+    private static Canvas Chart() => new() { Height = 21, Width = ChartWidth, MinWidth = ChartWidth, IsHitTestVisible = false };
     private static SolidColorBrush Color(byte red, byte green, byte blue) => new(Windows.UI.Color.FromArgb(255, red, green, blue));
     private static TextBlock Label(string text = "") => new() { Text = text, FontSize = 11, Opacity = 0.68, TextTrimming = TextTrimming.CharacterEllipsis };
     private StackPanel IconLabel(string text, string glyph)

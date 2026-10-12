@@ -14,6 +14,7 @@ public sealed partial class TreeSettingsSection : UserControl
     private readonly ToggleSwitch _enable = new() { OnContent = "", OffContent = "" };
     private readonly ToggleSwitch _pause = new();
     private readonly TextBlock _title = new() { FontSize = 24, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+    private readonly TextBlock _status = new() { FontSize = 13, Opacity = 0.75, TextWrapping = TextWrapping.Wrap };
     private SettingsViewModel? _viewModel;
     private LocalizationService? _localization;
     private bool _updating;
@@ -23,6 +24,7 @@ public sealed partial class TreeSettingsSection : UserControl
     {
         var panel = new StackPanel { Spacing = 14, Margin = new Thickness(24) };
         panel.Children.Add(_title);
+        panel.Children.Add(_status);
         panel.Children.Add(_enable);
         panel.Children.Add(_pause);
         Content = panel;
@@ -40,10 +42,15 @@ public sealed partial class TreeSettingsSection : UserControl
         Loaded += (_, _) =>
         {
             _counter.Changed += OnChanged;
+            if (_localization is not null) _localization.LanguageChanged += OnLanguageChanged;
             RenderLabels();
             Refresh();
         };
-        Unloaded += (_, _) => _counter.Changed -= OnChanged;
+        Unloaded += (_, _) =>
+        {
+            _counter.Changed -= OnChanged;
+            if (_localization is not null) _localization.LanguageChanged -= OnLanguageChanged;
+        };
     }
 
     public void Configure(SettingsViewModel viewModel, LocalizationService localization)
@@ -77,6 +84,12 @@ public sealed partial class TreeSettingsSection : UserControl
             Interlocked.Exchange(ref _refreshQueued, 0);
     }
 
+    private void OnLanguageChanged()
+    {
+        RenderLabels();
+        Refresh();
+    }
+
     private void Refresh()
     {
         if (_viewModel is null) return;
@@ -84,7 +97,15 @@ public sealed partial class TreeSettingsSection : UserControl
         try
         {
             _enable.IsOn = _viewModel.IsWidgetEnabled(WidgetKind.Tree);
-            _pause.IsOn = _counter.Snapshot.Paused;
+            TreeProgress snapshot = _counter.Snapshot;
+            _pause.IsOn = snapshot.Paused;
+            _status.Text = snapshot.Stage >= 5
+                ? _localization?.Format("Tree.Settings.ProgressComplete", snapshot.TotalEnergy) ?? string.Empty
+                : _localization?.Format(
+                    "Tree.Settings.Progress",
+                    snapshot.TotalEnergy,
+                    snapshot.NextStagePercentage,
+                    snapshot.NextStageRemainingEnergy) ?? string.Empty;
         }
         finally { _updating = false; }
     }

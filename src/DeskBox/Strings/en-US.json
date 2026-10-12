@@ -23,6 +23,8 @@
   "Tree.Settings.ResetConfirm": "Reset",
   "Tree.Settings.Cancel": "Cancel",
   "Tree.Settings.Status": "Stage {0} · {1:N0} energy · {2:N0} today · {3:N0} ready · {4:N0} picked",
+  "Tree.Settings.Progress": "Current energy: {0:N0} · Next upgrade: {1:0}% ({2:N0} remaining)",
+  "Tree.Settings.ProgressComplete": "Current energy: {0:N0} · Highest stage reached",
   "Settings.AutoStart.Mode.Title": "Startup method",
   "Settings.AutoStart.Mode.Description": "Standard is managed in Windows Startup apps; a scheduled task can attempt an earlier start.",
   "Settings.AutoStart.Mode.Standard": "Standard (recommended)",
