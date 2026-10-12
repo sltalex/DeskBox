@@ -67,6 +67,9 @@ public sealed record WeatherPresentationSettings(
 
 public interface IFeatureWidgetsSettings
 {
+    SystemMonitorPresentationSettings ReadSystemMonitorPresentation();
+    bool SetSystemMonitorChartStyle(string? style);
+    bool SetSystemMonitorChartColor(string metric, string? color);
     /// <summary>Reads the current music presentation snapshot (raw stored values).</summary>
     MusicPresentationSettings ReadMusicPresentation();
 
@@ -159,3 +162,9 @@ public interface IFeatureWidgetsSettings
     /// </summary>
     string ReadAttachmentStorageMode();
 }
+
+public sealed record SystemMonitorPresentationSettings(
+    string ChartStyle,
+    string CpuColor,
+    string MemoryColor,
+    string NetworkColor);

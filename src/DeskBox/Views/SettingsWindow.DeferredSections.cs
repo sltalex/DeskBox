@@ -198,6 +198,11 @@ public sealed partial class SettingsWindow
             RefreshDragOutWin10State();
         }
 
+        if (sectionTag == "SystemMonitorSettings")
+        {
+            section.DataContext = _featureWidgetsSettingsViewModel;
+        }
+
         // The appearance family (main section plus the material, density,
         // window and animation subsections) binds through the appearance
         // editor; {Binding} markup resolves through its generated custom

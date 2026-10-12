@@ -31,6 +31,10 @@ public sealed partial class FeatureWidgetsSettingsViewModel : ObservableObject
     private string[]? _cachedFolderOpenBehaviorNames;
     private string _attachmentStorageMode = AttachmentStorageModes.Link;
     private string[]? _cachedAttachmentStorageModeNames;
+    private string _systemMonitorChartStyle = "Bars";
+    private string _systemMonitorCpuChartColor = "#2C8EE4";
+    private string _systemMonitorMemoryChartColor = "#46AE85";
+    private string _systemMonitorNetworkChartColor = "#E6A23C";
 
     public FeatureWidgetsSettingsViewModel(
         IFeatureWidgetsSettings settings,
@@ -40,6 +44,14 @@ public sealed partial class FeatureWidgetsSettingsViewModel : ObservableObject
         _localize = localize;
         SyncPresentation();
     }
+
+    public string SystemMonitorChartStyle { get => _systemMonitorChartStyle; set { if (SetProperty(ref _systemMonitorChartStyle, value) && !_isSyncingPresentation) _settings.SetSystemMonitorChartStyle(value); } }
+    public string SystemMonitorCpuChartColor { get => _systemMonitorCpuChartColor; set { if (SetProperty(ref _systemMonitorCpuChartColor, value) && !_isSyncingPresentation) _settings.SetSystemMonitorChartColor("Cpu", value); } }
+    public string SystemMonitorMemoryChartColor { get => _systemMonitorMemoryChartColor; set { if (SetProperty(ref _systemMonitorMemoryChartColor, value) && !_isSyncingPresentation) _settings.SetSystemMonitorChartColor("Memory", value); } }
+    public string SystemMonitorNetworkChartColor { get => _systemMonitorNetworkChartColor; set { if (SetProperty(ref _systemMonitorNetworkChartColor, value) && !_isSyncingPresentation) _settings.SetSystemMonitorChartColor("Network", value); } }
+
+    public object[] AvailableSystemMonitorChartStyles =>
+        [new SettingsOption("Bars", _localize("Settings.SystemMonitor.ChartStyle.Bars")), new SettingsOption("Line", _localize("Settings.SystemMonitor.ChartStyle.Line"))];
 
     public string FolderOpenBehavior
     {
@@ -160,6 +172,11 @@ public sealed partial class FeatureWidgetsSettingsViewModel : ObservableObject
         {
             FolderOpenBehavior = _settings.ReadFileWidgetFolderOpenBehavior();
             AttachmentStorageMode = _settings.ReadAttachmentStorageMode();
+            SystemMonitorPresentationSettings monitor = _settings.ReadSystemMonitorPresentation();
+            SystemMonitorChartStyle = monitor.ChartStyle;
+            SystemMonitorCpuChartColor = monitor.CpuColor;
+            SystemMonitorMemoryChartColor = monitor.MemoryColor;
+            SystemMonitorNetworkChartColor = monitor.NetworkColor;
         }
         finally
         {
@@ -179,6 +196,7 @@ public sealed partial class FeatureWidgetsSettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(AvailableFolderOpenBehaviorOptionItems));
         OnPropertyChanged(nameof(FolderOpenBehavior));
         OnPropertyChanged(nameof(AvailableAttachmentStorageModeOptions));
+        OnPropertyChanged(nameof(AvailableSystemMonitorChartStyles));
     }
 
     public void SetFeatureWidgetEnabled(WidgetKind kind, bool enabled) =>

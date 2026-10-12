@@ -108,7 +108,7 @@ public sealed class WidgetContentFactory
             "WidgetContent.SystemMonitor.StatusDescription",
             HasSettingsPage: true,
             IsFeatureWidget: true,
-            SettingsSectionTag: "FeatureWidgets",
+            SettingsSectionTag: "SystemMonitorSettings",
             ChromeCategory: WidgetChromeCategory.Display,
             DefaultChromeMode: WidgetChromeMode.Overlay),
         new(

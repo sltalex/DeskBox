@@ -9,7 +9,12 @@ namespace DeskBox.Features.FeatureWidgets;
 // mirroring the GlanceWidgetViewModel bridge pattern.
 [WinRT.GeneratedBindableCustomProperty([
     nameof(AttachmentStorageMode),
-    nameof(AvailableAttachmentStorageModeOptions)
+    nameof(AvailableAttachmentStorageModeOptions),
+    nameof(SystemMonitorChartStyle),
+    nameof(SystemMonitorCpuChartColor),
+    nameof(SystemMonitorMemoryChartColor),
+    nameof(SystemMonitorNetworkChartColor),
+    nameof(AvailableSystemMonitorChartStyles)
 ], [])]
 public sealed partial class FeatureWidgetsSettingsViewModel
 {

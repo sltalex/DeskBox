@@ -109,41 +109,41 @@ public sealed partial class SettingsWindow
         await dialog.ShowAsync();
     }
 
+    private long _managedStorageAssessmentGeneration;
+
     private void RefreshManagedStoragePathWarning()
     {
         if (ManagedStoragePathWarningText is null)
         {
             return;
         }
-
-        ManagedStoragePathAssessment assessment =
-            ManagedStoragePathService.AssessPath(ViewModel.ManagedStorageRootPath);
-        var warnings = new List<string>();
-        if (ManagedStoragePathService.OverlapsDesktop(ViewModel.ManagedStorageRootPath))
+        string path = ViewModel.ManagedStorageRootPath;
+        long generation = Interlocked.Increment(ref _managedStorageAssessmentGeneration);
+        _ = Task.Run(() => ManagedStoragePathService.AssessPath(path)).ContinueWith(task =>
         {
-            warnings.Add(_localizationService.T("Settings.ManagedPath.Warning.DesktopOverlap"));
-        }
-        if (assessment.IsSystemDrive)
-        {
-            warnings.Add(_localizationService.T(assessment.HasSuitableNonSystemDrive
-                ? "Settings.ManagedPath.Warning.SystemDrive"
-                : "Settings.ManagedPath.Warning.SystemDriveOnly"));
-        }
-        if (assessment.IsCloudSynced)
-        {
-            warnings.Add(_localizationService.T("Settings.ManagedPath.Warning.CloudSync"));
-        }
-        if (assessment.DriveType == DriveType.Removable || assessment.IsTransientBusDrive)
-        {
-            warnings.Add(_localizationService.T("Settings.ManagedPath.Warning.Removable"));
-        }
-        else if (assessment.DriveType == DriveType.Network)
-        {
-            warnings.Add(_localizationService.T("Settings.ManagedPath.Warning.Network"));
-        }
-
-        ManagedStoragePathWarningText.Text = string.Join(Environment.NewLine, warnings);
-        ManagedStoragePathWarningBorder.IsOpen = warnings.Count > 0;
+            if (task.IsCanceled || task.IsFaulted || _isClosed ||
+                generation != Volatile.Read(ref _managedStorageAssessmentGeneration)) return;
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (_isClosed || generation != Volatile.Read(ref _managedStorageAssessmentGeneration) ||
+                    !string.Equals(path, ViewModel.ManagedStorageRootPath, StringComparison.OrdinalIgnoreCase)) return;
+                ManagedStoragePathAssessment assessment = task.Result;
+                var warnings = new List<string>();
+                if (ManagedStoragePathService.OverlapsDesktop(path))
+                    warnings.Add(_localizationService.T("Settings.ManagedPath.Warning.DesktopOverlap"));
+                if (assessment.IsSystemDrive)
+                    warnings.Add(_localizationService.T(assessment.HasSuitableNonSystemDrive
+                        ? "Settings.ManagedPath.Warning.SystemDrive" : "Settings.ManagedPath.Warning.SystemDriveOnly"));
+                if (assessment.IsCloudSynced)
+                    warnings.Add(_localizationService.T("Settings.ManagedPath.Warning.CloudSync"));
+                if (assessment.DriveType == DriveType.Removable || assessment.IsTransientBusDrive)
+                    warnings.Add(_localizationService.T("Settings.ManagedPath.Warning.Removable"));
+                else if (assessment.DriveType == DriveType.Network)
+                    warnings.Add(_localizationService.T("Settings.ManagedPath.Warning.Network"));
+                ManagedStoragePathWarningText.Text = string.Join(Environment.NewLine, warnings);
+                ManagedStoragePathWarningBorder.IsOpen = warnings.Count > 0;
+            });
+        }, TaskScheduler.Default);
     }
 
     private void RefreshDragOutWin10State()
@@ -168,6 +168,8 @@ public sealed partial class SettingsWindow
 
     private bool _isSynchronizingManagedStorageDesktopShortcutToggle;
 
+    private long _managedStorageShortcutGeneration;
+
     private void RefreshManagedStorageDesktopShortcutState()
     {
         if (ManagedStorageDesktopShortcutToggle is not ToggleSwitch toggle)
@@ -175,9 +177,18 @@ public sealed partial class SettingsWindow
             return;
         }
 
-        SetManagedStorageDesktopShortcutToggleState(
-            toggle,
-            App.Current.ManagedStorageDesktopShortcutService.HasShortcut());
+        long generation = Interlocked.Increment(ref _managedStorageShortcutGeneration);
+        toggle.IsEnabled = false;
+        _ = Task.Run(() => App.Current.ManagedStorageDesktopShortcutService.HasShortcut()).ContinueWith(task =>
+        {
+            if (task.IsCanceled || task.IsFaulted || _isClosed || generation != Volatile.Read(ref _managedStorageShortcutGeneration)) return;
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                if (_isClosed || generation != Volatile.Read(ref _managedStorageShortcutGeneration)) return;
+                SetManagedStorageDesktopShortcutToggleState(toggle, task.Result);
+                toggle.IsEnabled = true;
+            });
+        }, TaskScheduler.Default);
     }
 
     private async void ManagedStorageDesktopShortcutToggle_Toggled(

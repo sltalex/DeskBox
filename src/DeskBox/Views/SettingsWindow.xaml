@@ -8,6 +8,7 @@
     xmlns:sections="using:DeskBox.Views.SettingsSections"
     xmlns:viewModels="using:DeskBox.ViewModels"
     xmlns:fileStack="using:DeskBox.Features.FileStack"
+    xmlns:featureWidgets="using:DeskBox.Features.FeatureWidgets"
     xmlns:backup="using:DeskBox.Features.Backup"
     xmlns:svc="using:DeskBox.Services"
     xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
@@ -1791,6 +1792,23 @@ svc:Localized.DescriptionKey="Settings.DefaultWidth.Description"
                             Spacing="4" />
                     </StackPanel>
                 </StackPanel>
+                    </DataTemplate>
+                    <DataTemplate x:Key="SystemMonitorSettingsSectionTemplate" x:DataType="viewModels:SettingsViewModel">
+                        <StackPanel x:Name="SystemMonitorSettingsSection" Visibility="Collapsed" Style="{StaticResource SectionPanelStyle}">
+                            <TextBlock Style="{StaticResource SectionTitleTextStyle}" svc:Localized.Key="SystemMonitor.Title" />
+                            <toolkit:SettingsCard svc:Localized.HeaderKey="Settings.SystemMonitor.ChartStyle.Title" svc:Localized.DescriptionKey="Settings.SystemMonitor.ChartStyle.Description">
+                                <ComboBox MinWidth="180" ItemsSource="{Binding AvailableSystemMonitorChartStyles}" controls:SettingsComboBox.Value="{Binding SystemMonitorChartStyle, Mode=TwoWay}" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard svc:Localized.HeaderKey="Settings.SystemMonitor.CpuColor" >
+                                <TextBox Width="130" Text="{Binding SystemMonitorCpuChartColor, Mode=TwoWay}" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard svc:Localized.HeaderKey="Settings.SystemMonitor.MemoryColor" >
+                                <TextBox Width="130" Text="{Binding SystemMonitorMemoryChartColor, Mode=TwoWay}" />
+                            </toolkit:SettingsCard>
+                            <toolkit:SettingsCard svc:Localized.HeaderKey="Settings.SystemMonitor.NetworkColor" >
+                                <TextBox Width="130" Text="{Binding SystemMonitorNetworkChartColor, Mode=TwoWay}" />
+                            </toolkit:SettingsCard>
+                        </StackPanel>
                     </DataTemplate>
                     <DataTemplate x:Key="QuickCaptureSettingsSectionTemplate" x:DataType="viewModels:SettingsViewModel">
                         <StackPanel

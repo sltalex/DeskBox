@@ -1,4 +1,5 @@
 using DeskBox.Helpers;
+using DeskBox.Contracts;
 using DeskBox.Services;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
@@ -33,10 +34,16 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     private IDisposable? _subscription;
     private bool _visible = true;
     private bool _disposed;
+    private SystemMonitorPresentationSettings _presentation = new("Bars", "#2C8EE4", "#46AE85", "#E6A23C");
 
     public SystemMonitorWidgetContent(LocalizationService localization)
     {
         _localization = localization;
+        if (App.Current?.SettingsService is { } settings)
+        {
+            _presentation = new FeatureWidgetsSettingsCoordinator(settings).ReadSystemMonitorPresentation();
+            settings.SettingsChanged += OnSettingsChanged;
+        }
         var root = new StackPanel { Spacing = 6, Margin = new Thickness(9, 6, 9, 8) };
 
         var primary = new Grid { ColumnSpacing = 12 };
@@ -193,12 +200,18 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
             diskIndex++;
         }
 
-        DrawBars(_cpuChart, history.Select(item => item.CpuPercent), null, 100);
-        DrawBars(_memoryChart, history.Select(item => item.MemoryPercent), null, 100);
+        DrawChart(_cpuChart, history.Select(item => item.CpuPercent), null, 100, _presentation.CpuColor);
+        DrawChart(_memoryChart, history.Select(item => item.MemoryPercent), null, 100, _presentation.MemoryColor);
         double scale = Math.Max(1, history.SelectMany(item => new[]
             { item.DownloadBytesPerSecond ?? 0, item.UploadBytesPerSecond ?? 0 }).DefaultIfEmpty().Max());
-        DrawBars(_networkChart, history.Select(item => item.DownloadBytesPerSecond),
-            history.Select(item => item.UploadBytesPerSecond), scale);
+        DrawChart(_networkChart, history.Select(item => item.DownloadBytesPerSecond),
+            history.Select(item => item.UploadBytesPerSecond), scale, _presentation.NetworkColor);
+    }
+
+    private void OnSettingsChanged()
+    {
+        if (_disposed || App.Current?.SettingsService is not { } settings) return;
+        _presentation = new FeatureWidgetsSettingsCoordinator(settings).ReadSystemMonitorPresentation();
     }
 
     private void EnsureDiskCards(int count)
@@ -263,8 +276,13 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         }
     }
 
-    private static void DrawBars(Canvas canvas, IEnumerable<double?> primary, IEnumerable<double?>? secondary, double scale)
+    private void DrawChart(Canvas canvas, IEnumerable<double?> primary, IEnumerable<double?>? secondary, double scale, string color)
     {
+        if (_presentation.ChartStyle == "Line")
+        {
+            DrawLines(canvas, primary, secondary, scale, color);
+            return;
+        }
         canvas.Children.Clear();
         double?[] first = primary.ToArray();
         double?[]? second = secondary?.ToArray();
@@ -278,10 +296,34 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         for (int index = 0; index < count; index++)
         {
             AddBar(canvas, index, first, scale, height, slot, barWidth,
-                Color(44, 142, 228), 0);
+                ParseColor(color), 0);
             if (paired)
                 AddBar(canvas, index, second!, scale, height, slot, barWidth,
-                    Color(70, 174, 133), 1);
+                    ParseColor(color, 0.58), 1);
+        }
+    }
+
+    private static void DrawLines(Canvas canvas, IEnumerable<double?> primary, IEnumerable<double?>? secondary, double scale, string color)
+    {
+        canvas.Children.Clear();
+        double?[] first = primary.ToArray();
+        double?[]? second = secondary?.ToArray();
+        int count = Math.Max(first.Length, second?.Length ?? 0);
+        if (count < 2) return;
+        const double height = 20;
+        double width = ChartWidth;
+        double step = width / (count - 1);
+        AddLine(canvas, first, scale, height, step, ParseColor(color));
+        if (second is not null) AddLine(canvas, second, scale, height, step, ParseColor(color, 0.58));
+    }
+
+    private static void AddLine(Canvas canvas, double?[] samples, double scale, double height, double step, SolidColorBrush brush)
+    {
+        for (int i = 1; i < samples.Length; i++)
+        {
+            if (samples[i - 1] is not double a || samples[i] is not double b) continue;
+            var line = new Line { X1 = (i - 1) * step, X2 = i * step, Y1 = height - Math.Clamp(a / Math.Max(1, scale), 0, 1) * (height - 1), Y2 = height - Math.Clamp(b / Math.Max(1, scale), 0, 1) * (height - 1), Stroke = brush, StrokeThickness = 1.5 };
+            canvas.Children.Add(line);
         }
     }
 
@@ -307,7 +349,15 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     private string Temperature(double? value) => value.HasValue ? $"{value.Value:0.#} °C" : _localization.T("SystemMonitor.Unavailable");
     private static string FormatSize(long bytes) => $"{bytes / 1073741824d:0.#} GB";
     private static Canvas Chart() => new() { Height = 21, Width = ChartWidth, MinWidth = ChartWidth, IsHitTestVisible = false };
-    private static SolidColorBrush Color(byte red, byte green, byte blue) => new(Windows.UI.Color.FromArgb(255, red, green, blue));
+    private static SolidColorBrush ParseColor(string value, double opacity = 1)
+    {
+        try
+        {
+            uint rgb = Convert.ToUInt32(value.TrimStart('#'), 16);
+            return new SolidColorBrush(Windows.UI.Color.FromArgb((byte)(255 * opacity), (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb));
+        }
+        catch { return new SolidColorBrush(Windows.UI.Color.FromArgb((byte)(255 * opacity), 44, 142, 228)); }
+    }
     private static TextBlock Label(string text = "") => new() { Text = text, FontSize = 11, Opacity = 0.68, TextTrimming = TextTrimming.CharacterEllipsis };
     private StackPanel IconLabel(string text, string glyph)
     {
@@ -328,5 +378,5 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     }
     private static TextBlock Value(double size = 17) => new() { FontSize = size, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
 
-    public void Dispose() { _disposed = true; Stop(); }
+    public void Dispose() { _disposed = true; if (App.Current?.SettingsService is { } settings) settings.SettingsChanged -= OnSettingsChanged; Stop(); }
 }

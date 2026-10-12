@@ -5,6 +5,11 @@ namespace DeskBox.Models;
 /// </summary>
 public sealed class WidgetLayoutSettingsSlice
 {
+    /// <summary>System monitor chart presentation preferences.</summary>
+    public string SystemMonitorChartStyle { get; set; } = "Bars";
+    public string SystemMonitorCpuChartColor { get; set; } = "#2C8EE4";
+    public string SystemMonitorMemoryChartColor { get; set; } = "#46AE85";
+    public string SystemMonitorNetworkChartColor { get; set; } = "#E6A23C";
     /// <summary>
     /// Enabled state for singleton feature widgets, keyed by <see cref="WidgetKind"/> name.
     /// Legacy boolean properties are still kept as compatibility mirrors.
@@ -75,6 +80,10 @@ public sealed class WidgetLayoutSettingsSlice
         ArgumentNullException.ThrowIfNull(other);
 
         FeatureWidgetEnabledStates = other.FeatureWidgetEnabledStates;
+        SystemMonitorChartStyle = other.SystemMonitorChartStyle;
+        SystemMonitorCpuChartColor = other.SystemMonitorCpuChartColor;
+        SystemMonitorMemoryChartColor = other.SystemMonitorMemoryChartColor;
+        SystemMonitorNetworkChartColor = other.SystemMonitorNetworkChartColor;
         Widgets = other.Widgets;
         WidgetGroups = other.WidgetGroups;
         WidgetTopologyLayouts = other.WidgetTopologyLayouts;

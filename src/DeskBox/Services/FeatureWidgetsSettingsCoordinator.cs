@@ -27,6 +27,53 @@ public sealed class FeatureWidgetsSettingsCoordinator : IFeatureWidgetsSettings
 
     internal bool IsStopped => _stopped;
 
+    public SystemMonitorPresentationSettings ReadSystemMonitorPresentation()
+    {
+        WidgetLayoutSettingsSlice layout = _settings.Settings.WidgetLayout;
+        return new SystemMonitorPresentationSettings(
+            NormalizeChartStyle(layout.SystemMonitorChartStyle),
+            NormalizeChartColor(layout.SystemMonitorCpuChartColor, "#2C8EE4"),
+            NormalizeChartColor(layout.SystemMonitorMemoryChartColor, "#46AE85"),
+            NormalizeChartColor(layout.SystemMonitorNetworkChartColor, "#E6A23C"));
+    }
+
+    public bool SetSystemMonitorChartStyle(string? style)
+    {
+        ThrowIfStopped();
+        string normalized = NormalizeChartStyle(style);
+        WidgetLayoutSettingsSlice layout = _settings.Settings.WidgetLayout;
+        if (layout.SystemMonitorChartStyle == normalized) return false;
+        layout.SystemMonitorChartStyle = normalized;
+        _settings.SaveDebounced();
+        return true;
+    }
+
+    public bool SetSystemMonitorChartColor(string metric, string? color)
+    {
+        ThrowIfStopped();
+        string fallback = metric switch { "Cpu" => "#2C8EE4", "Memory" => "#46AE85", _ => "#E6A23C" };
+        string normalized = NormalizeChartColor(color, fallback);
+        WidgetLayoutSettingsSlice layout = _settings.Settings.WidgetLayout;
+        string before = metric switch { "Cpu" => layout.SystemMonitorCpuChartColor, "Memory" => layout.SystemMonitorMemoryChartColor, _ => layout.SystemMonitorNetworkChartColor };
+        if (before == normalized) return false;
+        if (metric == "Cpu") layout.SystemMonitorCpuChartColor = normalized;
+        else if (metric == "Memory") layout.SystemMonitorMemoryChartColor = normalized;
+        else layout.SystemMonitorNetworkChartColor = normalized;
+        _settings.SaveDebounced();
+        return true;
+    }
+
+    private static string NormalizeChartStyle(string? value) =>
+        string.Equals(value, "Line", StringComparison.OrdinalIgnoreCase) ? "Line" : "Bars";
+
+    private static string NormalizeChartColor(string? value, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return fallback;
+        string text = value.Trim();
+        if (text.Length == 7 && text[0] == '#' && text[1..].All(Uri.IsHexDigit)) return text.ToUpperInvariant();
+        return fallback;
+    }
+
     public FeatureWidgetsSettingsCoordinator(SettingsService settings)
     {
         _settings = settings;
