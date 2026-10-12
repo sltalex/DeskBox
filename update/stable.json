@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "channel": "stable",
+  "version": "2026101202",
+  "releaseDate": "2026-10-12",
+  "mandatory": false,
+  "downloadUrl": "https://github.com/sltalex/DeskBox/releases/download/v2026101202/DeskBox_Setup_2026101202_x64.exe",
+  "manualDownloadUrl": "https://github.com/sltalex/DeskBox/releases",
+  "sha256": "a7f470bb88227ca4643e0142a7c7b20b399f630b932841222b775e9f84da3448",
+  "size": 71749464,
+  "releaseNotesUrl": "https://github.com/sltalex/DeskBox/releases/tag/v2026101202",
+  "summary": {
+    "zh-CN": "DeskBox 2026101202 x64 Full Native AOT 直发版，收紧系统监控图表布局并增加种树进度状态；本次暂无 ARM64 安装包。",
+    "en-US": "DeskBox 2026101202 is an x64 Full Native AOT direct release with tighter system monitor charts and tree progress status; ARM64 is not available yet."
+  }
+}
