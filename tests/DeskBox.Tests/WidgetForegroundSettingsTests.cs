@@ -1,11 +1,25 @@
 ﻿using DeskBox.Models;
 using DeskBox.Services;
+using DeskBox.Helpers;
+using Microsoft.UI.Xaml;
 using Windows.UI;
 
 namespace DeskBox.Tests;
 
 public sealed class WidgetForegroundSettingsTests
 {
+    [Fact]
+    public void SharedForegroundDefaults_AreGrayBlackInLightAndCreamWhiteInDark()
+    {
+        Color custom = Color.FromArgb(255, 12, 34, 56);
+        Assert.Equal(Color.FromArgb(255, 48, 48, 46),
+            ForegroundResourceScope.ResolvePrimary(WidgetForegroundSettings.ModeFollowTheme, custom, ElementTheme.Light));
+        Assert.Equal(Color.FromArgb(255, 245, 241, 232),
+            ForegroundResourceScope.ResolvePrimary(WidgetForegroundSettings.ModeFollowTheme, custom, ElementTheme.Dark));
+        Assert.Equal(custom,
+            ForegroundResourceScope.ResolvePrimary(WidgetForegroundSettings.ModeCustom, custom, ElementTheme.Dark));
+    }
+
     [Fact]
     public void Resolve_UsesGlobalDefaultsWithoutOverrides()
     {

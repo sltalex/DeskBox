@@ -3,6 +3,22 @@
 public sealed class WidgetForegroundContractTests
 {
     [Fact]
+    public void GlobalForeground_ReusesAppearanceSettingForNonWidgetWindows()
+    {
+        string theme = Read("src/DeskBox/Services/ThemeService.cs");
+        string palette = Read("src/DeskBox/Helpers/ForegroundResourceScope.cs");
+        Assert.Contains("window is not IDesktopWidgetWindow", theme, StringComparison.Ordinal);
+        Assert.Contains("ForegroundResourceScope.Apply(rootElement, foreground)", theme, StringComparison.Ordinal);
+        Assert.Contains("ForegroundResourceScope.Apply(Application.Current.Resources, foreground)", theme, StringComparison.Ordinal);
+        Assert.Contains("AppearancePreviewChanged += OnAppearancePreviewChanged", theme, StringComparison.Ordinal);
+        Assert.Contains("TextFillColorPrimaryBrush", palette, StringComparison.Ordinal);
+        Assert.Contains("TextControlForeground", palette, StringComparison.Ordinal);
+        Assert.Contains("ListViewItemForeground", palette, StringComparison.Ordinal);
+        string search = Read("src/DeskBox/Views/SearchPopupWindow.xaml.cs");
+        Assert.Contains("_themeService.ApplyToWindow(this)", search, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SettingsSurface_ExposesPaletteAndColorControlsWithoutTextEdge()
     {
         string xaml = Read("src/DeskBox/Views/SettingsWindow.xaml");

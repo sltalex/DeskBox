@@ -543,6 +543,7 @@ public sealed partial class SearchPopupWindow : Window
             theme = Win32Helper.IsSystemDarkMode() ? ElementTheme.Dark : ElementTheme.Light;
 
         RootGrid.RequestedTheme = theme;
+        _themeService.ApplyToWindow(this);
 
         // A pre-warmed hidden shell intentionally owns no backdrop controller.
         // The current material is applied immediately before the next native show.

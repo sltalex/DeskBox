@@ -182,4 +182,14 @@ public sealed class TreeIllustrationTests
         Assert.Contains("_celebration.Stop();", source);
         Assert.DoesNotContain("new UISettings()", source);
     }
+
+    [Fact]
+    public void TreeProgressPercent_SitsOutsideTheRoundedGrowthTrack()
+    {
+        string source = File.ReadAllText(TestPaths.FromRepository(
+            "src/DeskBox/Controls/WidgetContents/TreeWidgetContent.cs"));
+        Assert.Contains("CornerRadius = new CornerRadius(7)", source, StringComparison.Ordinal);
+        Assert.Contains("Grid.SetColumn(_progress, 1)", source, StringComparison.Ordinal);
+        Assert.Contains("Grid.SetColumn(_percent, 2)", source, StringComparison.Ordinal);
+    }
 }

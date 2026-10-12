@@ -72,7 +72,9 @@ public sealed partial class FeatureWidgetsSettingsViewModel : ObservableObject
                 new("#46AE85", _localize("Settings.SystemMonitor.Color.Green")),
                 new("#E6A23C", _localize("Settings.SystemMonitor.Color.Orange")),
                 new("#D9534F", _localize("Settings.SystemMonitor.Color.Red")),
-                new("#8B6FD8", _localize("Settings.SystemMonitor.Color.Purple"))
+                new("#8B6FD8", _localize("Settings.SystemMonitor.Color.Purple")),
+                new("#000000", _localize("Settings.SystemMonitor.Color.Black")),
+                new("#FFFFFF", _localize("Settings.SystemMonitor.Color.White"))
             };
             foreach (string color in new[] { _systemMonitorCpuChartColor, _systemMonitorMemoryChartColor, _systemMonitorNetworkChartColor })
                 if (!options.Any(option => Equals(option.Value, color)))

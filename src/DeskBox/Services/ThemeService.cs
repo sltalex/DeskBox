@@ -1,6 +1,8 @@
 using DeskBox.Helpers;
 using DeskBox.Platform;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using Windows.UI.ViewManagement;
 using WinRT.Interop;
 using Windows.UI;
 
@@ -15,9 +17,12 @@ public sealed class ThemeService : IDisposable
     public const string AccentModeCustom = "Custom";
 
     private readonly SettingsService _settingsService;
+    private readonly DispatcherQueue? _dispatcherQueue;
     private readonly WindowTrackingRegistry<Window> _trackedWindows = new();
     private readonly Windows.UI.ViewManagement.UISettings _uiSettings = new();
     private Microsoft.UI.Dispatching.DispatcherQueueTimer? _appearanceDebounceTimer;
+    private string _lastForegroundMode = string.Empty;
+    private string _lastForegroundColor = string.Empty;
     private bool _disposed;
 
     public event Action? AppearanceChanged;
@@ -25,13 +30,27 @@ public sealed class ThemeService : IDisposable
     public ThemeService(SettingsService settingsService)
     {
         _settingsService = settingsService;
+        _dispatcherQueue = DispatcherQueue.GetForCurrentThread();
         _uiSettings.ColorValuesChanged += OnColorValuesChanged;
+        _settingsService.AppearancePreviewChanged += OnAppearancePreviewChanged;
+    }
+
+    private void OnAppearancePreviewChanged()
+    {
+        string mode = _settingsService.Settings.WidgetShell.WidgetForegroundMode;
+        string color = _settingsService.Settings.WidgetShell.WidgetForegroundColor;
+        if (mode == _lastForegroundMode && color == _lastForegroundColor) return;
+        _lastForegroundMode = mode;
+        _lastForegroundColor = color;
+        var dispatcher = _dispatcherQueue;
+        if (dispatcher is { HasThreadAccess: true }) RefreshAppearance();
+        else dispatcher?.TryEnqueue(RefreshAppearance);
     }
 
     private void OnColorValuesChanged(Windows.UI.ViewManagement.UISettings sender, object args)
     {
         if (_disposed) return;
-        var dispatcherQueue = App.UiDispatcherQueue;
+        var dispatcherQueue = _dispatcherQueue;
         if (dispatcherQueue is null)
         {
             App.Log("[Theme] ColorValuesChanged dropped: UI dispatcher unavailable");
@@ -43,7 +62,7 @@ public sealed class ThemeService : IDisposable
             if (_disposed) return;
             if (_appearanceDebounceTimer is null)
             {
-                _appearanceDebounceTimer = App.UiDispatcherQueue.CreateTimer();
+                _appearanceDebounceTimer = dispatcherQueue.CreateTimer();
                 _appearanceDebounceTimer.Interval = TimeSpan.FromMilliseconds(200);
                 _appearanceDebounceTimer.IsRepeating = false;
                 _appearanceDebounceTimer.Tick += OnAppearanceTimerTick;
@@ -208,6 +227,31 @@ public sealed class ThemeService : IDisposable
 
         rootElement.RequestedTheme = theme;
         AccentResourceScope.Apply(rootElement, GetEffectiveAccentColor());
+        Color customColor = AccentColorHelper.FromHex(
+            _settingsService.Settings.WidgetShell.WidgetForegroundColor);
+        Color foreground = ForegroundResourceScope.ResolvePrimary(
+            WidgetForegroundSettings.NormalizeMode(_settingsService.Settings.WidgetShell.WidgetForegroundMode),
+            customColor,
+            theme);
+        try
+        {
+            if (new AccessibilitySettings().HighContrast)
+                foreground = _uiSettings.GetColorValue(UIColorType.Foreground);
+        }
+        catch { /* Keep the selected palette if accessibility state is unavailable. */ }
+        ForegroundResourceScope.Apply(Application.Current.Resources, foreground);
+        if (window is not IDesktopWidgetWindow)
+        {
+            if (ForegroundResourceScope.Apply(rootElement, foreground) && rootElement.IsLoaded)
+            {
+                // Existing ThemeResource references need a theme transition to
+                // resolve a newly introduced window-local brush.
+                rootElement.RequestedTheme = theme == ElementTheme.Dark
+                    ? ElementTheme.Light
+                    : ElementTheme.Dark;
+                rootElement.RequestedTheme = theme;
+            }
+        }
 
         var hWnd = WindowNative.GetWindowHandle(window);
         if (hWnd == IntPtr.Zero)
@@ -247,6 +291,7 @@ public sealed class ThemeService : IDisposable
         if (_disposed) return;
         _disposed = true;
         _uiSettings.ColorValuesChanged -= OnColorValuesChanged;
+        _settingsService.AppearancePreviewChanged -= OnAppearancePreviewChanged;
         if (_appearanceDebounceTimer is not null)
         {
             _appearanceDebounceTimer.Tick -= OnAppearanceTimerTick;

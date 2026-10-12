@@ -219,18 +219,7 @@ public abstract partial class WidgetWindowBase
             }
         }
 
-        Color primary = mode switch
-        {
-            WidgetForegroundSettings.ModeLight =>
-                Color.FromArgb(0xFF, 0xF7, 0xF7, 0xF7),
-            WidgetForegroundSettings.ModeDark =>
-                Color.FromArgb(0xFF, 0x1A, 0x1A, 0x1A),
-            WidgetForegroundSettings.ModeCustom =>
-                Color.FromArgb(0xFF, customColor.R, customColor.G, customColor.B),
-            _ when actualTheme == ElementTheme.Light =>
-                Color.FromArgb(0xFF, 0x1A, 0x1A, 0x1A),
-            _ => Color.FromArgb(0xFF, 0xF7, 0xF7, 0xF7)
-        };
+        Color primary = ForegroundResourceScope.ResolvePrimary(mode, customColor, actualTheme);
 
         return new WidgetForegroundPalette(
             primary,

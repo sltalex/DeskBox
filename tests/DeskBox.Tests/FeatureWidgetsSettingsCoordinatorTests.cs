@@ -8,6 +8,17 @@ namespace DeskBox.Tests;
 public sealed class FeatureWidgetsSettingsCoordinatorTests : IDisposable
 {
     [Fact]
+    public void SystemMonitorPalette_OffersBlackAndWhiteForEveryChart()
+    {
+        var settings = new SettingsService(_root);
+        var editor = new FeatureWidgetsSettingsViewModel(
+            new FeatureWidgetsSettingsCoordinator(settings), key => key);
+        object[] options = editor.AvailableSystemMonitorColors;
+        Assert.Contains(options, option => option is SettingsOption { Value: "#000000" });
+        Assert.Contains(options, option => option is SettingsOption { Value: "#FFFFFF" });
+    }
+
+    [Fact]
     public async Task SystemMonitorOptions_PersistIndependentStylesColorsAndRefreshRate()
     {
         var settings = new SettingsService(_root);

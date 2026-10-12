@@ -32,8 +32,21 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
     private readonly TextBlock _stage = new() { FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock _captureStatus = new() { FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock _fruitStats = new() { FontSize = 12, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-    private readonly ProgressBar _progress = new() { Height = 18 };
-    private readonly TextBlock _percent = new() { FontSize = 11, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+    private readonly ProgressBar _progress = new()
+    {
+        Height = 14,
+        CornerRadius = new CornerRadius(7),
+        Foreground = new SolidColorBrush(ColorHelper.FromArgb(255, 105, 179, 115)),
+        Background = new SolidColorBrush(ColorHelper.FromArgb(150, 195, 225, 187))
+    };
+    private readonly TextBlock _percent = new()
+    {
+        FontSize = 11,
+        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+        VerticalAlignment = VerticalAlignment.Center,
+        MinWidth = 44,
+        TextAlignment = TextAlignment.Right
+    };
     private volatile bool _visible = true;
     private volatile bool _disposed;
     private bool _motionRunning;
@@ -54,8 +67,14 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         ConfigureMotion();
 
         var stack = new StackPanel { Spacing = 2, HorizontalAlignment = HorizontalAlignment.Stretch };
-        var progressRow = new Grid { Margin = new Thickness(16, 8, 16, 4) };
+        var progressRow = new Grid { Margin = new Thickness(16, 8, 16, 4), ColumnSpacing = 7 };
+        progressRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        progressRow.ColumnDefinitions.Add(new ColumnDefinition());
+        progressRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        progressRow.Children.Add(new TextBlock { Text = "🌱", FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
+        Grid.SetColumn(_progress, 1);
         progressRow.Children.Add(_progress);
+        Grid.SetColumn(_percent, 2);
         progressRow.Children.Add(_percent);
         stack.Children.Add(new Viewbox { Child = _drawing, Height = 110, Stretch = Stretch.Uniform });
         stack.Children.Add(_stage);
