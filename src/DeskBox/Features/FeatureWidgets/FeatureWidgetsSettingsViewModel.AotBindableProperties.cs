@@ -11,10 +11,16 @@ namespace DeskBox.Features.FeatureWidgets;
     nameof(AttachmentStorageMode),
     nameof(AvailableAttachmentStorageModeOptions),
     nameof(SystemMonitorChartStyle),
+    nameof(SystemMonitorCpuChartStyle),
+    nameof(SystemMonitorMemoryChartStyle),
+    nameof(SystemMonitorNetworkChartStyle),
     nameof(SystemMonitorCpuChartColor),
     nameof(SystemMonitorMemoryChartColor),
     nameof(SystemMonitorNetworkChartColor),
-    nameof(AvailableSystemMonitorChartStyles)
+    nameof(SystemMonitorRefreshIntervalSeconds),
+    nameof(AvailableSystemMonitorChartStyles),
+    nameof(AvailableSystemMonitorRefreshIntervals),
+    nameof(AvailableSystemMonitorColors)
 ], [])]
 public sealed partial class FeatureWidgetsSettingsViewModel
 {

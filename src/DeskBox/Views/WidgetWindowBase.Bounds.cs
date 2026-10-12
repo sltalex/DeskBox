@@ -183,7 +183,7 @@ public abstract partial class WidgetWindowBase
         object sender,
         PointerRoutedEventArgs args)
     {
-        if (!WidgetLayerService.UsesDesktopPinnedMode())
+        if (!WidgetLayerService.UsesDesktopPinnedMode(HWnd))
         {
             return;
         }
@@ -220,7 +220,7 @@ public abstract partial class WidgetWindowBase
         object sender,
         RoutedEventArgs args)
     {
-        if (!WidgetLayerService.UsesDesktopPinnedMode() ||
+        if (!WidgetLayerService.UsesDesktopPinnedMode(HWnd) ||
             _desktopPinnedInputActivationInProgress ||
             !IsKeyboardInputTarget(args.OriginalSource))
         {
@@ -284,7 +284,7 @@ public abstract partial class WidgetWindowBase
         object sender,
         WindowActivatedEventArgs args)
     {
-        if (!WidgetLayerService.UsesDesktopPinnedMode())
+        if (!WidgetLayerService.UsesDesktopPinnedMode(HWnd))
         {
             return;
         }

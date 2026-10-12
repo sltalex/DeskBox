@@ -17,6 +17,7 @@ public static class WidgetLayerService
 
     private static readonly object s_desktopLayerLock = new();
     private static readonly Dictionary<IntPtr, DesktopLayerAttachment> s_desktopLayerAttachments = [];
+    private static readonly HashSet<IntPtr> s_forcedDesktopPinnedWindows = [];
     private static IntPtr s_cachedDesktopIconView;
     private static bool s_startupDesktopLayerAttachmentDeferred;
 
@@ -77,7 +78,7 @@ public static class WidgetLayerService
 
         // Desktop-pinned mode always rests inside Explorer. Dynamic mode uses
         // the same owner only when the user wants widgets to survive Win+D.
-        if (ShouldAttachRestingWindowToDesktop() &&
+        if (ShouldAttachRestingWindowToDesktop(windowHandle) &&
             TryAttachToDesktopIconLayer(
                 windowHandle,
                 showWindow: showWindow))
@@ -94,7 +95,7 @@ public static class WidgetLayerService
     {
         ApplyDesktopPinnedActivationStyle(windowHandle);
 
-        if (UsesDesktopPinnedMode())
+        if (UsesDesktopPinnedMode(windowHandle))
         {
             if (!TryAttachToDesktopIconLayer(windowHandle))
             {
@@ -228,6 +229,11 @@ public static class WidgetLayerService
                 break;
         }
 
+        foreach (IntPtr pinnedHandle in handles.Where(UsesDesktopPinnedMode))
+        {
+            MoveToDesktopBottom(pinnedHandle);
+        }
+
         App.LogVerbose(
             $"[ZOrder] Group restore reason={reason} count={handles.Count} " +
             $"foreground=0x{foregroundRoot.ToInt64():X} " +
@@ -239,7 +245,7 @@ public static class WidgetLayerService
     {
         ApplyDesktopPinnedActivationStyle(windowHandle);
 
-        if (UsesDesktopPinnedMode())
+        if (UsesDesktopPinnedMode(windowHandle))
         {
             if (!TryAttachToDesktopIconLayer(windowHandle))
             {
@@ -258,7 +264,7 @@ public static class WidgetLayerService
     {
         ApplyDesktopPinnedActivationStyle(windowHandle);
 
-        if (UsesDesktopPinnedMode())
+        if (UsesDesktopPinnedMode(windowHandle))
         {
             if (!TryAttachToDesktopIconLayer(
                     windowHandle,
@@ -292,6 +298,11 @@ public static class WidgetLayerService
         for (int index = handles.Count - 1; index >= 0; index--)
         {
             IntPtr handle = handles[index];
+            if (UsesDesktopPinnedMode(handle))
+            {
+                MoveToDesktopBottom(handle);
+                continue;
+            }
             ApplyDesktopPinnedActivationStyle(handle);
             DetachFromDesktopIconLayerIfNeeded(handle);
             Win32Helper.SetWindowTopMost(handle);
@@ -305,7 +316,7 @@ public static class WidgetLayerService
     {
         ApplyDesktopPinnedActivationStyle(windowHandle);
 
-        if (UsesDesktopPinnedMode())
+        if (UsesDesktopPinnedMode(windowHandle))
         {
             if (!TryAttachToDesktopIconLayer(windowHandle))
             {
@@ -341,6 +352,11 @@ public static class WidgetLayerService
         RaisedBandReleasePlacement placement,
         IntPtr foreignForegroundRoot)
     {
+        if (UsesDesktopPinnedMode(windowHandle))
+        {
+            MoveToDesktopBottom(windowHandle);
+            return;
+        }
         if (placement == RaisedBandReleasePlacement.BelowForeignForeground &&
             foreignForegroundRoot != IntPtr.Zero &&
             Win32Helper.IsWindow(foreignForegroundRoot))
@@ -369,7 +385,7 @@ public static class WidgetLayerService
     /// </summary>
     public static void BringAbovePeerWidgets(IntPtr windowHandle)
     {
-        if (UsesDesktopPinnedMode())
+        if (UsesDesktopPinnedMode(windowHandle))
         {
             MoveToDesktopBottom(windowHandle);
             return;
@@ -392,7 +408,7 @@ public static class WidgetLayerService
         // Desktop-pinned widgets are owner-attached to Explorer's desktop icon
         // layer, so HWND_TOP lifts them above sibling widgets only; the band
         // itself stays beneath every application window and Win+D.
-        if (!ShouldAttachRestingWindowToDesktop() ||
+        if (!ShouldAttachRestingWindowToDesktop(windowHandle) ||
             !TryAttachToDesktopIconLayer(windowHandle, placeAtBottom: false))
         {
             return false;
@@ -523,7 +539,7 @@ public static class WidgetLayerService
     /// </returns>
     public static bool TryBringAbovePeerWidgetsBehindForeground(IntPtr windowHandle)
     {
-        if (UsesDesktopPinnedMode() ||
+        if (UsesDesktopPinnedMode(windowHandle) ||
             windowHandle == IntPtr.Zero ||
             !Win32Helper.IsWindow(windowHandle))
         {
@@ -618,7 +634,7 @@ public static class WidgetLayerService
         }
 
         var handles = windowHandles
-            .Where(handle => handle != IntPtr.Zero && Win32Helper.IsWindow(handle))
+            .Where(handle => handle != IntPtr.Zero && Win32Helper.IsWindow(handle) && !UsesDesktopPinnedMode(handle))
             .Distinct()
             .ToList();
         if (handles.Count == 0)
@@ -760,7 +776,14 @@ public static class WidgetLayerService
 
     public static void ReleaseWindow(IntPtr windowHandle)
     {
+        lock (s_desktopLayerLock) s_forcedDesktopPinnedWindows.Remove(windowHandle);
         DetachFromDesktopIconLayerIfNeeded(windowHandle);
+    }
+
+    public static void RegisterForcedDesktopPinnedWindow(IntPtr windowHandle)
+    {
+        if (windowHandle == IntPtr.Zero) return;
+        lock (s_desktopLayerLock) s_forcedDesktopPinnedWindows.Add(windowHandle);
     }
 
     public static void InvalidateDesktopIconViewCache()
@@ -776,6 +799,12 @@ public static class WidgetLayerService
         var settings = App.Current?.SettingsService?.Settings;
         string mode = SettingsService.NormalizeWidgetLayerModeSetting(settings?.WidgetLayerMode);
         return string.Equals(mode, SettingsService.WidgetLayerModeDesktopPinned, StringComparison.Ordinal);
+    }
+
+    public static bool UsesDesktopPinnedMode(IntPtr windowHandle)
+    {
+        if (UsesDesktopPinnedMode()) return true;
+        lock (s_desktopLayerLock) return s_forcedDesktopPinnedWindows.Contains(windowHandle);
     }
 
     public static bool UsesQuickRevealMode()
@@ -803,7 +832,7 @@ public static class WidgetLayerService
             App.Current?.WidgetManager?.IsWidgetWindow(foregroundRoot) == true;
 
         return WidgetLayerPointerActivationPolicy.ShouldSuppress(
-            UsesDesktopPinnedMode(),
+            UsesDesktopPinnedMode(windowHandle),
             hasForeground,
             hasForeground && IsDesktopShellWindow(foregroundRoot),
             foregroundIsWidget);
@@ -831,7 +860,7 @@ public static class WidgetLayerService
     /// </summary>
     public static bool TryAllowDesktopPinnedPointerActivation(IntPtr windowHandle)
     {
-        if (!UsesDesktopPinnedMode())
+        if (!UsesDesktopPinnedMode(windowHandle))
         {
             SetWindowNoActivate(windowHandle, enabled: false);
             return true;
@@ -866,7 +895,7 @@ public static class WidgetLayerService
 
     private static void ApplyDesktopPinnedActivationStyle(IntPtr windowHandle)
     {
-        SetWindowNoActivate(windowHandle, UsesDesktopPinnedMode());
+        SetWindowNoActivate(windowHandle, UsesDesktopPinnedMode(windowHandle));
     }
 
     private static void SetWindowNoActivate(IntPtr windowHandle, bool enabled)
@@ -908,19 +937,19 @@ public static class WidgetLayerService
             $"enabled={enabled}");
     }
 
-    private static bool ShouldAttachRestingWindowToDesktop()
+    private static bool ShouldAttachRestingWindowToDesktop(IntPtr windowHandle)
     {
         bool keepVisible = App.Current?.SettingsService?.Settings
             .KeepWidgetsVisibleOnShowDesktop ?? true;
         return RelativeLayerRestorePolicy.ShouldAttachToDesktop(
-            UsesDesktopPinnedMode(),
+            UsesDesktopPinnedMode(windowHandle),
             keepVisible);
     }
 
     private static bool TryAttachRestingWindowWithoutChangingLevel(
         IntPtr windowHandle)
     {
-        return ShouldAttachRestingWindowToDesktop() &&
+        return ShouldAttachRestingWindowToDesktop(windowHandle) &&
                TryAttachToDesktopIconLayer(
                    windowHandle,
                    placeAtBottom: false);

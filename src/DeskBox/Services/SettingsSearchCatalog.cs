@@ -109,7 +109,7 @@ internal static class SettingsSearchCatalog
         new("InteractionWindowSettings", "Settings.WidgetSnap.Spacing.Title", "Settings.WidgetSnap.Spacing.Description"),
         new("InteractionWindowSettings", "Settings.DesktopDoubleClick.Title", "Settings.DesktopDoubleClick.Description"),
         new("ManagedStorage", "Settings.ManagedStorage.ListTitle", null),
-        new("SystemMonitorSettings", "Settings.SystemMonitor.ChartStyle.Title", "Settings.SystemMonitor.ChartStyle.Description"),
+        new("SystemMonitorSettings", "Settings.SystemMonitor.Refresh.Title", null),
         new("SystemMonitorSettings", "Settings.SystemMonitor.CpuColor", null),
         new("SystemMonitorSettings", "Settings.SystemMonitor.MemoryColor", null),
         new("SystemMonitorSettings", "Settings.SystemMonitor.NetworkColor", null),

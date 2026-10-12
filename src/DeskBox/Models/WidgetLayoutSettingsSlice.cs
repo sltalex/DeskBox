@@ -7,9 +7,14 @@ public sealed class WidgetLayoutSettingsSlice
 {
     /// <summary>System monitor chart presentation preferences.</summary>
     public string SystemMonitorChartStyle { get; set; } = "Bars";
+    // Empty until explicitly chosen so older single-style settings keep their appearance.
+    public string SystemMonitorCpuChartStyle { get; set; } = string.Empty;
+    public string SystemMonitorMemoryChartStyle { get; set; } = string.Empty;
+    public string SystemMonitorNetworkChartStyle { get; set; } = string.Empty;
     public string SystemMonitorCpuChartColor { get; set; } = "#2C8EE4";
     public string SystemMonitorMemoryChartColor { get; set; } = "#46AE85";
     public string SystemMonitorNetworkChartColor { get; set; } = "#E6A23C";
+    public int SystemMonitorRefreshIntervalSeconds { get; set; } = 2;
     /// <summary>
     /// Enabled state for singleton feature widgets, keyed by <see cref="WidgetKind"/> name.
     /// Legacy boolean properties are still kept as compatibility mirrors.
@@ -81,9 +86,13 @@ public sealed class WidgetLayoutSettingsSlice
 
         FeatureWidgetEnabledStates = other.FeatureWidgetEnabledStates;
         SystemMonitorChartStyle = other.SystemMonitorChartStyle;
+        SystemMonitorCpuChartStyle = other.SystemMonitorCpuChartStyle;
+        SystemMonitorMemoryChartStyle = other.SystemMonitorMemoryChartStyle;
+        SystemMonitorNetworkChartStyle = other.SystemMonitorNetworkChartStyle;
         SystemMonitorCpuChartColor = other.SystemMonitorCpuChartColor;
         SystemMonitorMemoryChartColor = other.SystemMonitorMemoryChartColor;
         SystemMonitorNetworkChartColor = other.SystemMonitorNetworkChartColor;
+        SystemMonitorRefreshIntervalSeconds = other.SystemMonitorRefreshIntervalSeconds;
         Widgets = other.Widgets;
         WidgetGroups = other.WidgetGroups;
         WidgetTopologyLayouts = other.WidgetTopologyLayouts;

@@ -176,7 +176,7 @@ public sealed class TreeIllustrationTests
         string source = File.ReadAllText(TestPaths.FromRepository(
             "src/DeskBox/Controls/WidgetContents/TreeWidgetContent.cs"));
         Assert.Contains("!_disposed && _visible && IsLoaded && WindowsCompatibilityService.ShouldAnimate", source);
-        Assert.Contains("Unloaded += (_, _) => { _timer.Stop(); StopMotion(); };", source);
+        Assert.Contains("Unloaded += (_, _) => { _counter.Changed -= CounterChanged; _timer.Stop(); StopMotion(); };", source);
         Assert.Contains("else { _timer.Stop(); StopMotion(); }", source);
         Assert.Contains("_sway.Stop();", source);
         Assert.Contains("_celebration.Stop();", source);

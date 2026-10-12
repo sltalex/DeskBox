@@ -34,7 +34,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     private IDisposable? _subscription;
     private bool _visible = true;
     private bool _disposed;
-    private SystemMonitorPresentationSettings _presentation = new("Bars", "#2C8EE4", "#46AE85", "#E6A23C");
+    private SystemMonitorPresentationSettings _presentation = new("Bars", "Bars", "Bars", "#2C8EE4", "#46AE85", "#E6A23C", 2);
 
     public SystemMonitorWidgetContent(LocalizationService localization)
     {
@@ -42,6 +42,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         if (App.Current?.SettingsService is { } settings)
         {
             _presentation = new FeatureWidgetsSettingsCoordinator(settings).ReadSystemMonitorPresentation();
+            SystemMonitorService.Instance.SetRefreshInterval(_presentation.RefreshIntervalSeconds);
             settings.SettingsChanged += OnSettingsChanged;
         }
         var root = new StackPanel { Spacing = 6, Margin = new Thickness(9, 6, 9, 8) };
@@ -200,18 +201,19 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
             diskIndex++;
         }
 
-        DrawChart(_cpuChart, history.Select(item => item.CpuPercent), null, 100, _presentation.CpuColor);
-        DrawChart(_memoryChart, history.Select(item => item.MemoryPercent), null, 100, _presentation.MemoryColor);
+        DrawChart(_cpuChart, history.Select(item => item.CpuPercent), null, 100, _presentation.CpuColor, _presentation.CpuChartStyle);
+        DrawChart(_memoryChart, history.Select(item => item.MemoryPercent), null, 100, _presentation.MemoryColor, _presentation.MemoryChartStyle);
         double scale = Math.Max(1, history.SelectMany(item => new[]
             { item.DownloadBytesPerSecond ?? 0, item.UploadBytesPerSecond ?? 0 }).DefaultIfEmpty().Max());
         DrawChart(_networkChart, history.Select(item => item.DownloadBytesPerSecond),
-            history.Select(item => item.UploadBytesPerSecond), scale, _presentation.NetworkColor);
+            history.Select(item => item.UploadBytesPerSecond), scale, _presentation.NetworkColor, _presentation.NetworkChartStyle);
     }
 
     private void OnSettingsChanged()
     {
         if (_disposed || App.Current?.SettingsService is not { } settings) return;
         _presentation = new FeatureWidgetsSettingsCoordinator(settings).ReadSystemMonitorPresentation();
+        SystemMonitorService.Instance.SetRefreshInterval(_presentation.RefreshIntervalSeconds);
     }
 
     private void EnsureDiskCards(int count)
@@ -276,9 +278,9 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         }
     }
 
-    private void DrawChart(Canvas canvas, IEnumerable<double?> primary, IEnumerable<double?>? secondary, double scale, string color)
+    private static void DrawChart(Canvas canvas, IEnumerable<double?> primary, IEnumerable<double?>? secondary, double scale, string color, string style)
     {
-        if (_presentation.ChartStyle == "Line")
+        if (style == "Line")
         {
             DrawLines(canvas, primary, secondary, scale, color);
             return;

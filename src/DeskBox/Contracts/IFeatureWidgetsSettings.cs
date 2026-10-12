@@ -69,7 +69,9 @@ public interface IFeatureWidgetsSettings
 {
     SystemMonitorPresentationSettings ReadSystemMonitorPresentation();
     bool SetSystemMonitorChartStyle(string? style);
+    bool SetSystemMonitorChartStyle(string metric, string? style);
     bool SetSystemMonitorChartColor(string metric, string? color);
+    bool SetSystemMonitorRefreshInterval(int seconds);
     /// <summary>Reads the current music presentation snapshot (raw stored values).</summary>
     MusicPresentationSettings ReadMusicPresentation();
 
@@ -164,7 +166,10 @@ public interface IFeatureWidgetsSettings
 }
 
 public sealed record SystemMonitorPresentationSettings(
-    string ChartStyle,
+    string CpuChartStyle,
+    string MemoryChartStyle,
+    string NetworkChartStyle,
     string CpuColor,
     string MemoryColor,
-    string NetworkColor);
+    string NetworkColor,
+    int RefreshIntervalSeconds);

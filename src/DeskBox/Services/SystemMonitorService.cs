@@ -16,6 +16,10 @@ internal sealed class SystemMonitorService
     private CancellationTokenSource? _stop;
     private Task _runningTask = Task.CompletedTask;
     private SystemMonitorSnapshot? _latest;
+    private int _refreshIntervalSeconds = 2;
+
+    public void SetRefreshInterval(int seconds) =>
+        Volatile.Write(ref _refreshIntervalSeconds, FeatureWidgetsSettingsCoordinator.NormalizeRefreshInterval(seconds));
 
     private SystemMonitorService() { }
     internal SystemMonitorService(Func<CancellationToken, Task> testRunner) => _testRunner = testRunner;
@@ -78,8 +82,7 @@ internal sealed class SystemMonitorService
         long lastTick = 0;
         try
         {
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
-            do
+            while (!cancellationToken.IsCancellationRequested)
             {
                 // Read all independent sources off the UI thread. A broken source only
                 // blanks its own value and is retried on the next tick.
@@ -146,14 +149,16 @@ internal sealed class SystemMonitorService
                     if (cancellationToken.IsCancellationRequested) break;
                     _latest = snapshot;
                     _history.Enqueue(snapshot);
-                    while (_history.Count > 30 ||
+                    while (_history.Count > 61 ||
                         (_history.Count > 0 && _history.Peek().Timestamp < now.AddSeconds(-60)))
                         _history.Dequeue();
                     history = _history.ToArray();
                     listeners = _listeners.ToArray();
                 }
                 foreach (var listener in listeners) Notify(listener, snapshot, history);
-            } while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false));
+                int interval = Volatile.Read(ref _refreshIntervalSeconds);
+                await Task.Delay(TimeSpan.FromSeconds(interval), cancellationToken).ConfigureAwait(false);
+            }
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { App.LogVerbose($"[SystemMonitor] Sampler stopped: {ex.Message}"); }

@@ -31,10 +31,13 @@ public sealed class FeatureWidgetsSettingsCoordinator : IFeatureWidgetsSettings
     {
         WidgetLayoutSettingsSlice layout = _settings.Settings.WidgetLayout;
         return new SystemMonitorPresentationSettings(
-            NormalizeChartStyle(layout.SystemMonitorChartStyle),
+            NormalizeChartStyle(string.IsNullOrWhiteSpace(layout.SystemMonitorCpuChartStyle) ? layout.SystemMonitorChartStyle : layout.SystemMonitorCpuChartStyle),
+            NormalizeChartStyle(string.IsNullOrWhiteSpace(layout.SystemMonitorMemoryChartStyle) ? layout.SystemMonitorChartStyle : layout.SystemMonitorMemoryChartStyle),
+            NormalizeChartStyle(string.IsNullOrWhiteSpace(layout.SystemMonitorNetworkChartStyle) ? layout.SystemMonitorChartStyle : layout.SystemMonitorNetworkChartStyle),
             NormalizeChartColor(layout.SystemMonitorCpuChartColor, "#2C8EE4"),
             NormalizeChartColor(layout.SystemMonitorMemoryChartColor, "#46AE85"),
-            NormalizeChartColor(layout.SystemMonitorNetworkChartColor, "#E6A23C"));
+            NormalizeChartColor(layout.SystemMonitorNetworkChartColor, "#E6A23C"),
+            NormalizeRefreshInterval(layout.SystemMonitorRefreshIntervalSeconds));
     }
 
     public bool SetSystemMonitorChartStyle(string? style)
@@ -44,6 +47,36 @@ public sealed class FeatureWidgetsSettingsCoordinator : IFeatureWidgetsSettings
         WidgetLayoutSettingsSlice layout = _settings.Settings.WidgetLayout;
         if (layout.SystemMonitorChartStyle == normalized) return false;
         layout.SystemMonitorChartStyle = normalized;
+        _settings.SaveDebounced();
+        return true;
+    }
+
+    public bool SetSystemMonitorChartStyle(string metric, string? style)
+    {
+        ThrowIfStopped();
+        string normalized = NormalizeChartStyle(style);
+        WidgetLayoutSettingsSlice layout = _settings.Settings.WidgetLayout;
+        string before = metric switch
+        {
+            "Cpu" => layout.SystemMonitorCpuChartStyle,
+            "Memory" => layout.SystemMonitorMemoryChartStyle,
+            _ => layout.SystemMonitorNetworkChartStyle
+        };
+        if (before == normalized) return false;
+        if (metric == "Cpu") layout.SystemMonitorCpuChartStyle = normalized;
+        else if (metric == "Memory") layout.SystemMonitorMemoryChartStyle = normalized;
+        else layout.SystemMonitorNetworkChartStyle = normalized;
+        _settings.SaveDebounced();
+        return true;
+    }
+
+    public bool SetSystemMonitorRefreshInterval(int seconds)
+    {
+        ThrowIfStopped();
+        int normalized = NormalizeRefreshInterval(seconds);
+        WidgetLayoutSettingsSlice layout = _settings.Settings.WidgetLayout;
+        if (layout.SystemMonitorRefreshIntervalSeconds == normalized) return false;
+        layout.SystemMonitorRefreshIntervalSeconds = normalized;
         _settings.SaveDebounced();
         return true;
     }
@@ -65,6 +98,8 @@ public sealed class FeatureWidgetsSettingsCoordinator : IFeatureWidgetsSettings
 
     private static string NormalizeChartStyle(string? value) =>
         string.Equals(value, "Line", StringComparison.OrdinalIgnoreCase) ? "Line" : "Bars";
+
+    internal static int NormalizeRefreshInterval(int seconds) => seconds is 1 or 2 or 5 or 10 ? seconds : 2;
 
     private static string NormalizeChartColor(string? value, string fallback)
     {

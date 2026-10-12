@@ -78,9 +78,13 @@ public sealed class WidgetLayoutStoreTests : IDisposable
             "featureWidgetEnabledStates",
             "widgets",
             "systemMonitorChartStyle",
+            "systemMonitorCpuChartStyle",
+            "systemMonitorMemoryChartStyle",
+            "systemMonitorNetworkChartStyle",
             "systemMonitorCpuChartColor",
             "systemMonitorMemoryChartColor",
             "systemMonitorNetworkChartColor",
+            "systemMonitorRefreshIntervalSeconds",
             "widgetGroups",
             "widgetTopologyLayouts",
             "activeWidgetTopologyKey",
@@ -115,7 +119,7 @@ public sealed class WidgetLayoutStoreTests : IDisposable
         // it lands in the file AND the settings strip set automatically, so
         // this pins the count.
         Assert.Equal(
-            15,
+            19,
             typeof(WidgetLayoutSettingsSlice).GetProperties(
                 System.Reflection.BindingFlags.Instance |
                 System.Reflection.BindingFlags.Public).Length);

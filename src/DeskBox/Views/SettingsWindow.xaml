@@ -1796,17 +1796,26 @@ svc:Localized.DescriptionKey="Settings.DefaultWidth.Description"
                     <DataTemplate x:Key="SystemMonitorSettingsSectionTemplate" x:DataType="viewModels:SettingsViewModel">
                         <StackPanel x:Name="SystemMonitorSettingsSection" Visibility="Collapsed" Style="{StaticResource SectionPanelStyle}">
                             <TextBlock Style="{StaticResource SectionTitleTextStyle}" svc:Localized.Key="SystemMonitor.Title" />
-                            <toolkit:SettingsCard svc:Localized.HeaderKey="Settings.SystemMonitor.ChartStyle.Title" svc:Localized.DescriptionKey="Settings.SystemMonitor.ChartStyle.Description">
-                                <ComboBox MinWidth="180" ItemsSource="{Binding AvailableSystemMonitorChartStyles}" controls:SettingsComboBox.Value="{Binding SystemMonitorChartStyle, Mode=TwoWay}" />
+                            <toolkit:SettingsCard svc:Localized.HeaderKey="Settings.SystemMonitor.Refresh.Title">
+                                <ComboBox MinWidth="160" ItemsSource="{Binding AvailableSystemMonitorRefreshIntervals}" controls:SettingsComboBox.Value="{Binding SystemMonitorRefreshIntervalSeconds, Mode=TwoWay}" />
                             </toolkit:SettingsCard>
-                            <toolkit:SettingsCard svc:Localized.HeaderKey="Settings.SystemMonitor.CpuColor" >
-                                <TextBox Width="130" Text="{Binding SystemMonitorCpuChartColor, Mode=TwoWay}" />
+                            <toolkit:SettingsCard svc:Localized.HeaderKey="Settings.SystemMonitor.CpuColor">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <ComboBox MinWidth="120" ItemsSource="{Binding AvailableSystemMonitorChartStyles}" controls:SettingsComboBox.Value="{Binding SystemMonitorCpuChartStyle, Mode=TwoWay}" />
+                                    <ComboBox MinWidth="120" ItemsSource="{Binding AvailableSystemMonitorColors}" controls:SettingsComboBox.Value="{Binding SystemMonitorCpuChartColor, Mode=TwoWay}" />
+                                </StackPanel>
                             </toolkit:SettingsCard>
-                            <toolkit:SettingsCard svc:Localized.HeaderKey="Settings.SystemMonitor.MemoryColor" >
-                                <TextBox Width="130" Text="{Binding SystemMonitorMemoryChartColor, Mode=TwoWay}" />
+                            <toolkit:SettingsCard svc:Localized.HeaderKey="Settings.SystemMonitor.MemoryColor">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <ComboBox MinWidth="120" ItemsSource="{Binding AvailableSystemMonitorChartStyles}" controls:SettingsComboBox.Value="{Binding SystemMonitorMemoryChartStyle, Mode=TwoWay}" />
+                                    <ComboBox MinWidth="120" ItemsSource="{Binding AvailableSystemMonitorColors}" controls:SettingsComboBox.Value="{Binding SystemMonitorMemoryChartColor, Mode=TwoWay}" />
+                                </StackPanel>
                             </toolkit:SettingsCard>
-                            <toolkit:SettingsCard svc:Localized.HeaderKey="Settings.SystemMonitor.NetworkColor" >
-                                <TextBox Width="130" Text="{Binding SystemMonitorNetworkChartColor, Mode=TwoWay}" />
+                            <toolkit:SettingsCard svc:Localized.HeaderKey="Settings.SystemMonitor.NetworkColor">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <ComboBox MinWidth="120" ItemsSource="{Binding AvailableSystemMonitorChartStyles}" controls:SettingsComboBox.Value="{Binding SystemMonitorNetworkChartStyle, Mode=TwoWay}" />
+                                    <ComboBox MinWidth="120" ItemsSource="{Binding AvailableSystemMonitorColors}" controls:SettingsComboBox.Value="{Binding SystemMonitorNetworkChartColor, Mode=TwoWay}" />
+                                </StackPanel>
                             </toolkit:SettingsCard>
                         </StackPanel>
                     </DataTemplate>

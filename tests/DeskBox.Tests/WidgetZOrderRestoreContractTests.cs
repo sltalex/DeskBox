@@ -3,6 +3,25 @@ namespace DeskBox.Tests;
 public sealed class WidgetZOrderRestoreContractTests
 {
     [Fact]
+    public void SystemMonitorWindow_RemainsDesktopPinnedAcrossRaisePaths()
+    {
+        string window = File.ReadAllText(TestPaths.FromRepository(
+            "src/DeskBox/Views/ContentWidgetWindow.xaml.cs"));
+        string layer = File.ReadAllText(TestPaths.FromRepository(
+            "src/DeskBox/Services/WidgetLayerService.cs"));
+
+        Assert.Contains("_config.WidgetKind == WidgetKind.SystemMonitor", window, StringComparison.Ordinal);
+        Assert.Contains("RegisterForcedDesktopPinnedWindow(HWnd)", window, StringComparison.Ordinal);
+        Assert.Contains("s_forcedDesktopPinnedWindows.Remove(windowHandle)", layer, StringComparison.Ordinal);
+        Assert.Contains("if (UsesDesktopPinnedMode(windowHandle))", SliceMethod(
+            layer, "public static void BringAbovePeerWidgets", "public static bool TryBringAbovePeerWidgetsAtDesktopLayer"), StringComparison.Ordinal);
+        Assert.Contains("!UsesDesktopPinnedMode(handle)", SliceMethod(
+            layer, "public static void BringGroupTemporarilyToFront", "public static bool ApplyPeerOrderHighestToLowest"), StringComparison.Ordinal);
+        Assert.Contains("MoveToDesktopBottom(handle)", SliceMethod(
+            layer, "public static void HoldGroupTopMostWithoutActivation", "public static void BringToFront"), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void IdleNormalization_OnlyReordersWidgetPeers()
     {
         string source = File.ReadAllText(TestPaths.FromRepository(

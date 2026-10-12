@@ -7,6 +7,45 @@ namespace DeskBox.Tests;
 
 public sealed class FeatureWidgetsSettingsCoordinatorTests : IDisposable
 {
+    [Fact]
+    public async Task SystemMonitorOptions_PersistIndependentStylesColorsAndRefreshRate()
+    {
+        var settings = new SettingsService(_root);
+        await settings.LoadAsync();
+        var coordinator = new FeatureWidgetsSettingsCoordinator(settings);
+
+        Assert.True(coordinator.SetSystemMonitorChartStyle("Cpu", "Line"));
+        Assert.True(coordinator.SetSystemMonitorChartStyle("Network", "Line"));
+        Assert.True(coordinator.SetSystemMonitorChartColor("Memory", "#8b6fd8"));
+        Assert.True(coordinator.SetSystemMonitorRefreshInterval(5));
+        Assert.False(coordinator.SetSystemMonitorRefreshInterval(5));
+        Assert.Equal(5, coordinator.ReadSystemMonitorPresentation().RefreshIntervalSeconds);
+
+        await settings.SaveAsync();
+        var reloaded = new SettingsService(_root);
+        await reloaded.LoadAsync();
+        var presentation = new FeatureWidgetsSettingsCoordinator(reloaded).ReadSystemMonitorPresentation();
+        Assert.Equal("Line", presentation.CpuChartStyle);
+        Assert.Equal("Bars", presentation.MemoryChartStyle);
+        Assert.Equal("Line", presentation.NetworkChartStyle);
+        Assert.Equal("#8B6FD8", presentation.MemoryColor);
+        Assert.Equal(5, presentation.RefreshIntervalSeconds);
+    }
+
+    [Fact]
+    public void SystemMonitorLegacyStyle_IsInheritedUntilPerChartSelection()
+    {
+        var settings = new SettingsService(_root);
+        settings.Settings.WidgetLayout.SystemMonitorChartStyle = "Line";
+        var coordinator = new FeatureWidgetsSettingsCoordinator(settings);
+
+        Assert.Equal("Line", coordinator.ReadSystemMonitorPresentation().CpuChartStyle);
+        Assert.Equal("Line", coordinator.ReadSystemMonitorPresentation().MemoryChartStyle);
+        Assert.True(coordinator.SetSystemMonitorChartStyle("Memory", "Bars"));
+        Assert.Equal("Line", coordinator.ReadSystemMonitorPresentation().CpuChartStyle);
+        Assert.Equal("Bars", coordinator.ReadSystemMonitorPresentation().MemoryChartStyle);
+    }
+
     private readonly string _root = Path.Combine(
         Path.GetTempPath(), "DeskBox.Tests", Guid.NewGuid().ToString("N"));
 

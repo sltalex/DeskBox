@@ -48,7 +48,7 @@ public abstract partial class WidgetWindowBase
 
     protected void HoldTemporaryTopMost(bool showWindow = true)
     {
-        if (WidgetLayerService.UsesDesktopPinnedMode())
+        if (WidgetLayerService.UsesDesktopPinnedMode(HWnd))
         {
             IsAtDesktopLayer = true;
             IsRaisedFromManager = false;

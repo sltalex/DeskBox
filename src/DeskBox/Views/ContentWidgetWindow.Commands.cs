@@ -979,7 +979,7 @@ public sealed partial class ContentWidgetWindow
 
     private void ActivateForTitleRename()
     {
-        if (WidgetLayerService.UsesDesktopPinnedMode())
+        if (WidgetLayerService.UsesDesktopPinnedMode(HWnd))
         {
             // Resting desktop-pinned widgets carry WS_EX_NOACTIVATE; strip it
             // before the explicit activation so the editor window can take

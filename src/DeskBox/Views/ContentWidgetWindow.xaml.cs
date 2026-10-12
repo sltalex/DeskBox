@@ -69,6 +69,10 @@ public sealed partial class ContentWidgetWindow : WidgetWindowBase, IDesktopWidg
 
         SettingsService = settingsService;
         HWnd = WindowNative.GetWindowHandle(this);
+        if (_config.WidgetKind == WidgetKind.SystemMonitor)
+        {
+            WidgetLayerService.RegisterForcedDesktopPinnedWindow(HWnd);
+        }
         var windowId = Win32Interop.GetWindowIdFromWindow(HWnd);
         AppWindow = AppWindow.GetFromWindowId(windowId);
         Diagnostics = new WidgetWindowDiagnostics("Content", _config, () => HWnd);

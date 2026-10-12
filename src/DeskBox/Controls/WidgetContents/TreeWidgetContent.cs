@@ -1,5 +1,6 @@
 using DeskBox.Services;
 using Microsoft.UI;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -13,6 +14,7 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
 {
     private readonly LocalizationService _localization;
     private readonly TreeCounterService _counter = TreeCounterService.Instance;
+    private readonly DispatcherQueue _uiQueue = DispatcherQueue.GetForCurrentThread();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromSeconds(1) };
     private readonly Grid _drawing = new() { Width = TreeIllustrationLayout.Width, Height = TreeIllustrationLayout.Height };
     private readonly Grid _treeSurface = new()
@@ -28,12 +30,15 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
     private readonly Storyboard _sway = new();
     private readonly Storyboard _celebration = new();
     private readonly TextBlock _stage = new() { FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly TextBlock _captureStatus = new() { FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock _fruitStats = new() { FontSize = 12, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly ProgressBar _progress = new() { Height = 18 };
     private readonly TextBlock _percent = new() { FontSize = 11, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-    private bool _visible = true;
-    private bool _disposed;
+    private volatile bool _visible = true;
+    private volatile bool _disposed;
     private bool _motionRunning;
+    private int _refreshQueued;
+    private long _lastCounterRefreshTicks;
     private int _lastStage;
     private long _lastFruitInventory = -1;
     private long _lastHarvested;
@@ -52,8 +57,9 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         var progressRow = new Grid { Margin = new Thickness(16, 8, 16, 4) };
         progressRow.Children.Add(_progress);
         progressRow.Children.Add(_percent);
-        stack.Children.Add(new Viewbox { Child = _drawing, Height = 220, Stretch = Stretch.Uniform });
+        stack.Children.Add(new Viewbox { Child = _drawing, Height = 110, Stretch = Stretch.Uniform });
         stack.Children.Add(_stage);
+        stack.Children.Add(_captureStatus);
         stack.Children.Add(_fruitStats);
         stack.Children.Add(progressRow);
         Content = stack;
@@ -71,9 +77,10 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         _timer.Tick += (_, _) => { if (_visible) Refresh(); };
         Loaded += (_, _) =>
         {
+            _counter.Changed += CounterChanged;
             if (_visible && !_disposed) { _timer.Start(); Refresh(); }
         };
-        Unloaded += (_, _) => { _timer.Stop(); StopMotion(); };
+        Unloaded += (_, _) => { _counter.Changed -= CounterChanged; _timer.Stop(); StopMotion(); };
         Refresh();
     }
 
@@ -91,12 +98,14 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         bool celebrate = _lastStage != 0 && (p.Stage > _lastStage || p.HarvestedFruit > _lastHarvested);
         _lastHarvested = p.HarvestedFruit;
         _stage.Text = _localization.T($"Tree.Stage.{p.Stage}");
+        _captureStatus.Visibility = p.Paused ? Visibility.Visible : Visibility.Collapsed;
+        if (p.Paused) _captureStatus.Text = _localization.T("Tree.Settings.StatisticsPaused");
         _fruitStats.Visibility = p.Stage == 5 ? Visibility.Visible : Visibility.Collapsed;
         if (p.Stage == 5)
             _fruitStats.Text = _localization.Format("Tree.FruitStats", p.FruitInventory, p.HarvestedFruit);
         double percentage = p.MaturityPercentage;
         _progress.Value = percentage;
-        _percent.Text = $"{percentage:0}%";
+        _percent.Text = $"{percentage:0.00}%";
         if (_lastStage != p.Stage)
             _treeImage.Source = Asset(TreeIllustrationLayout.StageAssetName(p.Stage));
         if (_lastStage != p.Stage || _lastFruitInventory != p.FruitInventory)
@@ -110,6 +119,21 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
             _celebration.Stop();
             _celebration.Begin();
         }
+    }
+
+    private void CounterChanged()
+    {
+        if (_disposed || !_visible) return;
+        long now = Environment.TickCount64;
+        if (now - Volatile.Read(ref _lastCounterRefreshTicks) < 100) return;
+        if (Interlocked.Exchange(ref _refreshQueued, 1) != 0) return;
+        Volatile.Write(ref _lastCounterRefreshTicks, now);
+        if (!_uiQueue.TryEnqueue(() =>
+            {
+                try { if (!_disposed && _visible && IsLoaded) Refresh(); }
+                finally { Interlocked.Exchange(ref _refreshQueued, 0); }
+            }))
+            Interlocked.Exchange(ref _refreshQueued, 0);
     }
 
     private static SvgImageSource Asset(string fileName) => new(new Uri($"ms-appx:///Assets/Tree/{fileName}"));
@@ -202,6 +226,7 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
     public void Dispose()
     {
         _disposed = true;
+        _counter.Changed -= CounterChanged;
         _timer.Stop();
         StopMotion();
     }

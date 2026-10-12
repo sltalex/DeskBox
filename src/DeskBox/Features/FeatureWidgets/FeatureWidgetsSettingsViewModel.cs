@@ -32,9 +32,13 @@ public sealed partial class FeatureWidgetsSettingsViewModel : ObservableObject
     private string _attachmentStorageMode = AttachmentStorageModes.Link;
     private string[]? _cachedAttachmentStorageModeNames;
     private string _systemMonitorChartStyle = "Bars";
+    private string _systemMonitorCpuChartStyle = "Bars";
+    private string _systemMonitorMemoryChartStyle = "Bars";
+    private string _systemMonitorNetworkChartStyle = "Bars";
     private string _systemMonitorCpuChartColor = "#2C8EE4";
     private string _systemMonitorMemoryChartColor = "#46AE85";
     private string _systemMonitorNetworkChartColor = "#E6A23C";
+    private int _systemMonitorRefreshIntervalSeconds = 2;
 
     public FeatureWidgetsSettingsViewModel(
         IFeatureWidgetsSettings settings,
@@ -46,12 +50,36 @@ public sealed partial class FeatureWidgetsSettingsViewModel : ObservableObject
     }
 
     public string SystemMonitorChartStyle { get => _systemMonitorChartStyle; set { if (SetProperty(ref _systemMonitorChartStyle, value) && !_isSyncingPresentation) _settings.SetSystemMonitorChartStyle(value); } }
+    public string SystemMonitorCpuChartStyle { get => _systemMonitorCpuChartStyle; set { if (SetProperty(ref _systemMonitorCpuChartStyle, value) && !_isSyncingPresentation) _settings.SetSystemMonitorChartStyle("Cpu", value); } }
+    public string SystemMonitorMemoryChartStyle { get => _systemMonitorMemoryChartStyle; set { if (SetProperty(ref _systemMonitorMemoryChartStyle, value) && !_isSyncingPresentation) _settings.SetSystemMonitorChartStyle("Memory", value); } }
+    public string SystemMonitorNetworkChartStyle { get => _systemMonitorNetworkChartStyle; set { if (SetProperty(ref _systemMonitorNetworkChartStyle, value) && !_isSyncingPresentation) _settings.SetSystemMonitorChartStyle("Network", value); } }
     public string SystemMonitorCpuChartColor { get => _systemMonitorCpuChartColor; set { if (SetProperty(ref _systemMonitorCpuChartColor, value) && !_isSyncingPresentation) _settings.SetSystemMonitorChartColor("Cpu", value); } }
     public string SystemMonitorMemoryChartColor { get => _systemMonitorMemoryChartColor; set { if (SetProperty(ref _systemMonitorMemoryChartColor, value) && !_isSyncingPresentation) _settings.SetSystemMonitorChartColor("Memory", value); } }
     public string SystemMonitorNetworkChartColor { get => _systemMonitorNetworkChartColor; set { if (SetProperty(ref _systemMonitorNetworkChartColor, value) && !_isSyncingPresentation) _settings.SetSystemMonitorChartColor("Network", value); } }
+    public int SystemMonitorRefreshIntervalSeconds { get => _systemMonitorRefreshIntervalSeconds; set { if (SetProperty(ref _systemMonitorRefreshIntervalSeconds, value) && !_isSyncingPresentation) _settings.SetSystemMonitorRefreshInterval(value); } }
 
     public object[] AvailableSystemMonitorChartStyles =>
         [new SettingsOption("Bars", _localize("Settings.SystemMonitor.ChartStyle.Bars")), new SettingsOption("Line", _localize("Settings.SystemMonitor.ChartStyle.Line"))];
+    public object[] AvailableSystemMonitorRefreshIntervals =>
+        [new SettingsOption(1, _localize("Settings.SystemMonitor.Refresh.1")), new SettingsOption(2, _localize("Settings.SystemMonitor.Refresh.2")), new SettingsOption(5, _localize("Settings.SystemMonitor.Refresh.5")), new SettingsOption(10, _localize("Settings.SystemMonitor.Refresh.10"))];
+    public object[] AvailableSystemMonitorColors
+    {
+        get
+        {
+            var options = new List<SettingsOption>
+            {
+                new("#2C8EE4", _localize("Settings.SystemMonitor.Color.Blue")),
+                new("#46AE85", _localize("Settings.SystemMonitor.Color.Green")),
+                new("#E6A23C", _localize("Settings.SystemMonitor.Color.Orange")),
+                new("#D9534F", _localize("Settings.SystemMonitor.Color.Red")),
+                new("#8B6FD8", _localize("Settings.SystemMonitor.Color.Purple"))
+            };
+            foreach (string color in new[] { _systemMonitorCpuChartColor, _systemMonitorMemoryChartColor, _systemMonitorNetworkChartColor })
+                if (!options.Any(option => Equals(option.Value, color)))
+                    options.Add(new SettingsOption(color, color));
+            return options.Cast<object>().ToArray();
+        }
+    }
 
     public string FolderOpenBehavior
     {
@@ -173,10 +201,14 @@ public sealed partial class FeatureWidgetsSettingsViewModel : ObservableObject
             FolderOpenBehavior = _settings.ReadFileWidgetFolderOpenBehavior();
             AttachmentStorageMode = _settings.ReadAttachmentStorageMode();
             SystemMonitorPresentationSettings monitor = _settings.ReadSystemMonitorPresentation();
-            SystemMonitorChartStyle = monitor.ChartStyle;
+            SystemMonitorChartStyle = monitor.CpuChartStyle;
+            SystemMonitorCpuChartStyle = monitor.CpuChartStyle;
+            SystemMonitorMemoryChartStyle = monitor.MemoryChartStyle;
+            SystemMonitorNetworkChartStyle = monitor.NetworkChartStyle;
             SystemMonitorCpuChartColor = monitor.CpuColor;
             SystemMonitorMemoryChartColor = monitor.MemoryColor;
             SystemMonitorNetworkChartColor = monitor.NetworkColor;
+            SystemMonitorRefreshIntervalSeconds = monitor.RefreshIntervalSeconds;
         }
         finally
         {
@@ -197,6 +229,8 @@ public sealed partial class FeatureWidgetsSettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(FolderOpenBehavior));
         OnPropertyChanged(nameof(AvailableAttachmentStorageModeOptions));
         OnPropertyChanged(nameof(AvailableSystemMonitorChartStyles));
+        OnPropertyChanged(nameof(AvailableSystemMonitorRefreshIntervals));
+        OnPropertyChanged(nameof(AvailableSystemMonitorColors));
     }
 
     public void SetFeatureWidgetEnabled(WidgetKind kind, bool enabled) =>

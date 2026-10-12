@@ -610,9 +610,13 @@ public class AppSettings
 
     /// <inheritdoc cref="WidgetLayoutSettingsSlice.SystemMonitorChartStyle"/>
     public string SystemMonitorChartStyle { get => WidgetLayout.SystemMonitorChartStyle; set => WidgetLayout.SystemMonitorChartStyle = value; }
+    public string SystemMonitorCpuChartStyle { get => WidgetLayout.SystemMonitorCpuChartStyle; set => WidgetLayout.SystemMonitorCpuChartStyle = value; }
+    public string SystemMonitorMemoryChartStyle { get => WidgetLayout.SystemMonitorMemoryChartStyle; set => WidgetLayout.SystemMonitorMemoryChartStyle = value; }
+    public string SystemMonitorNetworkChartStyle { get => WidgetLayout.SystemMonitorNetworkChartStyle; set => WidgetLayout.SystemMonitorNetworkChartStyle = value; }
     public string SystemMonitorCpuChartColor { get => WidgetLayout.SystemMonitorCpuChartColor; set => WidgetLayout.SystemMonitorCpuChartColor = value; }
     public string SystemMonitorMemoryChartColor { get => WidgetLayout.SystemMonitorMemoryChartColor; set => WidgetLayout.SystemMonitorMemoryChartColor = value; }
     public string SystemMonitorNetworkChartColor { get => WidgetLayout.SystemMonitorNetworkChartColor; set => WidgetLayout.SystemMonitorNetworkChartColor = value; }
+    public int SystemMonitorRefreshIntervalSeconds { get => WidgetLayout.SystemMonitorRefreshIntervalSeconds; set => WidgetLayout.SystemMonitorRefreshIntervalSeconds = value; }
 
     /// <inheritdoc cref="WidgetLayoutSettingsSlice.WidgetGroups"/>
     public List<WidgetGroupConfig> WidgetGroups { get => WidgetLayout.WidgetGroups; set => WidgetLayout.WidgetGroups = value; }
