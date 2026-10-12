@@ -125,9 +125,20 @@ internal static class ManagedStoragePathService
             {
                 var drive = new DriveInfo(pathRoot);
                 driveType = drive.DriveType;
-                if (drive.IsReady)
+                // Mapped network drives can block while Windows waits for the
+                // remote server. Path warnings are refreshed from the settings
+                // UI, so only inspect capacity and bus metadata for a ready
+                // local fixed volume.
+                if (driveType == DriveType.Fixed && drive.IsReady)
                 {
                     availableFreeSpace = drive.AvailableFreeSpace;
+
+                    // DriveType misses detachable disks that report as fixed;
+                    // query the bus only after the local volume is confirmed
+                    // ready. Never issue a device query for UNC or mapped
+                    // network paths.
+                    isTransientBusDrive = StorageBusTypeHelper.IsTransientBus(
+                        StorageBusTypeHelper.TryGetBusType(pathRoot));
                 }
             }
             catch
@@ -135,11 +146,6 @@ internal static class ManagedStoragePathService
                 // The path can still be selected. The onboarding UI will label
                 // its storage details as unknown instead of blocking the user.
             }
-
-            // DriveType misses detachable disks that report as fixed; the bus
-            // type is what actually tells them apart.
-            isTransientBusDrive = StorageBusTypeHelper.IsTransientBus(
-                StorageBusTypeHelper.TryGetBusType(pathRoot));
         }
 
         ManagedStorageDriveCandidate? suitableNonSystemDrive =
@@ -200,6 +206,30 @@ internal static class ManagedStoragePathService
 
         foreach (DriveInfo drive in drives)
         {
+            DriveType driveType;
+            try
+            {
+                driveType = drive.DriveType;
+            }
+            catch
+            {
+                continue;
+            }
+
+            // DriveInfo.IsReady and AvailableFreeSpace may wait on a mapped
+            // network drive. Network and other non-fixed volumes cannot be a
+            // suitable local migration target, so do not probe them further.
+            if (driveType != DriveType.Fixed)
+            {
+                yield return new ManagedStorageDriveCandidate(
+                    drive.Name,
+                    driveType,
+                    IsReady: false,
+                    AvailableFreeSpace: 0,
+                    IsTransientBus: true);
+                continue;
+            }
+
             bool isReady;
             long availableFreeSpace;
             try
@@ -213,13 +243,15 @@ internal static class ManagedStoragePathService
                 availableFreeSpace = 0;
             }
 
-            bool isTransientBus = drive.DriveType != DriveType.Fixed ||
-                                  StorageBusTypeHelper.IsTransientBus(
-                                      StorageBusTypeHelper.TryGetBusType(drive.Name));
+            // Only ready fixed volumes are safe to query with DeviceIoControl;
+            // an unavailable removable volume can block just like a network
+            // mapping.
+            bool isTransientBus = isReady && StorageBusTypeHelper.IsTransientBus(
+                StorageBusTypeHelper.TryGetBusType(drive.Name));
 
             yield return new ManagedStorageDriveCandidate(
                 drive.Name,
-                drive.DriveType,
+                driveType,
                 isReady,
                 availableFreeSpace,
                 isTransientBus);
