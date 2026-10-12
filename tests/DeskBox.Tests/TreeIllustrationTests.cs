@@ -84,8 +84,14 @@ public sealed class TreeIllustrationTests
     [InlineData("stage-3.svg", "0 0 260 220")]
     [InlineData("stage-4.svg", "0 0 260 220")]
     [InlineData("stage-5.svg", "0 0 260 220")]
+    [InlineData("stage-1-canopy.svg", "0 0 260 220")]
+    [InlineData("stage-2-canopy.svg", "0 0 260 220")]
+    [InlineData("stage-3-canopy.svg", "0 0 260 220")]
+    [InlineData("stage-4-canopy.svg", "0 0 260 220")]
+    [InlineData("stage-5-canopy.svg", "0 0 260 220")]
     [InlineData("ground.svg", "0 0 260 220")]
     [InlineData("fruit.svg", "0 0 24 28")]
+    [InlineData("falling-leaf.svg", "0 0 18 12")]
     public void IllustrationsAreSelfContainedSvgWithoutUnsupportedEffects(string fileName, string viewBox)
     {
         XDocument document = XDocument.Load(AssetPath(fileName));
@@ -158,6 +164,44 @@ public sealed class TreeIllustrationTests
     }
 
     [Fact]
+    public void EveryStageHasSeparateFoliageWithoutMovingTheTrunkOrGround()
+    {
+        for (int stage = 1; stage <= 5; stage++)
+        {
+            XDocument trunk = XDocument.Load(AssetPath(TreeIllustrationLayout.StageAssetName(stage)));
+            XDocument canopy = XDocument.Load(AssetPath(TreeIllustrationLayout.CanopyAssetName(stage)));
+            string trunkFill = stage == 1 ? "url(#stem)" : "url(#wood)";
+            Assert.Contains(trunk.Descendants(), element => (string?)element.Attribute("fill") == trunkFill);
+            Assert.DoesNotContain(canopy.Descendants(), element => (string?)element.Attribute("fill") == trunkFill);
+            Assert.Contains(canopy.Descendants(Svg + "path"), element => element.Attribute("d") is not null);
+            Assert.InRange(TreeIllustrationLayout.CanopyPivotY(stage), 128, 145);
+        }
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 0)]
+    [InlineData(2, 0)]
+    [InlineData(3, 2)]
+    [InlineData(4, 3)]
+    [InlineData(5, 3)]
+    [InlineData(6, 0)]
+    public void FallingLeavesStayBoundedAndFinishWithinOneSharedCycle(int stage, int count)
+    {
+        IReadOnlyList<FallingLeaf> leaves = TreeIllustrationLayout.FallingLeaves(stage);
+        Assert.Equal(count, leaves.Count);
+        foreach (FallingLeaf leaf in leaves)
+        {
+            Assert.InRange(leaf.X - Math.Abs(leaf.Drift), 12, TreeIllustrationLayout.Width - 30);
+            Assert.InRange(leaf.X + Math.Abs(leaf.Drift), 12, TreeIllustrationLayout.Width - 30);
+            Assert.InRange(leaf.Y, 12, 150);
+            Assert.InRange(leaf.DelaySeconds, 0, TreeIllustrationLayout.LeafCycleSeconds);
+            Assert.InRange(leaf.DurationSeconds, 2, TreeIllustrationLayout.LeafCycleSeconds);
+            Assert.True(leaf.DelaySeconds + leaf.DurationSeconds <= TreeIllustrationLayout.LeafCycleSeconds);
+        }
+    }
+
+    [Fact]
     public void TreeAssetsAreCopiedIntoTheApplicationOutput()
     {
         XDocument project = XDocument.Load(TestPaths.FromRepository("src/DeskBox/DeskBox.csproj"));
@@ -180,6 +224,9 @@ public sealed class TreeIllustrationTests
         Assert.Contains("else { _timer.Stop(); StopMotion(); }", source);
         Assert.Contains("_sway.Stop();", source);
         Assert.Contains("_celebration.Stop();", source);
+        Assert.Contains("_fallingLeaves.Stop();", source);
+        Assert.Contains("_fallingLeafLayer.Visibility = Visibility.Collapsed;", source);
+        Assert.Contains("Storyboard.SetTarget(sway, _canopyTransform);", source);
         Assert.DoesNotContain("new UISettings()", source);
     }
 

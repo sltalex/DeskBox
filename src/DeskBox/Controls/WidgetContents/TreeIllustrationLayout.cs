@@ -6,6 +6,7 @@ internal static class TreeIllustrationLayout
     public const double Width = 260;
     public const double Height = 220;
     public const int MaxVisibleFruit = 12;
+    public const double LeafCycleSeconds = 10;
 
     public static IReadOnlyList<(double X, double Y)> FruitPositions { get; } = Array.AsReadOnly<(double X, double Y)>(
     [
@@ -16,6 +17,36 @@ internal static class TreeIllustrationLayout
 
     public static string StageAssetName(int stage) => $"stage-{Math.Clamp(stage, 1, 5)}.svg";
 
+    public static string CanopyAssetName(int stage) => $"stage-{Math.Clamp(stage, 1, 5)}-canopy.svg";
+
+    public static double CanopyPivotY(int stage) => Math.Clamp(stage, 1, 5) switch
+    {
+        1 => 142,
+        2 => 145,
+        _ => 128
+    };
+
+    /// <summary>A small fixed population; falling leaves are decorative and never affect progress.</summary>
+    public static IReadOnlyList<FallingLeaf> FallingLeaves(int stage) => stage switch
+    {
+        3 => SmallTreeLeaves,
+        4 or 5 => GrownTreeLeaves,
+        _ => Array.Empty<FallingLeaf>()
+    };
+
+    private static readonly IReadOnlyList<FallingLeaf> SmallTreeLeaves = Array.AsReadOnly<FallingLeaf>(
+    [
+        new(83, 105, -22, 0, 5.4, 15),
+        new(171, 102, 25, 3.6, 5.8, -25)
+    ]);
+
+    private static readonly IReadOnlyList<FallingLeaf> GrownTreeLeaves = Array.AsReadOnly<FallingLeaf>(
+    [
+        new(67, 91, -25, 0, 5.8, 15),
+        new(181, 85, 27, 2.5, 6, -25),
+        new(112, 114, 26, 4.2, 5.6, 30)
+    ]);
+
     public static int VisibleFruitCount(long inventory) => (int)Math.Clamp(inventory, 0, MaxVisibleFruit);
 
     public static long ExtraFruitCount(long inventory) => inventory > MaxVisibleFruit ? inventory - MaxVisibleFruit : 0;
@@ -23,3 +54,6 @@ internal static class TreeIllustrationLayout
     public static bool CanHarvest(int stage, long inventory, double x, double y) =>
         stage == 5 && inventory > 0 && x is >= 32 and <= 228 && y is >= 12 and <= 150;
 }
+
+internal readonly record struct FallingLeaf(
+    double X, double Y, double Drift, double DelaySeconds, double DurationSeconds, double InitialRotation);

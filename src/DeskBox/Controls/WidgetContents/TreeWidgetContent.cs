@@ -25,11 +25,19 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         RenderTransformOrigin = new Windows.Foundation.Point(.5, .86)
     };
     private readonly Image _treeImage = new() { Stretch = Stretch.Uniform, IsHitTestVisible = false };
+    private readonly Grid _canopySurface = new() { IsHitTestVisible = false };
+    private readonly Image _canopyImage = new() { Stretch = Stretch.Uniform, IsHitTestVisible = false };
     private readonly Canvas _fruitLayer = new() { IsHitTestVisible = false };
+    private readonly Canvas _fallingLeafLayer = new() { IsHitTestVisible = false, Visibility = Visibility.Collapsed };
     private readonly CompositeTransform _treeTransform = new();
+    private readonly CompositeTransform _canopyTransform = new();
     private readonly Storyboard _sway = new();
     private readonly Storyboard _celebration = new();
-    private readonly TextBlock _stage = new() { FontSize = 18, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly Storyboard _fallingLeaves = new()
+    {
+        Duration = new Duration(TimeSpan.FromSeconds(TreeIllustrationLayout.LeafCycleSeconds)),
+        RepeatBehavior = RepeatBehavior.Forever
+    };
     private readonly TextBlock _captureStatus = new() { FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock _fruitStats = new() { FontSize = 12, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly ProgressBar _progress = new()
@@ -61,9 +69,13 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         _localization = localization;
         _drawing.Children.Add(new Image { Source = Asset("ground.svg"), Stretch = Stretch.Uniform, IsHitTestVisible = false });
         _treeSurface.RenderTransform = _treeTransform;
+        _canopySurface.RenderTransform = _canopyTransform;
+        _canopySurface.Children.Add(_canopyImage);
+        _canopySurface.Children.Add(_fruitLayer);
         _treeSurface.Children.Add(_treeImage);
-        _treeSurface.Children.Add(_fruitLayer);
+        _treeSurface.Children.Add(_canopySurface);
         _drawing.Children.Add(_treeSurface);
+        _drawing.Children.Add(_fallingLeafLayer);
         ConfigureMotion();
 
         var stack = new StackPanel { Spacing = 2, HorizontalAlignment = HorizontalAlignment.Stretch };
@@ -77,7 +89,6 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         Grid.SetColumn(_percent, 2);
         progressRow.Children.Add(_percent);
         stack.Children.Add(new Viewbox { Child = _drawing, Height = 110, Stretch = Stretch.Uniform });
-        stack.Children.Add(_stage);
         stack.Children.Add(_captureStatus);
         stack.Children.Add(_fruitStats);
         stack.Children.Add(progressRow);
@@ -116,7 +127,6 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         TreeProgress p = _counter.Snapshot;
         bool celebrate = _lastStage != 0 && (p.Stage > _lastStage || p.HarvestedFruit > _lastHarvested);
         _lastHarvested = p.HarvestedFruit;
-        _stage.Text = _localization.T($"Tree.Stage.{p.Stage}");
         _captureStatus.Visibility = p.Paused ? Visibility.Visible : Visibility.Collapsed;
         if (p.Paused) _captureStatus.Text = _localization.T("Tree.Settings.StatisticsPaused");
         _fruitStats.Visibility = p.Stage == 5 ? Visibility.Visible : Visibility.Collapsed;
@@ -126,7 +136,15 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         _progress.Value = percentage;
         _percent.Text = $"{percentage:0.00}%";
         if (_lastStage != p.Stage)
+        {
+            StopMotion();
             _treeImage.Source = Asset(TreeIllustrationLayout.StageAssetName(p.Stage));
+            _canopyImage.Source = Asset(TreeIllustrationLayout.CanopyAssetName(p.Stage));
+            _canopySurface.RenderTransformOrigin = new Windows.Foundation.Point(
+                .5, TreeIllustrationLayout.CanopyPivotY(p.Stage) / TreeIllustrationLayout.Height);
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(_treeSurface, _localization.T($"Tree.Stage.{p.Stage}"));
+            ConfigureFallingLeaves(p.Stage);
+        }
         if (_lastStage != p.Stage || _lastFruitInventory != p.FruitInventory)
             DrawFruit(p);
         _lastStage = p.Stage;
@@ -199,14 +217,14 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
     {
         var sway = new DoubleAnimation
         {
-            From = -.85,
-            To = .85,
-            Duration = new Duration(TimeSpan.FromSeconds(2.6)),
+            From = -2.1,
+            To = 2.1,
+            Duration = new Duration(TimeSpan.FromSeconds(2.8)),
             AutoReverse = true,
             RepeatBehavior = RepeatBehavior.Forever,
             EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
         };
-        Storyboard.SetTarget(sway, _treeTransform);
+        Storyboard.SetTarget(sway, _canopyTransform);
         Storyboard.SetTargetProperty(sway, "Rotation");
         _sway.Children.Add(sway);
         foreach (string property in new[] { "ScaleX", "ScaleY" })
@@ -225,11 +243,79 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         }
     }
 
+    private void ConfigureFallingLeaves(int stage)
+    {
+        _fallingLeaves.Children.Clear();
+        _fallingLeafLayer.Children.Clear();
+        SvgImageSource source = Asset("falling-leaf.svg");
+        foreach (FallingLeaf leaf in TreeIllustrationLayout.FallingLeaves(stage))
+        {
+            var transform = new CompositeTransform();
+            var image = new Image
+            {
+                Width = 18,
+                Height = 12,
+                Source = source,
+                Opacity = 0,
+                RenderTransform = transform,
+                RenderTransformOrigin = new Windows.Foundation.Point(.5, .5)
+            };
+            Canvas.SetLeft(image, leaf.X);
+            Canvas.SetTop(image, leaf.Y);
+            _fallingLeafLayer.Children.Add(image);
+            double start = leaf.DelaySeconds;
+            double middle = start + leaf.DurationSeconds * .5;
+            double end = start + leaf.DurationSeconds;
+            double drop = 199 - leaf.Y;
+            AddLeafAnimation(transform, "TranslateY", (0, 0), (start, 0),
+                (middle, drop * .46), (end, drop));
+            AddLeafAnimation(transform, "TranslateX", (0, 0), (start, 0),
+                (start + leaf.DurationSeconds * .25, leaf.Drift * .8),
+                (start + leaf.DurationSeconds * .6, -leaf.Drift * .2), (end, leaf.Drift));
+            AddLeafAnimation(transform, "Rotation", (0, leaf.InitialRotation), (start, leaf.InitialRotation),
+                (middle, leaf.InitialRotation + 85), (end, leaf.InitialRotation + 165));
+            AddLeafAnimation(image, "Opacity", (0, 0), (start, 0),
+                (start + .5, .85), (end - .9, .75), (end, 0));
+        }
+    }
+
+    private void AddLeafAnimation(DependencyObject target, string property, params (double Seconds, double Value)[] frames)
+    {
+        var animation = new DoubleAnimationUsingKeyFrames
+        {
+            Duration = new Duration(TimeSpan.FromSeconds(TreeIllustrationLayout.LeafCycleSeconds))
+        };
+        double previousTime = -1;
+        foreach ((double seconds, double value) in frames)
+        {
+            if (seconds == previousTime) continue;
+            animation.KeyFrames.Add(new EasingDoubleKeyFrame
+            {
+                KeyTime = KeyTime.FromTimeSpan(TimeSpan.FromSeconds(seconds)),
+                Value = value,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            });
+            previousTime = seconds;
+        }
+        Storyboard.SetTarget(animation, target);
+        Storyboard.SetTargetProperty(animation, property);
+        _fallingLeaves.Children.Add(animation);
+    }
+
     private void UpdateMotion()
     {
         bool shouldAnimate = !_disposed && _visible && IsLoaded && WindowsCompatibilityService.ShouldAnimate;
         if (shouldAnimate == _motionRunning) return;
-        if (shouldAnimate) { _sway.Begin(); _motionRunning = true; }
+        if (shouldAnimate)
+        {
+            _sway.Begin();
+            if (_fallingLeaves.Children.Count > 0)
+            {
+                _fallingLeafLayer.Visibility = Visibility.Visible;
+                _fallingLeaves.Begin();
+            }
+            _motionRunning = true;
+        }
         else StopMotion();
     }
 
@@ -237,6 +323,9 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
     {
         _sway.Stop();
         _celebration.Stop();
+        _fallingLeaves.Stop();
+        _fallingLeafLayer.Visibility = Visibility.Collapsed;
+        _canopyTransform.Rotation = 0;
         _treeTransform.Rotation = 0;
         _treeTransform.ScaleX = _treeTransform.ScaleY = 1;
         _motionRunning = false;

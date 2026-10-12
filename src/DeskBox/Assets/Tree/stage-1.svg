@@ -6,11 +6,6 @@
   </defs>
   <path d="M120 188C125 173 123 148 126 137Q129 131 133 138C131 160 136 177 140 188Q131 194 120 188Z" fill="url(#stem)"/>
   <path d="M127 154Q124 168 128 181" fill="none" stroke="#d0e891" stroke-width="3" stroke-linecap="round" opacity=".7"/>
-  <path d="M129 145C103 151 81 134 84 110C104 102 134 115 129 145Z" fill="#477f49" opacity=".22" transform="translate(1 3)"/>
-  <path d="M129 143C102 149 78 129 83 106C108 99 135 113 129 143Z" fill="url(#leaf)"/>
-  <path d="M132 137C126 109 148 93 176 96C182 121 161 146 132 137Z" fill="url(#leaf2)"/>
-  <path d="M129 141Q108 132 94 117M133 136Q148 116 166 106" fill="none" stroke="#edf9b8" stroke-width="2.2" stroke-linecap="round" opacity=".52"/>
-  <path d="M91 110Q104 108 113 114M144 107Q153 101 163 102" fill="none" stroke="#f5ffd2" stroke-width="4" stroke-linecap="round" opacity=".52"/>
   <ellipse cx="125" cy="169" rx="1.5" ry="2.2" fill="#344b31"/>
   <ellipse cx="134" cy="169" rx="1.5" ry="2.2" fill="#344b31"/>
   <path d="M127 175Q130 178 133 174" fill="none" stroke="#344b31" stroke-width="1.5" stroke-linecap="round"/>

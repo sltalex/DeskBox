@@ -7,13 +7,6 @@
   <path d="M119 188C125 164 121 121 130 95Q135 90 136 98C132 122 134 166 142 188Q131 195 119 188Z" fill="url(#wood)"/>
   <path d="M129 147Q112 130 100 120M132 127Q147 111 158 99M132 157Q145 146 159 145" fill="none" stroke="#b78756" stroke-width="5" stroke-linecap="round"/>
   <path d="M127 148Q127 166 129 184" fill="none" stroke="#f4d19c" stroke-width="3" stroke-linecap="round" opacity=".65"/>
-  <path d="M108 133C84 142 65 125 69 103C92 97 114 107 108 133Z" fill="url(#leaf)"/>
-  <path d="M117 122C100 116 99 96 108 86C126 87 135 107 117 122Z" fill="url(#leaf2)"/>
-  <path d="M135 101C111 91 115 65 133 52C153 66 155 91 135 101Z" fill="url(#leaf)"/>
-  <path d="M148 112C139 87 159 69 184 75C188 100 173 116 148 112Z" fill="url(#leaf2)"/>
-  <path d="M148 149C149 128 171 121 186 135C178 155 159 164 148 149Z" fill="url(#leaf)"/>
-  <path d="M102 127L80 112M134 92L134 67M155 104L176 83M154 147L175 138" stroke="#e4f6ae" stroke-width="2" stroke-linecap="round" opacity=".5"/>
-  <path d="M78 108Q89 106 96 111M129 64Q124 74 127 79M158 82Q166 78 172 80M161 134Q169 132 175 136" fill="none" stroke="#f2ffd0" stroke-width="3.5" stroke-linecap="round" opacity=".58"/>
   <ellipse cx="127" cy="168" rx="1.7" ry="2.4" fill="#533c2c"/>
   <ellipse cx="136" cy="168" rx="1.7" ry="2.4" fill="#533c2c"/>
   <path d="M129 175Q132 178 135 174" fill="none" stroke="#533c2c" stroke-width="1.5" stroke-linecap="round"/>
