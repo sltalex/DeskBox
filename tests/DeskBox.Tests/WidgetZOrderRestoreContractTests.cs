@@ -19,6 +19,8 @@ public sealed class WidgetZOrderRestoreContractTests
             layer, "public static void BringGroupTemporarilyToFront", "public static bool ApplyPeerOrderHighestToLowest"), StringComparison.Ordinal);
         Assert.Contains("MoveToDesktopBottom(handle)", SliceMethod(
             layer, "public static void HoldGroupTopMostWithoutActivation", "public static void BringToFront"), StringComparison.Ordinal);
+        Assert.Contains("handles.RemoveAll(IsForcedDesktopPinnedWindow)", SliceMethod(
+            layer, "public static bool ApplyPeerOrderHighestToLowest", "private static bool ApplyWindowOrderHighestToLowest"), StringComparison.Ordinal);
     }
 
     [Fact]

@@ -440,9 +440,13 @@ public static class WidgetLayerService
             .Where(handle => handle != IntPtr.Zero && Win32Helper.IsWindow(handle))
             .Distinct()
             .ToList();
+        bool hadForcedWindow = handles.Any(IsForcedDesktopPinnedWindow);
+        foreach (IntPtr forced in handles.Where(IsForcedDesktopPinnedWindow))
+            MoveToDesktopBottom(forced);
+        handles.RemoveAll(IsForcedDesktopPinnedWindow);
         if (handles.Count < 2)
         {
-            return handles.Count == 1;
+            return handles.Count == 1 || hadForcedWindow;
         }
 
         IntPtr activeWindow = handles[0];
@@ -674,6 +678,11 @@ public static class WidgetLayerService
             .Where(handle => handle != IntPtr.Zero && Win32Helper.IsWindow(handle))
             .Distinct()
             .ToList();
+        // A forced desktop-only widget must never join a transaction whose
+        // boundary may be HWND_TOP or a foreign application window.
+        foreach (IntPtr forced in handles.Where(IsForcedDesktopPinnedWindow))
+            MoveToDesktopBottom(forced);
+        handles.RemoveAll(IsForcedDesktopPinnedWindow);
         if (handles.Count < 2)
         {
             return true;
@@ -804,6 +813,11 @@ public static class WidgetLayerService
     public static bool UsesDesktopPinnedMode(IntPtr windowHandle)
     {
         if (UsesDesktopPinnedMode()) return true;
+        return IsForcedDesktopPinnedWindow(windowHandle);
+    }
+
+    private static bool IsForcedDesktopPinnedWindow(IntPtr windowHandle)
+    {
         lock (s_desktopLayerLock) return s_forcedDesktopPinnedWindows.Contains(windowHandle);
     }
 
