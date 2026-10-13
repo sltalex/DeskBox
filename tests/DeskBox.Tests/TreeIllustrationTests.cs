@@ -262,13 +262,17 @@ public sealed class TreeIllustrationTests
     }
 
     [Fact]
-    public void TreeProgressPercent_SitsOutsideTheRoundedGrowthTrack()
+    public void TreeProgressPercent_SitsInsideTheNarrowRectangularGrowthTrack()
     {
         string source = File.ReadAllText(TestPaths.FromRepository(
             "src/DeskBox/Controls/WidgetContents/TreeWidgetContent.cs"));
-        Assert.Contains("CornerRadius = new CornerRadius(7)", source, StringComparison.Ordinal);
+        string progressSource = File.ReadAllText(TestPaths.FromRepository(
+            "src/DeskBox/Controls/WidgetContents/TreeBubbleProgressBar.cs"));
+        Assert.Contains("CornerRadius = new CornerRadius(0)", progressSource, StringComparison.Ordinal);
+        Assert.Contains("Height = 16", progressSource, StringComparison.Ordinal);
+        Assert.Contains("_baseLabel.Text = _filledLabel.Text", progressSource, StringComparison.Ordinal);
         Assert.Contains("Grid.SetColumn(_progress, 1)", source, StringComparison.Ordinal);
-        Assert.Contains("Grid.SetColumn(_percent, 2)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Grid.SetColumn(_percent, 2)", source, StringComparison.Ordinal);
     }
 
     [Fact]

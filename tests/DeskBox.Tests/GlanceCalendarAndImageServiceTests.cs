@@ -48,10 +48,12 @@ public sealed class GlanceCalendarAndImageServiceTests : IDisposable
     public async Task CalendarMonth_AlwaysBuildsSixCompleteWeeks()
     {
         var source = new LocalCalendarPresentationSource();
+        CultureInfo culture = (CultureInfo)CultureInfo.GetCultureInfo("zh-CN").Clone();
+        culture.DateTimeFormat.FirstDayOfWeek = DayOfWeek.Monday;
 
         GlanceCalendarMonth month = await source.GetMonthAsync(
             new DateOnly(2026, 8, 1),
-            CultureInfo.GetCultureInfo("zh-CN"));
+            culture);
 
         Assert.Equal(new DateOnly(2026, 8, 1), month.Month);
         Assert.Equal(7, month.WeekdayHeaders.Count);
@@ -62,7 +64,7 @@ public sealed class GlanceCalendarAndImageServiceTests : IDisposable
         Assert.Empty(await source.GetAgendaAsync(
             new DateOnly(2026, 8, 1),
             7,
-            CultureInfo.GetCultureInfo("zh-CN")));
+            culture));
     }
 
     [Fact]

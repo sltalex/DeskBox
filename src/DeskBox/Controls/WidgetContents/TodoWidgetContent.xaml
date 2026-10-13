@@ -99,7 +99,7 @@
 
         <Style x:Key="TodoCardBorderStyle" TargetType="Border">
             <Setter Property="MinHeight" Value="48" />
-            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="Padding" Value="2" />
             <Setter Property="Background" Value="{ThemeResource WidgetLayerFillSecondaryBrush}" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
@@ -224,40 +224,6 @@
                     <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPressed" Color="Transparent" />
                     <SolidColorBrush x:Key="ListViewItemBackgroundSelectedDisabled" Color="Transparent" />
                 </ListView.Resources>
-                <ListView.Header>
-                    <Button
-                        Margin="0,2"
-                        MinHeight="42"
-                        Padding="8,5"
-                        HorizontalAlignment="Stretch"
-                        HorizontalContentAlignment="Stretch"
-                        Background="{ThemeResource WidgetLayerFillSecondaryBrush}"
-                        BorderBrush="Transparent"
-                        BorderThickness="0"
-                        Click="AddCard_Click"
-                        CornerRadius="{StaticResource WidgetCornerRadiusSmall}">
-                            <Grid ColumnSpacing="4">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="32" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <FontIcon
-                                    Grid.Column="0"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    FontSize="{Binding PrimaryIconSize}"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Glyph="&#xE710;" />
-                                <TextBlock
-                                    Grid.Column="1"
-                                    VerticalAlignment="Center"
-                                    FontSize="{Binding TextSize}"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="{Binding AddPlaceholderText}" />
-                            </Grid>
-                    </Button>
-                </ListView.Header>
-
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem">
                         <Setter Property="Padding" Value="0" />
@@ -283,9 +249,9 @@
                         <Border
                             x:Name="TodoItemRoot"
                             AllowDrop="True"
-                            Margin="0,2"
+                            Margin="2"
                             MinHeight="50"
-                            Padding="8,6"
+                            Padding="2"
                             Style="{StaticResource TodoCardBorderStyle}"
                             DataContextChanged="TodoItem_DataContextChanged"
                             Loaded="TodoItem_Loaded"
@@ -305,7 +271,7 @@
                                 <Border
                                     x:Name="TodoItemHoverBackground"
                                     Grid.ColumnSpan="3"
-                                    Margin="-8,-6"
+                                    Margin="-2"
                                     CornerRadius="{StaticResource WidgetCornerRadiusSmall}"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                     IsHitTestVisible="False"
@@ -313,7 +279,7 @@
 
                                 <Border
                                     Grid.ColumnSpan="3"
-                                    Margin="-8,-6"
+                                    Margin="-2"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                     CornerRadius="{StaticResource WidgetCornerRadiusSmall}"
                                     IsHitTestVisible="False"
@@ -322,7 +288,7 @@
 
                                 <Border
                                     Grid.ColumnSpan="3"
-                                    Margin="-8,-6"
+                                    Margin="-2"
                                     Background="{ThemeResource SubtleFillColorTertiaryBrush}"
                                     CornerRadius="{StaticResource WidgetCornerRadiusSmall}"
                                     IsHitTestVisible="False"
@@ -333,7 +299,7 @@
                                     x:Name="TodoDetailSelectionIndicator"
                                     Grid.ColumnSpan="3"
                                     Width="2"
-                                    Margin="-8,-6"
+                                    Margin="-2"
                                     HorizontalAlignment="Left"
                                     Background="{ThemeResource ControlStrongStrokeColorDefaultBrush}"
                                     CornerRadius="1"
@@ -487,6 +453,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock
                 VerticalAlignment="Center"
@@ -496,8 +463,20 @@
                 TextTrimming="CharacterEllipsis"
                 Visibility="{Binding FooterStatsVisibility}" />
             <Button
-                x:Name="ClearCompletedButton"
+                x:Name="AddCardButton"
                 Grid.Column="1"
+                MinWidth="0"
+                Padding="8,4"
+                Click="AddCard_Click"
+                Style="{StaticResource SubtleButtonStyle}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <FontIcon FontSize="{Binding SmallIconSize}" Glyph="&#xE710;" />
+                    <TextBlock FontSize="{Binding SecondaryTextSize}" Text="{Binding AddPlaceholderText}" />
+                </StackPanel>
+            </Button>
+            <Button
+                x:Name="ClearCompletedButton"
+                Grid.Column="2"
                 MinWidth="0"
                 Padding="8,4"
                 Click="ClearCompletedButton_Click"

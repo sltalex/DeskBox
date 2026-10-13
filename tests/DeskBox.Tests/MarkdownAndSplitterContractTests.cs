@@ -528,7 +528,7 @@ public sealed class MarkdownAndSplitterContractTests
             todoXaml,
             StringComparison.Ordinal);
         Assert.Contains(
-            "Width=\"2\"\n                                    Margin=\"-8,-6\"\n                                    HorizontalAlignment=\"Left\"",
+            "Width=\"2\"\n                                    Margin=\"-2\"\n                                    HorizontalAlignment=\"Left\"",
             todoXaml.ReplaceLineEndings("\n"),
             StringComparison.Ordinal);
         Assert.Contains(
@@ -543,17 +543,13 @@ public sealed class MarkdownAndSplitterContractTests
             quickCaptureXaml.Split("WidgetCornerRadiusSmall", StringSplitOptions.None).Length > 5,
             "Quick Capture add, list, selection, and detail surfaces should share the compact radius.");
         Assert.Contains(
-            "Margin=\"0,2\"\n                            MinHeight=\"50\"\n                            Padding=\"8,6\"",
+            "Margin=\"2\"\n                            MinHeight=\"50\"\n                            Padding=\"2\"",
             todoXaml.ReplaceLineEndings("\n"),
             StringComparison.Ordinal);
-        Assert.Contains(
-            "MinHeight=\"42\"\n                        Padding=\"8,5\"",
-            todoXaml.ReplaceLineEndings("\n"),
-            StringComparison.Ordinal);
-        Assert.Contains(
-            "BorderBrush=\"Transparent\"\n                        BorderThickness=\"0\"",
-            todoXaml.ReplaceLineEndings("\n"),
-            StringComparison.Ordinal);
+        Assert.True(
+            todoXaml.IndexOf("x:Name=\"AddCardButton\"", StringComparison.Ordinal) <
+            todoXaml.IndexOf("x:Name=\"ClearCompletedButton\"", StringComparison.Ordinal),
+            "The add-task button should precede clear-completed in the footer.");
         Assert.Contains(
             "BorderBrush=\"Transparent\"\n                BorderThickness=\"0\"",
             quickCaptureXaml.ReplaceLineEndings("\n"),

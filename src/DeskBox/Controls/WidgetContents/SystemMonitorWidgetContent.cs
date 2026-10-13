@@ -4,8 +4,11 @@ using DeskBox.Services;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Windows.Storage;
+using Windows.System;
 
 namespace DeskBox.Controls.WidgetContents;
 
@@ -196,6 +199,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         int diskIndex = 0;
         foreach (var disk in snapshot.Disks)
         {
+            _diskCards[diskIndex].Tag = disk.Name.TrimEnd('\\') + "\\";
             _diskNames[diskIndex].Text = disk.Name;
             _diskPercents[diskIndex].Text = Percent(disk.UsedPercent);
             _diskCapacities[diskIndex].Text = disk.TotalBytes is long bytes
@@ -259,6 +263,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
                 CornerRadius = new CornerRadius(6),
                 Child = content
             };
+            card.DoubleTapped += DiskCard_DoubleTapped;
             _diskNames.Add(name);
             _diskPercents.Add(percent);
             _diskCapacities.Add(capacity);
@@ -267,6 +272,23 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         }
         ArrangeDiskCards();
         UpdateDiskCardAppearance();
+    }
+
+    private async void DiskCard_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
+    {
+        e.Handled = true;
+        if (_disposed || sender is not Border { Tag: string path }) return;
+
+        try
+        {
+            StorageFolder folder = await StorageFolder.GetFolderFromPathAsync(path);
+            if (!await Launcher.LaunchFolderAsync(folder))
+                App.Log($"[SystemMonitor] Could not open disk folder: {path}");
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[SystemMonitor] Open disk folder failed: {path}: {ex}");
+        }
     }
 
     private void ArrangeDiskCards()

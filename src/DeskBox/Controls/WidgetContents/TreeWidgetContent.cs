@@ -41,21 +41,7 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
     };
     private readonly TextBlock _captureStatus = new() { FontSize = 11, HorizontalAlignment = HorizontalAlignment.Center };
     private readonly TextBlock _fruitStats = new() { FontSize = 12, TextAlignment = TextAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-    private readonly ProgressBar _progress = new()
-    {
-        Height = 14,
-        CornerRadius = new CornerRadius(7),
-        Foreground = new SolidColorBrush(ColorHelper.FromArgb(255, 105, 179, 115)),
-        Background = new SolidColorBrush(ColorHelper.FromArgb(150, 195, 225, 187))
-    };
-    private readonly TextBlock _percent = new()
-    {
-        FontSize = 11,
-        FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-        VerticalAlignment = VerticalAlignment.Center,
-        MinWidth = 44,
-        TextAlignment = TextAlignment.Right
-    };
+    private readonly TreeBubbleProgressBar _progress = new();
     private volatile bool _visible = true;
     private volatile bool _disposed;
     private bool _motionRunning;
@@ -83,12 +69,9 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         var progressRow = new Grid { Margin = new Thickness(16, 8, 16, 4), ColumnSpacing = 7 };
         progressRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         progressRow.ColumnDefinitions.Add(new ColumnDefinition());
-        progressRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         progressRow.Children.Add(new TextBlock { Text = "🌱", FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
         Grid.SetColumn(_progress, 1);
         progressRow.Children.Add(_progress);
-        Grid.SetColumn(_percent, 2);
-        progressRow.Children.Add(_percent);
         stack.Children.Add(new Viewbox { Child = _drawing, Height = TreeIllustrationLayout.DisplayHeight, Stretch = Stretch.Uniform });
         stack.Children.Add(_captureStatus);
         stack.Children.Add(_fruitStats);
@@ -138,7 +121,6 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         // stage wording and made each 36,000-energy stage feel stalled.
         double percentage = p.NextStagePercentage;
         _progress.Value = percentage;
-        _percent.Text = $"{percentage:0.00}%";
         if (_lastStage != p.Stage)
         {
             StopMotion();
@@ -308,6 +290,7 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
     private void UpdateMotion()
     {
         bool shouldAnimate = !_disposed && _visible && IsLoaded && WindowsCompatibilityService.ShouldAnimate;
+        _progress.SetAnimationEnabled(shouldAnimate);
         if (shouldAnimate == _motionRunning) return;
         if (shouldAnimate)
         {
@@ -324,6 +307,7 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
 
     private void StopMotion()
     {
+        _progress.SetAnimationEnabled(false);
         _sway.Stop();
         _celebration.Stop();
         _fallingLeaves.Stop();
@@ -340,5 +324,6 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         _counter.Changed -= CounterChanged;
         _timer.Stop();
         StopMotion();
+        _progress.Dispose();
     }
 }
