@@ -15,7 +15,6 @@ namespace DeskBox.Controls.WidgetContents;
 /// <summary>Compact, live-only monitor. No per-second samples are persisted.</summary>
 public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposable
 {
-    private const double ChartWidth = 214;
     private readonly LocalizationService _localization;
     private readonly TextBlock _cpu = Value();
     private readonly TextBlock _memory = Value();
@@ -34,6 +33,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     private readonly List<TextBlock> _diskCapacities = [];
     private readonly List<TextBlock> _diskRates = [];
     private readonly List<Border> _diskCards = [];
+    private IReadOnlyList<SystemMonitorSnapshot> _latestHistory = [];
     private IDisposable? _subscription;
     private bool _visible = true;
     private bool _disposed;
@@ -81,13 +81,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         root.Children.Add(temperatures);
 
         root.Children.Add(IconLabel(_localization.T("SystemMonitor.Disks"), "\uEDA2"));
-        root.Children.Add(new ScrollViewer
-        {
-            Content = _disks,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            HorizontalScrollMode = ScrollMode.Disabled,
-            VerticalScrollMode = ScrollMode.Disabled
-        });
+        root.Children.Add(_disks);
 
         var trendHeading = Label(_localization.T("SystemMonitor.LastMinute"));
         trendHeading.Margin = new Thickness(0, 0, 0, -1);
@@ -117,6 +111,9 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         Unloaded += (_, _) => Stop();
         ActualThemeChanged += (_, _) => UpdateDiskCardAppearance();
         _disks.SizeChanged += (_, _) => ArrangeDiskCards();
+        _cpuChart.SizeChanged += Chart_SizeChanged;
+        _memoryChart.SizeChanged += Chart_SizeChanged;
+        _networkChart.SizeChanged += Chart_SizeChanged;
         ShowUnavailable();
     }
 
@@ -133,7 +130,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
 
     private Grid ChartRow(string key, string glyph, Canvas canvas)
     {
-        var grid = new Grid { ColumnSpacing = 8, Margin = new Thickness(0, 0, 8, 0) };
+        var grid = new Grid { ColumnSpacing = 8, Margin = new Thickness(0, 0, 8, 0), HorizontalAlignment = HorizontalAlignment.Stretch };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(62) });
         grid.ColumnDefinitions.Add(new ColumnDefinition());
         var label = IconLabel(_localization.T(key), glyph);
@@ -172,6 +169,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     {
         _subscription?.Dispose();
         _subscription = null;
+        _latestHistory = [];
     }
 
     private void OnSample(SystemMonitorSnapshot snapshot, IReadOnlyList<SystemMonitorSnapshot> history)
@@ -208,6 +206,17 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
             diskIndex++;
         }
 
+        _latestHistory = history;
+        DrawCharts(history);
+    }
+
+    private void Chart_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (!_disposed && _visible) DrawCharts(_latestHistory);
+    }
+
+    private void DrawCharts(IReadOnlyList<SystemMonitorSnapshot> history)
+    {
         DrawChart(_cpuChart, history.Select(item => item.CpuPercent), null, 100, _presentation.CpuColor, _presentation.CpuChartStyle);
         DrawChart(_memoryChart, history.Select(item => item.MemoryPercent), null, 100, _presentation.MemoryColor, _presentation.MemoryChartStyle);
         double scale = Math.Max(1, history.SelectMany(item => new[]
@@ -334,41 +343,39 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
 
     private static void DrawChart(Canvas canvas, IEnumerable<double?> primary, IEnumerable<double?>? secondary, double scale, string color, string style)
     {
+        double width = SystemMonitorChartLayout.UsableWidth(canvas.ActualWidth);
+        canvas.Children.Clear();
+        if (width <= 0) return;
         if (style == "Line")
         {
-            DrawLines(canvas, primary, secondary, scale, color);
+            DrawLines(canvas, primary, secondary, scale, color, width);
             return;
         }
-        canvas.Children.Clear();
         double?[] first = primary.ToArray();
         double?[]? second = secondary?.ToArray();
         int count = Math.Max(first.Length, second?.Length ?? 0);
         if (count == 0) return;
         const double height = 20;
-        double width = ChartWidth;
-        double slot = width / count;
         bool paired = second is not null;
-        double barWidth = Math.Max(1, paired ? (slot - 2) / 2 : slot - 1);
+        var (slot, barWidth, gap) = SystemMonitorChartLayout.BarMetrics(width, count, paired);
         for (int index = 0; index < count; index++)
         {
             AddBar(canvas, index, first, scale, height, slot, barWidth,
                 ParseColor(color), 0);
             if (paired)
                 AddBar(canvas, index, second!, scale, height, slot, barWidth,
-                    ParseColor(color, 0.58), 1);
+                    ParseColor(color, 0.58), 1, gap);
         }
     }
 
-    private static void DrawLines(Canvas canvas, IEnumerable<double?> primary, IEnumerable<double?>? secondary, double scale, string color)
+    private static void DrawLines(Canvas canvas, IEnumerable<double?> primary, IEnumerable<double?>? secondary, double scale, string color, double width)
     {
-        canvas.Children.Clear();
         double?[] first = primary.ToArray();
         double?[]? second = secondary?.ToArray();
         int count = Math.Max(first.Length, second?.Length ?? 0);
         if (count < 2) return;
         const double height = 20;
-        double width = ChartWidth;
-        double step = width / (count - 1);
+        double step = SystemMonitorChartLayout.LineStep(width, count);
         AddLine(canvas, first, scale, height, step, ParseColor(color));
         if (second is not null) AddLine(canvas, second, scale, height, step, ParseColor(color, 0.58));
     }
@@ -384,7 +391,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     }
 
     private static void AddBar(Canvas canvas, int index, double?[] samples, double scale,
-        double height, double slot, double barWidth, SolidColorBrush brush, int pair)
+        double height, double slot, double barWidth, SolidColorBrush brush, int pair, double gap = 0)
     {
         if (index >= samples.Length || samples[index] is not double value) return;
         double barHeight = Math.Max(1,
@@ -396,7 +403,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
             Fill = brush,
             IsHitTestVisible = false
         };
-        Canvas.SetLeft(bar, index * slot + (pair == 0 ? 0 : barWidth + 1));
+        Canvas.SetLeft(bar, index * slot + (pair == 0 ? 0 : barWidth + gap));
         Canvas.SetTop(bar, height - barHeight);
         canvas.Children.Add(bar);
     }
@@ -404,7 +411,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     private string Percent(double? value) => value.HasValue ? $"{value.Value:0}%" : _localization.T("SystemMonitor.Unavailable");
     private string Temperature(double? value) => value.HasValue ? $"{value.Value:0.#} °C" : _localization.T("SystemMonitor.Unavailable");
     private static string FormatSize(long bytes) => $"{bytes / 1073741824d:0.#} GB";
-    private static Canvas Chart() => new() { Height = 21, Width = ChartWidth, MinWidth = ChartWidth, IsHitTestVisible = false };
+    private static Canvas Chart() => new() { Height = 21, MinWidth = 0, HorizontalAlignment = HorizontalAlignment.Stretch, IsHitTestVisible = false };
     private static SolidColorBrush ParseColor(string value, double opacity = 1)
     {
         try
@@ -450,4 +457,22 @@ internal static class SystemMonitorDiskLayout
             (availableWidth + CardSpacing) / (MinimumCardWidth + CardSpacing)));
         return Math.Min(columns, diskCount);
     }
+}
+
+internal static class SystemMonitorChartLayout
+{
+    public static double UsableWidth(double actualWidth) =>
+        double.IsFinite(actualWidth) ? Math.Max(0, actualWidth) : 0;
+
+    public static (double Slot, double BarWidth, double Gap) BarMetrics(
+        double availableWidth, int sampleCount, bool paired)
+    {
+        if (sampleCount <= 0) return (0, 0, 0);
+        double slot = UsableWidth(availableWidth) / sampleCount;
+        double gap = Math.Min(1, slot / 4);
+        return (slot, paired ? (slot - gap) / 2 : slot - gap, gap);
+    }
+
+    public static double LineStep(double availableWidth, int sampleCount) =>
+        sampleCount < 2 ? 0 : Math.Max(0, UsableWidth(availableWidth) - 1) / (sampleCount - 1);
 }
