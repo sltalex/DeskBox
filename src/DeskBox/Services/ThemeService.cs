@@ -227,31 +227,9 @@ public sealed class ThemeService : IDisposable
 
         rootElement.RequestedTheme = theme;
         AccentResourceScope.Apply(rootElement, GetEffectiveAccentColor());
-        Color customColor = AccentColorHelper.FromHex(
-            _settingsService.Settings.WidgetShell.WidgetForegroundColor);
-        Color foreground = ForegroundResourceScope.ResolvePrimary(
-            WidgetForegroundSettings.NormalizeMode(_settingsService.Settings.WidgetShell.WidgetForegroundMode),
-            customColor,
-            theme);
-        try
-        {
-            if (new AccessibilitySettings().HighContrast)
-                foreground = _uiSettings.GetColorValue(UIColorType.Foreground);
-        }
-        catch { /* Keep the selected palette if accessibility state is unavailable. */ }
-        ForegroundResourceScope.Apply(Application.Current.Resources, foreground);
-        if (window is not IDesktopWidgetWindow)
-        {
-            if (ForegroundResourceScope.Apply(rootElement, foreground) && rootElement.IsLoaded)
-            {
-                // Existing ThemeResource references need a theme transition to
-                // resolve a newly introduced window-local brush.
-                rootElement.RequestedTheme = theme == ElementTheme.Dark
-                    ? ElementTheme.Light
-                    : ElementTheme.Dark;
-                rootElement.RequestedTheme = theme;
-            }
-        }
+        // Widget foreground is intentionally applied by WidgetWindowBase to
+        // the individual desktop tile.  Settings, popups and other regular
+        // windows keep their normal theme palette.
 
         var hWnd = WindowNative.GetWindowHandle(window);
         if (hWnd == IntPtr.Zero)

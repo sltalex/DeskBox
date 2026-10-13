@@ -3,19 +3,35 @@
 public sealed class WidgetForegroundContractTests
 {
     [Fact]
-    public void GlobalForeground_ReusesAppearanceSettingForNonWidgetWindows()
+    public void WidgetForeground_DoesNotLeakIntoSettingsOrOtherRegularWindows()
     {
         string theme = Read("src/DeskBox/Services/ThemeService.cs");
         string palette = Read("src/DeskBox/Helpers/ForegroundResourceScope.cs");
-        Assert.Contains("window is not IDesktopWidgetWindow", theme, StringComparison.Ordinal);
-        Assert.Contains("ForegroundResourceScope.Apply(rootElement, foreground)", theme, StringComparison.Ordinal);
-        Assert.Contains("ForegroundResourceScope.Apply(Application.Current.Resources, foreground)", theme, StringComparison.Ordinal);
+        Assert.DoesNotContain("ForegroundResourceScope.Apply(rootElement, foreground)", theme, StringComparison.Ordinal);
+        Assert.DoesNotContain("ForegroundResourceScope.Apply(Application.Current.Resources, foreground)", theme, StringComparison.Ordinal);
         Assert.Contains("AppearancePreviewChanged += OnAppearancePreviewChanged", theme, StringComparison.Ordinal);
         Assert.Contains("TextFillColorPrimaryBrush", palette, StringComparison.Ordinal);
         Assert.Contains("TextControlForeground", palette, StringComparison.Ordinal);
         Assert.Contains("ListViewItemForeground", palette, StringComparison.Ordinal);
         string search = Read("src/DeskBox/Views/SearchPopupWindow.xaml.cs");
         Assert.Contains("_themeService.ApplyToWindow(this)", search, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LightWidgetSurfaces_InstallTheirOwnDarkTextScope()
+    {
+        string scope = Read("src/DeskBox/Helpers/WidgetSurfaceForegroundScope.cs");
+        string search = Read("src/DeskBox/Controls/WidgetContents/SearchWidgetContent.xaml.cs");
+        string quickCapture = Read("src/DeskBox/Controls/WidgetContents/QuickCaptureSurfaceContent.xaml.cs");
+        string monitor = Read("src/DeskBox/Controls/WidgetContents/SystemMonitorWidgetContent.cs");
+        string todo = Read("src/DeskBox/Controls/WidgetContents/TodoWidgetContent.DragDrop.cs");
+
+        Assert.Contains("IsLight", scope, StringComparison.Ordinal);
+        Assert.Contains("ForegroundResourceScope.Apply(surface, DarkText)", scope, StringComparison.Ordinal);
+        Assert.Contains("ApplySearchSurfaceForeground", search, StringComparison.Ordinal);
+        Assert.Contains("WidgetSurfaceForegroundScope.ApplyForBackground(border, border.Background)", quickCapture, StringComparison.Ordinal);
+        Assert.Contains("WidgetSurfaceForegroundScope.ApplyForBackground(card, background)", monitor, StringComparison.Ordinal);
+        Assert.Contains("WidgetSurfaceForegroundScope.ApplyForBackground(border, border.Background)", todo, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -9,6 +9,37 @@ public sealed class TreeIllustrationTests
     private static readonly XNamespace Svg = "http://www.w3.org/2000/svg";
 
     [Theory]
+    [InlineData(int.MinValue, 6)]
+    [InlineData(1, 6)]
+    [InlineData(2, 5)]
+    [InlineData(3, 4)]
+    [InlineData(4, 3.5)]
+    [InlineData(5, 3)]
+    [InlineData(int.MaxValue, 3)]
+    public void CompactTreeUsesStageAppropriateVisibleSway(int stage, double expected)
+    {
+        Assert.Equal(expected, TreeIllustrationLayout.SwayAmplitudeDegrees(stage));
+    }
+
+    [Fact]
+    public void SeedlingLeafMotionRemainsVisibleAtTheCompactDisplaySize()
+    {
+        // The stage-1 tip (176,96) rotates around (130,142).
+        double radius = Math.Sqrt(46 * 46 + 46 * 46);
+        double angle = TreeIllustrationLayout.SwayAmplitudeDegrees(1) * Math.PI / 180;
+        double screenTravel = 2 * radius * Math.Sin(angle) *
+            TreeIllustrationLayout.DisplayHeight / TreeIllustrationLayout.Height;
+        Assert.InRange(screenTravel, 4, 9);
+
+        string source = File.ReadAllText(TestPaths.FromRepository(
+            "src/DeskBox/Controls/WidgetContents/TreeWidgetContent.cs"));
+        Assert.Contains("Height = TreeIllustrationLayout.DisplayHeight", source);
+        Assert.Contains("TreeIllustrationLayout.SwayAmplitudeDegrees(p.Stage)", source);
+        Assert.Contains("_swayRotation.From = -swayAmplitude", source);
+        Assert.Contains("_swayRotation.To = swayAmplitude", source);
+    }
+
+    [Theory]
     [InlineData(int.MinValue, "stage-1.svg")]
     [InlineData(0, "stage-1.svg")]
     [InlineData(1, "stage-1.svg")]
@@ -238,5 +269,14 @@ public sealed class TreeIllustrationTests
         Assert.Contains("CornerRadius = new CornerRadius(7)", source, StringComparison.Ordinal);
         Assert.Contains("Grid.SetColumn(_progress, 1)", source, StringComparison.Ordinal);
         Assert.Contains("Grid.SetColumn(_percent, 2)", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DesktopTreeProgress_DescribesTheCurrentStageInsteadOfWholeMaturity()
+    {
+        string source = File.ReadAllText(TestPaths.FromRepository(
+            "src/DeskBox/Controls/WidgetContents/TreeWidgetContent.cs"));
+        Assert.Contains("double percentage = p.NextStagePercentage", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("double percentage = p.MaturityPercentage", source, StringComparison.Ordinal);
     }
 }

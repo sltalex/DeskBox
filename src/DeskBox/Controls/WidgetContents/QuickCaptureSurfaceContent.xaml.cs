@@ -3016,6 +3016,7 @@ public sealed partial class QuickCaptureSurfaceContent :
         {
             border.Background = ResolveMaterialBrush(
                 QuickCaptureAppearancePreset.Default);
+            WidgetSurfaceForegroundScope.ApplyForBackground(border, border.Background);
             return;
         }
 
@@ -3029,6 +3030,7 @@ public sealed partial class QuickCaptureSurfaceContent :
                 requestedPreset,
                 item.IsRecent);
         border.Background = ResolveMaterialBrush(preset);
+        WidgetSurfaceForegroundScope.ApplyForBackground(border, border.Background);
     }
 
     private Brush ResolveMaterialBrush(QuickCaptureAppearancePreset preset)

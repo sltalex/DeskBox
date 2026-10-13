@@ -605,6 +605,14 @@ public sealed partial class TodoWidgetContent
         }
     }
 
+    private void TodoItem_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is Border border)
+        {
+            WidgetSurfaceForegroundScope.ApplyForBackground(border, border.Background);
+        }
+    }
+
     private async Task DropTodoItemAtRowAsync(
         Border border,
         TodoItemViewModel targetItem,

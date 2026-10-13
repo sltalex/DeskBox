@@ -288,6 +288,7 @@
                             Padding="8,6"
                             Style="{StaticResource TodoCardBorderStyle}"
                             DataContextChanged="TodoItem_DataContextChanged"
+                            Loaded="TodoItem_Loaded"
                             DragLeave="TodoItem_DragLeave"
                             DragOver="TodoItem_DragOver"
                             Drop="TodoItem_Drop"

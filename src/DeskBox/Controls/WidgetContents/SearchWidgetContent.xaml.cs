@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using DeskBox.Models;
 using DeskBox.Services;
+using DeskBox.Helpers;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 
@@ -35,6 +36,7 @@ public sealed partial class SearchWidgetContent : UserControl, IDisposable
         HistoryList.ItemsSource = _recentQueries;
         Loaded += SearchWidgetContent_Loaded;
         Unloaded += SearchWidgetContent_Unloaded;
+        ActualThemeChanged += (_, _) => ApplySearchSurfaceForeground();
 
         UpdateContent();
         AttachExternalSubscriptions();
@@ -47,6 +49,14 @@ public sealed partial class SearchWidgetContent : UserControl, IDisposable
         AttachExternalSubscriptions();
         UpdateContent();
     }
+
+    private void SearchBarButton_Loaded(object sender, RoutedEventArgs e) =>
+        ApplySearchSurfaceForeground();
+
+    private void ApplySearchSurfaceForeground() =>
+        WidgetSurfaceForegroundScope.ApplyForBackground(
+            SearchBarButton,
+            SearchBarButton.Background);
 
     private void SearchWidgetContent_Unloaded(object sender, RoutedEventArgs e)
     {

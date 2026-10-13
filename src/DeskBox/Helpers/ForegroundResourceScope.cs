@@ -10,6 +10,18 @@ namespace DeskBox.Helpers;
 public static class ForegroundResourceScope
 {
     private static readonly ConditionalWeakTable<ResourceDictionary, Dictionary<string, SolidColorBrush>> OwnedBrushes = new();
+    private static readonly string[] AliasKeys =
+    [
+        "DefaultTextForegroundThemeBrush", "TextControlForeground",
+        "TextControlForegroundPointerOver", "TextControlForegroundFocused",
+        "TextControlForegroundDisabled", "TextControlPlaceholderForeground",
+        "TextControlPlaceholderForegroundPointerOver", "TextControlPlaceholderForegroundFocused",
+        "TextControlPlaceholderForegroundDisabled", "GridViewItemForeground",
+        "GridViewItemForegroundPointerOver", "GridViewItemForegroundSelected",
+        "ListViewItemForeground", "ListViewItemForegroundPointerOver",
+        "ListViewItemForegroundPressed", "ListViewItemForegroundSelected",
+        "ListViewItemForegroundSelectedPointerOver", "ListViewItemForegroundSelectedPressed"
+    ];
 
     public static Color ResolvePrimary(string mode, Color customColor, ElementTheme theme) => mode switch
     {
@@ -55,6 +67,21 @@ public static class ForegroundResourceScope
         changed |= SetAlias(resources, "ListViewItemForegroundSelectedPointerOver", "TextFillColorPrimaryBrush");
         changed |= SetAlias(resources, "ListViewItemForegroundSelectedPressed", "TextFillColorPrimaryBrush");
         return changed;
+    }
+
+    /// <summary>Removes a palette previously installed on this local surface.</summary>
+    public static void Clear(FrameworkElement target)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ResourceDictionary resources = target.Resources;
+        if (OwnedBrushes.TryGetValue(resources, out Dictionary<string, SolidColorBrush>? owned))
+        {
+            foreach (string key in owned.Keys)
+                resources.Remove(key);
+            OwnedBrushes.Remove(resources);
+        }
+        foreach (string key in AliasKeys)
+            resources.Remove(key);
     }
 
     private static Color WithAlpha(Color color, byte alpha) =>

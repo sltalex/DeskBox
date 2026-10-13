@@ -165,6 +165,7 @@ public sealed partial class TodoWidgetContent : UserControl
         App.Current.ThemeService.AppearanceChanged -= OnThemeAppearanceChanged;
         App.Current.ThemeService.AppearanceChanged += OnThemeAppearanceChanged;
         ApplySegmentedStyle();
+        RefreshTodoCardForegrounds();
         ApplyMasterDetailLayout(ActualWidth);
         QueueDetailTitleHeightUpdate();
         QueueTodoSegmentedRestore();
@@ -208,6 +209,24 @@ public sealed partial class TodoWidgetContent : UserControl
         }
 
         ApplySegmentedStyle();
+        RefreshTodoCardForegrounds();
+    }
+
+    private void RefreshTodoCardForegrounds()
+    {
+        if (ViewModel is null)
+        {
+            return;
+        }
+
+        foreach (TodoItemViewModel item in ViewModel.VisibleItems)
+        {
+            if (TodoListView.ContainerFromItem(item) is ListViewItem
+                { ContentTemplateRoot: Border border })
+            {
+                WidgetSurfaceForegroundScope.ApplyForBackground(border, border.Background);
+            }
+        }
     }
 
     private void TodoFilterSegmented_SizeChanged(object sender, SizeChangedEventArgs e)

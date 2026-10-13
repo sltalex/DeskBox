@@ -85,6 +85,7 @@
             x:Name="SearchBarButton"
             Grid.Row="0"
             Click="SearchBar_Click"
+            Loaded="SearchBarButton_Loaded"
             Style="{StaticResource SearchLaunchButtonStyle}">
             <Grid ColumnSpacing="8">
                 <Grid.ColumnDefinitions>

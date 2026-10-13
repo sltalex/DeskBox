@@ -32,6 +32,7 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
     private readonly CompositeTransform _treeTransform = new();
     private readonly CompositeTransform _canopyTransform = new();
     private readonly Storyboard _sway = new();
+    private readonly DoubleAnimation _swayRotation = new();
     private readonly Storyboard _celebration = new();
     private readonly Storyboard _fallingLeaves = new()
     {
@@ -88,7 +89,7 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         progressRow.Children.Add(_progress);
         Grid.SetColumn(_percent, 2);
         progressRow.Children.Add(_percent);
-        stack.Children.Add(new Viewbox { Child = _drawing, Height = 110, Stretch = Stretch.Uniform });
+        stack.Children.Add(new Viewbox { Child = _drawing, Height = TreeIllustrationLayout.DisplayHeight, Stretch = Stretch.Uniform });
         stack.Children.Add(_captureStatus);
         stack.Children.Add(_fruitStats);
         stack.Children.Add(progressRow);
@@ -132,12 +133,18 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         _fruitStats.Visibility = p.Stage == 5 ? Visibility.Visible : Visibility.Collapsed;
         if (p.Stage == 5)
             _fruitStats.Text = _localization.Format("Tree.FruitStats", p.FruitInventory, p.HarvestedFruit);
-        double percentage = p.MaturityPercentage;
+        // The desktop tile describes the current growth step.  Showing the
+        // all-the-way-to-maturity percentage here made it disagree with the
+        // stage wording and made each 36,000-energy stage feel stalled.
+        double percentage = p.NextStagePercentage;
         _progress.Value = percentage;
         _percent.Text = $"{percentage:0.00}%";
         if (_lastStage != p.Stage)
         {
             StopMotion();
+            double swayAmplitude = TreeIllustrationLayout.SwayAmplitudeDegrees(p.Stage);
+            _swayRotation.From = -swayAmplitude;
+            _swayRotation.To = swayAmplitude;
             _treeImage.Source = Asset(TreeIllustrationLayout.StageAssetName(p.Stage));
             _canopyImage.Source = Asset(TreeIllustrationLayout.CanopyAssetName(p.Stage));
             _canopySurface.RenderTransformOrigin = new Windows.Foundation.Point(
@@ -215,15 +222,11 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
 
     private void ConfigureMotion()
     {
-        var sway = new DoubleAnimation
-        {
-            From = -2.1,
-            To = 2.1,
-            Duration = new Duration(TimeSpan.FromSeconds(2.8)),
-            AutoReverse = true,
-            RepeatBehavior = RepeatBehavior.Forever,
-            EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
-        };
+        DoubleAnimation sway = _swayRotation;
+        sway.Duration = new Duration(TimeSpan.FromSeconds(2.8));
+        sway.AutoReverse = true;
+        sway.RepeatBehavior = RepeatBehavior.Forever;
+        sway.EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut };
         Storyboard.SetTarget(sway, _canopyTransform);
         Storyboard.SetTargetProperty(sway, "Rotation");
         _sway.Children.Add(sway);

@@ -12,9 +12,13 @@ public sealed partial class TreeSettingsSection : UserControl
     private readonly TreeCounterService _counter = TreeCounterService.Instance;
     private readonly DispatcherQueue _uiQueue = DispatcherQueue.GetForCurrentThread();
     private readonly ToggleSwitch _enable = new() { OnContent = "", OffContent = "" };
-    private readonly ToggleSwitch _pause = new();
+    private readonly ToggleSwitch _statistics = new();
     private readonly TextBlock _title = new() { FontSize = 24, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
     private readonly TextBlock _status = new() { FontSize = 13, Opacity = 0.75, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _nextStageProgress = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };
+    private readonly ProgressBar _nextStageBar = new() { Minimum = 0, Maximum = 100, Height = 8 };
+    private readonly TextBlock _totalGrowthProgress = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };
+    private readonly ProgressBar _totalGrowthBar = new() { Minimum = 0, Maximum = 100, Height = 8 };
     private SettingsViewModel? _viewModel;
     private LocalizationService? _localization;
     private bool _updating;
@@ -25,8 +29,12 @@ public sealed partial class TreeSettingsSection : UserControl
         var panel = new StackPanel { Spacing = 14, Margin = new Thickness(24) };
         panel.Children.Add(_title);
         panel.Children.Add(_status);
+        panel.Children.Add(_nextStageProgress);
+        panel.Children.Add(_nextStageBar);
+        panel.Children.Add(_totalGrowthProgress);
+        panel.Children.Add(_totalGrowthBar);
         panel.Children.Add(_enable);
-        panel.Children.Add(_pause);
+        panel.Children.Add(_statistics);
         Content = panel;
 
         _enable.Toggled += (_, _) =>
@@ -34,10 +42,13 @@ public sealed partial class TreeSettingsSection : UserControl
             if (_updating || _viewModel is null) return;
             _viewModel.SetWidgetEnabled(WidgetKind.Tree, _enable.IsOn);
             _counter.SetEnabled(_enable.IsOn);
+            Refresh();
         };
-        _pause.Toggled += (_, _) =>
+        _statistics.Toggled += (_, _) =>
         {
-            if (!_updating) _counter.SetPaused(_pause.IsOn);
+            if (_updating || !_statistics.IsEnabled) return;
+            _counter.SetPaused(TreeStatisticsState.PausedFromToggle(_statistics.IsOn));
+            Refresh();
         };
         Loaded += (_, _) =>
         {
@@ -66,9 +77,9 @@ public sealed partial class TreeSettingsSection : UserControl
         if (_localization is null) return;
         _title.Text = _localization.T("Tree.Title");
         _enable.Header = _localization.T("Tree.Settings.Enable");
-        _pause.Header = _localization.T("Tree.Settings.StatisticsStatus");
-        _pause.OnContent = _localization.T("Tree.Settings.StatisticsPaused");
-        _pause.OffContent = _localization.T("Tree.Settings.StatisticsRunning");
+        _statistics.Header = _localization.T("Tree.Settings.EnableStatistics");
+        _statistics.OnContent = _localization.T("Tree.Settings.StatisticsRunning");
+        _statistics.OffContent = _localization.T("Tree.Settings.StatisticsPaused");
     }
 
     private void OnChanged()
@@ -98,14 +109,23 @@ public sealed partial class TreeSettingsSection : UserControl
         {
             _enable.IsOn = _viewModel.IsWidgetEnabled(WidgetKind.Tree);
             TreeProgress snapshot = _counter.Snapshot;
-            _pause.IsOn = snapshot.Paused;
-            _status.Text = snapshot.Stage >= 5
-                ? _localization?.Format("Tree.Settings.ProgressComplete", snapshot.TotalEnergy) ?? string.Empty
+            TreeStatisticsState statistics = TreeStatisticsState.FromProgress(_enable.IsOn, snapshot.Paused);
+            _statistics.IsEnabled = statistics.ToggleEnabled;
+            _statistics.IsOn = statistics.ToggleOn;
+            _statistics.OffContent = _localization?.T(statistics.OffContentKey) ?? string.Empty;
+            _status.Text = _localization?.T($"Tree.Stage.{snapshot.Stage}") ?? string.Empty;
+            _nextStageBar.Value = snapshot.NextStagePercentage;
+            _totalGrowthBar.Value = snapshot.MaturityPercentage;
+            _nextStageProgress.Text = snapshot.Stage >= 5
+                ? _localization?.T("Tree.Settings.NextStageComplete") ?? string.Empty
                 : _localization?.Format(
-                    "Tree.Settings.Progress",
-                    snapshot.TotalEnergy,
+                    "Tree.Settings.NextStageProgress",
                     snapshot.NextStagePercentage,
                     snapshot.NextStageRemainingEnergy) ?? string.Empty;
+            _totalGrowthProgress.Text = _localization?.Format(
+                "Tree.Settings.TotalGrowthProgress",
+                snapshot.TotalEnergy,
+                snapshot.MaturityPercentage) ?? string.Empty;
         }
         finally { _updating = false; }
     }

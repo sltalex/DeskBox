@@ -5,6 +5,7 @@ internal static class TreeIllustrationLayout
 {
     public const double Width = 260;
     public const double Height = 220;
+    public const double DisplayHeight = 110;
     public const int MaxVisibleFruit = 12;
     public const double LeafCycleSeconds = 10;
 
@@ -18,6 +19,17 @@ internal static class TreeIllustrationLayout
     public static string StageAssetName(int stage) => $"stage-{Math.Clamp(stage, 1, 5)}.svg";
 
     public static string CanopyAssetName(int stage) => $"stage-{Math.Clamp(stage, 1, 5)}-canopy.svg";
+
+    // The compact drawing is half-size; seedlings need a wider angle to
+    // keep their short leaves visibly moving without enlarging the tree.
+    public static double SwayAmplitudeDegrees(int stage) => Math.Clamp(stage, 1, 5) switch
+    {
+        1 => 6,
+        2 => 5,
+        3 => 4,
+        4 => 3.5,
+        _ => 3
+    };
 
     public static double CanopyPivotY(int stage) => Math.Clamp(stage, 1, 5) switch
     {

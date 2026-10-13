@@ -275,6 +275,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         {
             card.Background = background;
             card.BorderBrush = stroke;
+            WidgetSurfaceForegroundScope.ApplyForBackground(card, background);
         }
     }
 
