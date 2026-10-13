@@ -18,6 +18,7 @@ public sealed class AppUpdateServiceTests : IDisposable
         Assert.Equal("https://raw.githubusercontent.com/sltalex/DeskBox/main/update/stable.json", AppUpdateService.DefaultManifestUrl);
         Assert.Equal("https://api.github.com/repos/sltalex/DeskBox/releases/latest", AppUpdateService.DefaultGitHubLatestReleaseApiUrl);
         Assert.Equal("https://github.com/sltalex/DeskBox/releases", AppUpdateService.DefaultManualDownloadUrl);
+        Assert.Equal("https://sltbox.2leaves.cn/releases/", AppUpdateService.DefaultInstallerMirrorBaseUrl);
     }
 
     [Fact]
@@ -415,7 +416,7 @@ public sealed class AppUpdateServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task DownloadUpdateAsync_UsesHttpMirrorAfterGitHubFailure()
+    public async Task DownloadUpdateAsync_UsesHttpsMirrorAfterGitHubFailure()
     {
         byte[] payload = Encoding.UTF8.GetBytes("mirror-installer");
         string sha256 = Convert.ToHexString(SHA256.HashData(payload));
@@ -439,7 +440,7 @@ public sealed class AppUpdateServiceTests : IDisposable
 
         Assert.True(result.Success, $"{result.FailureKind}: {result.ErrorMessage}");
         Assert.Equal(2, requested.Count);
-        Assert.Equal("http://sltbox.2leaves.cn/releases/DeskBox_Setup_1.2.2_x64.exe", requested[1].AbsoluteUri);
+        Assert.Equal("https://sltbox.2leaves.cn/releases/DeskBox_Setup_1.2.2_x64.exe", requested[1].AbsoluteUri);
         Assert.Equal(payload, await File.ReadAllBytesAsync(result.FilePath!));
     }
 
@@ -589,6 +590,10 @@ public sealed class AppUpdateServiceTests : IDisposable
     [InlineData("https://deskbox.fun/update/DeskBox_Setup.exe", false)]
     [InlineData("https://cdn.deskbox.fun/DeskBox_Setup.exe", false)]
     [InlineData("https://github.com/sltalex/DeskBox/releases/download/v1.5.6/DeskBox_Setup.exe", true)]
+    [InlineData("https://sltbox.2leaves.cn/releases/DeskBox_Setup_2026101303_x64.exe", true)]
+    [InlineData("https://sltbox.2leaves.cn/releases/other.exe", false)]
+    [InlineData("https://sltbox.2leaves.cn/other/DeskBox_Setup_2026101303_x64.exe", false)]
+    [InlineData("http://sltbox.2leaves.cn/releases/DeskBox_Setup_2026101303_x64.exe", false)]
     [InlineData("https://github.com/Tianyu199509/DeskBox/releases/download/v1.5.2/DeskBox_Setup.exe", false)]
     [InlineData("http://deskbox.fun/update/DeskBox_Setup.exe", false)]
     [InlineData("https://evil.example.com/DeskBox_Setup.exe", false)]

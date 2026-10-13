@@ -15,7 +15,7 @@ public sealed partial class AppUpdateService : IAppUpdateService
     public const string DefaultManifestUrl = "https://raw.githubusercontent.com/sltalex/DeskBox/main/update/stable.json";
     public const string DefaultGitHubLatestReleaseApiUrl = "https://api.github.com/repos/sltalex/DeskBox/releases/latest";
     public const string DefaultManualDownloadUrl = "https://github.com/sltalex/DeskBox/releases";
-    public const string DefaultInstallerMirrorBaseUrl = "http://sltbox.2leaves.cn/releases/";
+    public const string DefaultInstallerMirrorBaseUrl = "https://sltbox.2leaves.cn/releases/";
 
     private readonly HttpClient _httpClient;
     private readonly string _manifestUrl;
@@ -526,10 +526,20 @@ public sealed partial class AppUpdateService : IAppUpdateService
         // the actual asset bytes arrive via redirect from
         // objects.githubusercontent.com, which the HTTP client follows and
         // which therefore must never be trusted as a manifest origin itself.
-        return string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase) &&
-            uri.AbsolutePath.StartsWith(
+        if (string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return uri.AbsolutePath.StartsWith(
                 "/sltalex/DeskBox/releases/download/",
                 StringComparison.OrdinalIgnoreCase);
+        }
+
+        // The HTTPS mirror is a controlled, same-name asset directory. Keep
+        // the path pinned so a manifest cannot use the mirror host as an
+        // arbitrary download/proxy origin.
+        return string.Equals(uri.Host, "sltbox.2leaves.cn", StringComparison.OrdinalIgnoreCase) &&
+            uri.AbsolutePath.StartsWith("/releases/DeskBox_Setup_", StringComparison.OrdinalIgnoreCase) &&
+            uri.AbsolutePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+            !uri.AbsolutePath.Contains("..", StringComparison.Ordinal);
     }
 
     internal static bool TrySelectInstallerForArchitecture(
