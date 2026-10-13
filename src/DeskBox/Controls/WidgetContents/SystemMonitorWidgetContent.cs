@@ -22,7 +22,7 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     private readonly TextBlock _diskTemperature = Value(13);
     private readonly TextBlock _download = Value(12);
     private readonly TextBlock _upload = Value(12);
-    private readonly StackPanel _disks = new() { Orientation = Orientation.Horizontal, Spacing = 4 };
+    private readonly Grid _disks = new() { ColumnSpacing = SystemMonitorDiskLayout.CardSpacing, RowSpacing = SystemMonitorDiskLayout.CardSpacing, HorizontalAlignment = HorizontalAlignment.Stretch };
     private readonly Canvas _cpuChart = Chart();
     private readonly Canvas _memoryChart = Chart();
     private readonly Canvas _networkChart = Chart();
@@ -81,10 +81,9 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         root.Children.Add(new ScrollViewer
         {
             Content = _disks,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollMode = ScrollMode.Enabled,
-            VerticalScrollMode = ScrollMode.Disabled,
-            Height = 60
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            HorizontalScrollMode = ScrollMode.Disabled,
+            VerticalScrollMode = ScrollMode.Disabled
         });
 
         var trendHeading = Label(_localization.T("SystemMonitor.LastMinute"));
@@ -103,14 +102,18 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
         Content = new ScrollViewer
         {
             Content = root,
-            HorizontalScrollMode = ScrollMode.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            // The disk grid needs the widget's real width to decide how many
+            // cards belong in a row; horizontal scrolling would measure it
+            // with an effectively unbounded width.
+            HorizontalScrollMode = ScrollMode.Disabled,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             VerticalScrollMode = ScrollMode.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto
         };
         Loaded += (_, _) => UpdateSubscription();
         Unloaded += (_, _) => Stop();
         ActualThemeChanged += (_, _) => UpdateDiskCardAppearance();
+        _disks.SizeChanged += (_, _) => ArrangeDiskCards();
         ShowUnavailable();
     }
 
@@ -220,6 +223,8 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     {
         if (_diskNames.Count == count && (count != 0 || _disks.Children.Count > 0)) return;
         _disks.Children.Clear();
+        _disks.RowDefinitions.Clear();
+        _disks.ColumnDefinitions.Clear();
         _diskNames.Clear();
         _diskPercents.Clear();
         _diskCapacities.Clear();
@@ -248,7 +253,6 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
             content.Children.Add(rates);
             var card = new Border
             {
-                Width = 132,
                 Height = 54,
                 Padding = new Thickness(4, 3, 4, 3),
                 BorderThickness = new Thickness(1),
@@ -260,9 +264,36 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
             _diskCapacities.Add(capacity);
             _diskRates.Add(rates);
             _diskCards.Add(card);
+        }
+        ArrangeDiskCards();
+        UpdateDiskCardAppearance();
+    }
+
+    private void ArrangeDiskCards()
+    {
+        if (_diskCards.Count == 0) return;
+
+        int columns = SystemMonitorDiskLayout.ColumnsForWidth(
+            _disks.ActualWidth,
+            _diskCards.Count);
+        _disks.Children.Clear();
+        _disks.RowDefinitions.Clear();
+        _disks.ColumnDefinitions.Clear();
+        for (int column = 0; column < columns; column++)
+            _disks.ColumnDefinitions.Add(new ColumnDefinition());
+        int rows = (int)Math.Ceiling((double)_diskCards.Count / columns);
+        for (int row = 0; row < rows; row++)
+            _disks.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        for (int index = 0; index < _diskCards.Count; index++)
+        {
+            Border card = _diskCards[index];
+            card.Width = double.NaN;
+            card.HorizontalAlignment = HorizontalAlignment.Stretch;
+            Grid.SetRow(card, index / columns);
+            Grid.SetColumn(card, index % columns);
             _disks.Children.Add(card);
         }
-        UpdateDiskCardAppearance();
     }
 
     private void UpdateDiskCardAppearance()
@@ -382,4 +413,19 @@ public sealed partial class SystemMonitorWidgetContent : UserControl, IDisposabl
     private static TextBlock Value(double size = 17) => new() { FontSize = size, FontWeight = FontWeights.SemiBold, TextTrimming = TextTrimming.CharacterEllipsis };
 
     public void Dispose() { _disposed = true; if (App.Current?.SettingsService is { } settings) settings.SettingsChanged -= OnSettingsChanged; Stop(); }
+}
+
+internal static class SystemMonitorDiskLayout
+{
+    public const double MinimumCardWidth = 128;
+    public const double CardSpacing = 4;
+
+    public static int ColumnsForWidth(double availableWidth, int diskCount)
+    {
+        if (diskCount <= 0) return 1;
+        if (!double.IsFinite(availableWidth) || availableWidth <= 0) return 1;
+        int columns = Math.Max(1, (int)Math.Floor(
+            (availableWidth + CardSpacing) / (MinimumCardWidth + CardSpacing)));
+        return Math.Min(columns, diskCount);
+    }
 }
