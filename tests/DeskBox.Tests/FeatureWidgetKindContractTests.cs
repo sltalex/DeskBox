@@ -40,15 +40,15 @@ public sealed class FeatureWidgetKindContractTests
     }
 
     [Fact]
-    public void TreeIsEnabledByDefaultButExplicitDisableIsPreserved()
+    public void TreeIsDisabledByDefaultButExplicitEnableIsPreserved()
     {
         var settings = new AppSettings();
-        Assert.True(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.Tree));
-        FeatureWidgetSettings.Normalize(settings);
-        Assert.True(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.Tree));
-
-        FeatureWidgetSettings.SetEnabled(settings, WidgetKind.Tree, false);
         Assert.False(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.Tree));
+        FeatureWidgetSettings.Normalize(settings);
+        Assert.False(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.Tree));
+
+        FeatureWidgetSettings.SetEnabled(settings, WidgetKind.Tree, true);
+        Assert.True(FeatureWidgetSettings.IsEnabled(settings, WidgetKind.Tree));
     }
 
     [Fact]

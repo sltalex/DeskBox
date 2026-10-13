@@ -143,7 +143,9 @@ public static class FeatureWidgetSettings
             WidgetKind.Weather => false,
             WidgetKind.Search => false,
             WidgetKind.Glance => false,
-            WidgetKind.Tree => true,
+            // Tree counting is opt-in for a new installation because it
+            // observes keyboard presses while the application is running.
+            WidgetKind.Tree => false,
             _ => false
         };
     }

@@ -40,7 +40,13 @@ public sealed partial class TreeSettingsSection : UserControl
         _enable.Toggled += (_, _) =>
         {
             if (_updating || _viewModel is null) return;
+            bool wasEnabled = _viewModel.IsWidgetEnabled(WidgetKind.Tree);
             _viewModel.SetWidgetEnabled(WidgetKind.Tree, _enable.IsOn);
+            // Enabling the feature is an explicit opt-in to keyboard
+            // counting too.  A prior pause must not leave a newly enabled
+            // tree appearing active while its energy remains at zero.
+            if (_enable.IsOn && !wasEnabled)
+                _counter.SetPaused(false);
             _counter.SetEnabled(_enable.IsOn);
             Refresh();
         };

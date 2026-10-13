@@ -35,15 +35,16 @@ public sealed class TreeStatisticsStateTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void DisablingTreeDoesNotOverwriteTheStoredPauseChoice(bool paused)
+    public void ReenablingTreeStartsCountingEvenWhenItWasPreviouslyPaused(bool paused)
     {
         var progress = new TreeProgress { Paused = paused };
         TreeStatisticsState disabled = TreeStatisticsState.FromProgress(false, progress.Paused);
+        progress.Paused = false;
         TreeStatisticsState restored = TreeStatisticsState.FromProgress(true, progress.Paused);
 
         Assert.False(disabled.ToggleOn);
-        Assert.Equal(paused, progress.Paused);
-        Assert.Equal(!paused, restored.ToggleOn);
+        Assert.False(progress.Paused);
+        Assert.True(restored.ToggleOn);
     }
 
     [Fact]
@@ -52,6 +53,8 @@ public sealed class TreeStatisticsStateTests
         string source = File.ReadAllText(TestPaths.FromRepository(
             "src/DeskBox/Views/SettingsSections/TreeSettingsSection.cs"));
         Assert.Contains("TreeStatisticsState.PausedFromToggle(", source);
+        Assert.Contains("if (_enable.IsOn && !wasEnabled)", source);
+        Assert.Contains("_counter.SetPaused(false);", source);
         Assert.Contains("TreeStatisticsState.FromProgress(_enable.IsOn, snapshot.Paused)", source);
         Assert.Contains(".IsEnabled = statistics.ToggleEnabled;", source);
         Assert.Contains(".IsOn = statistics.ToggleOn;", source);
