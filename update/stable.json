@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "channel": "stable",
-  "version": "2026101203",
-  "releaseDate": "2026-10-12",
+  "version": "2026101301",
+  "releaseDate": "2026-10-13",
   "mandatory": false,
-  "downloadUrl": "https://github.com/sltalex/DeskBox/releases/download/v2026101203/DeskBox_Setup_2026101203_x64.exe",
+  "downloadUrl": "https://github.com/sltalex/DeskBox/releases/download/v2026101301/DeskBox_Setup_2026101301_x64.exe",
   "manualDownloadUrl": "https://github.com/sltalex/DeskBox/releases",
-  "sha256": "759a5b6b3f101d12e7c129da9fd07840896fea39e20a326f0fa80b0845250728",
-  "size": 71815300,
-  "releaseNotesUrl": "https://github.com/sltalex/DeskBox/releases/tag/v2026101203",
+  "sha256": "b2fdaf7ef254b5f128ac6f635d45a4659c8449b8a0ca5fdd86d7ca88aed2938a",
+  "size": 71834900,
+  "releaseNotesUrl": "https://github.com/sltalex/DeskBox/releases/tag/v2026101301",
   "summary": {
-    "zh-CN": "DeskBox 2026101203 x64 直发版，新增五阶段摇叶、成长后飘叶并移除树底部阶段名称，支持全局字体颜色和系统监控图表设置。主程序采用 Native AOT，温度辅助进程自带 .NET 运行时；本次暂无 ARM64 安装包。",
-    "en-US": "DeskBox 2026101203 adds swaying foliage across all five tree stages, falling leaves for grown trees, hides the stage label, and includes global font colors and configurable monitor charts. This x64 release uses Native AOT for the main app and a bundled .NET runtime for the temperature helper; ARM64 is not available yet."
+    "zh-CN": "DeskBox 2026101301 x64 直发版：种树改为窄矩形冒泡进度条，百分比显示在条内；系统监控磁盘卡片支持双击打开，任务格子布局更紧凑。主程序采用 Native AOT，本次暂无 ARM64 安装包。",
+    "en-US": "DeskBox 2026101301 adds a slimmer bubbling tree progress bar with its percentage inside, double-click disk cards in System Monitor, and a more compact task widget. This x64 release uses Native AOT; ARM64 is not available yet."
   }
 }
