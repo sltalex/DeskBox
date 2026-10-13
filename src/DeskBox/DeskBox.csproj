@@ -6,10 +6,10 @@
     <!-- Keep the compile-time SDK modern while declaring the supported Win10 floor explicitly. -->
     <SupportedOSPlatformVersion>10.0.19044.0</SupportedOSPlatformVersion>
     <RootNamespace>DeskBox</RootNamespace>
-    <Version>2026101303</Version>
-    <AssemblyVersion>2026.10.13.3</AssemblyVersion>
-    <FileVersion>2026.10.13.3</FileVersion>
-    <InformationalVersion>2026101303</InformationalVersion>
+    <Version>2026101304</Version>
+    <AssemblyVersion>2026.10.13.4</AssemblyVersion>
+    <FileVersion>2026.10.13.4</FileVersion>
+    <InformationalVersion>2026101304</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
