@@ -415,6 +415,61 @@ public sealed class AppUpdateServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DownloadUpdateAsync_UsesHttpMirrorAfterGitHubFailure()
+    {
+        byte[] payload = Encoding.UTF8.GetBytes("mirror-installer");
+        string sha256 = Convert.ToHexString(SHA256.HashData(payload));
+        var requested = new List<Uri>();
+        using var httpClient = CreateHttpClient(request =>
+        {
+            requested.Add(request.RequestUri!);
+            return requested.Count == 1
+                ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+                : new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(payload) };
+        });
+        var service = new AppUpdateService(httpClient, updateRootPath: _tempRoot);
+
+        var result = await service.DownloadUpdateAsync(new AppUpdateManifest
+        {
+            Version = "1.2.2",
+            DownloadUrl = "https://github.com/sltalex/DeskBox/releases/download/v1.2.2/DeskBox_Setup_1.2.2_x64.exe",
+            Sha256 = sha256,
+            Size = payload.Length
+        });
+
+        Assert.True(result.Success, $"{result.FailureKind}: {result.ErrorMessage}");
+        Assert.Equal(2, requested.Count);
+        Assert.Equal("http://sltbox.2leaves.cn/releases/DeskBox_Setup_1.2.2_x64.exe", requested[1].AbsoluteUri);
+        Assert.Equal(payload, await File.ReadAllBytesAsync(result.FilePath!));
+    }
+
+    [Fact]
+    public async Task DownloadUpdateAsync_RejectsWrongHashFromBothSources()
+    {
+        int requests = 0;
+        using var httpClient = CreateHttpClient(_ =>
+        {
+            requests++;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new ByteArrayContent(Encoding.UTF8.GetBytes("wrong-installer"))
+            };
+        });
+        var service = new AppUpdateService(httpClient, updateRootPath: _tempRoot);
+
+        var result = await service.DownloadUpdateAsync(new AppUpdateManifest
+        {
+            Version = "1.2.2",
+            DownloadUrl = "https://github.com/sltalex/DeskBox/releases/download/v1.2.2/DeskBox_Setup_1.2.2_x64.exe",
+            Sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes("expected-installer")))
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(AppUpdateDownloadFailureKind.HashMismatch, result.FailureKind);
+        Assert.Equal(2, requests);
+    }
+
+    [Fact]
     public async Task DownloadUpdateAsync_RejectsInstallerForAnotherArchitecture()
     {
         byte[] payload = Encoding.UTF8.GetBytes("deskbox-installer");

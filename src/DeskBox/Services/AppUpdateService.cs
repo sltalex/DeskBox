@@ -15,6 +15,7 @@ public sealed partial class AppUpdateService : IAppUpdateService
     public const string DefaultManifestUrl = "https://raw.githubusercontent.com/sltalex/DeskBox/main/update/stable.json";
     public const string DefaultGitHubLatestReleaseApiUrl = "https://api.github.com/repos/sltalex/DeskBox/releases/latest";
     public const string DefaultManualDownloadUrl = "https://github.com/sltalex/DeskBox/releases";
+    public const string DefaultInstallerMirrorBaseUrl = "http://sltbox.2leaves.cn/releases/";
 
     private readonly HttpClient _httpClient;
     private readonly string _manifestUrl;
@@ -196,77 +197,85 @@ public sealed partial class AppUpdateService : IAppUpdateService
         string targetPath = Path.Combine(targetDirectory, fileName);
         string tempPath = targetPath + ".tmp";
 
-        try
+        Uri mirrorUri = new(new Uri(DefaultInstallerMirrorBaseUrl), Uri.EscapeDataString(fileName));
+        AppUpdateDownloadResult? lastFailure = null;
+        foreach (Uri sourceUri in new[] { downloadUri, mirrorUri })
         {
-            Directory.CreateDirectory(targetDirectory);
-            if (File.Exists(tempPath))
+            try
             {
-                File.Delete(tempPath);
-            }
-
-            using var response = await _httpClient.GetAsync(
-                downloadUri,
-                HttpCompletionOption.ResponseHeadersRead,
-                cancellationToken);
-            response.EnsureSuccessStatusCode();
-
-            long? totalBytes = response.Content.Headers.ContentLength;
-            if (totalBytes is null && manifest.Size > 0)
-            {
-                totalBytes = manifest.Size;
-            }
-
-            long bytesReceived = 0;
-            string actualSha256;
-            await using (var remoteStream = await response.Content.ReadAsStreamAsync(cancellationToken))
-            await using (var fileStream = new FileStream(
-                tempPath,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize: 1024 * 128,
-                useAsync: true))
-            using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
-            {
-                byte[] buffer = new byte[1024 * 128];
-                int bytesRead;
-                while ((bytesRead = await remoteStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
+                Directory.CreateDirectory(targetDirectory);
+                if (File.Exists(tempPath))
                 {
-                    await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
-                    hash.AppendData(buffer, 0, bytesRead);
-                    bytesReceived += bytesRead;
-                    progress?.Report(new AppUpdateDownloadProgress(bytesReceived, totalBytes));
+                    File.Delete(tempPath);
                 }
 
-                await fileStream.FlushAsync(cancellationToken);
-                actualSha256 = Convert.ToHexString(hash.GetHashAndReset());
-            }
+                using var response = await _httpClient.GetAsync(
+                    sourceUri,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+                response.EnsureSuccessStatusCode();
 
-            if (!string.Equals(actualSha256, NormalizeSha256(manifest.Sha256), StringComparison.OrdinalIgnoreCase))
+                long? totalBytes = response.Content.Headers.ContentLength;
+                if (totalBytes is null && manifest.Size > 0)
+                {
+                    totalBytes = manifest.Size;
+                }
+
+                long bytesReceived = 0;
+                string actualSha256;
+                await using (var remoteStream = await response.Content.ReadAsStreamAsync(cancellationToken))
+                await using (var fileStream = new FileStream(
+                    tempPath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None,
+                    bufferSize: 1024 * 128,
+                    useAsync: true))
+                using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
+                {
+                    byte[] buffer = new byte[1024 * 128];
+                    int bytesRead;
+                    while ((bytesRead = await remoteStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
+                    {
+                        await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+                        hash.AppendData(buffer, 0, bytesRead);
+                        bytesReceived += bytesRead;
+                        progress?.Report(new AppUpdateDownloadProgress(bytesReceived, totalBytes));
+                    }
+
+                    await fileStream.FlushAsync(cancellationToken);
+                    actualSha256 = Convert.ToHexString(hash.GetHashAndReset());
+                }
+
+                if (!string.Equals(actualSha256, NormalizeSha256(manifest.Sha256), StringComparison.OrdinalIgnoreCase))
+                {
+                    TryDelete(tempPath);
+                    lastFailure = AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.HashMismatch);
+                    continue;
+                }
+
+                File.Move(tempPath, targetPath, overwrite: true);
+                progress?.Report(new AppUpdateDownloadProgress(bytesReceived, totalBytes ?? bytesReceived));
+                return AppUpdateDownloadResult.Completed(targetPath);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 TryDelete(tempPath);
-                return AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.HashMismatch);
+                return AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.Cancelled);
             }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                TryDelete(tempPath);
+                lastFailure = AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.Network, ex.Message);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                TryDelete(tempPath);
+                return AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.FileSystem, ex.Message);
+            }
+        }
 
-            File.Move(tempPath, targetPath, overwrite: true);
-            progress?.Report(new AppUpdateDownloadProgress(bytesReceived, totalBytes ?? bytesReceived));
-            return AppUpdateDownloadResult.Completed(targetPath);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            TryDelete(tempPath);
-            return AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.Cancelled);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-        {
-            TryDelete(tempPath);
-            return AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.Network, ex.Message);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            TryDelete(tempPath);
-            return AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.FileSystem, ex.Message);
-        }
+        return lastFailure ?? AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.Network);
     }
 
     public AppUpdateInstallResult StartInstallerHelper(string installerPath, bool silent = true)
