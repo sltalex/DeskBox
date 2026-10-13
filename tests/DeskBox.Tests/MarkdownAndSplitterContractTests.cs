@@ -528,7 +528,7 @@ public sealed class MarkdownAndSplitterContractTests
             todoXaml,
             StringComparison.Ordinal);
         Assert.Contains(
-            "Width=\"2\"\n                                    Margin=\"-2\"\n                                    HorizontalAlignment=\"Left\"",
+            "Width=\"2\"\n                                    Margin=\"-1\"\n                                    HorizontalAlignment=\"Left\"",
             todoXaml.ReplaceLineEndings("\n"),
             StringComparison.Ordinal);
         Assert.Contains(
@@ -543,7 +543,7 @@ public sealed class MarkdownAndSplitterContractTests
             quickCaptureXaml.Split("WidgetCornerRadiusSmall", StringSplitOptions.None).Length > 5,
             "Quick Capture add, list, selection, and detail surfaces should share the compact radius.");
         Assert.Contains(
-            "Margin=\"2\"\n                            MinHeight=\"50\"\n                            Padding=\"2\"",
+            "Margin=\"2,1\"\n                            MinHeight=\"40\"\n                            Padding=\"1\"",
             todoXaml.ReplaceLineEndings("\n"),
             StringComparison.Ordinal);
         Assert.True(

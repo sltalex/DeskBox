@@ -271,7 +271,9 @@ public sealed class TreeIllustrationTests
         Assert.Contains("CornerRadius = new CornerRadius(0)", progressSource, StringComparison.Ordinal);
         Assert.Contains("Height = 16", progressSource, StringComparison.Ordinal);
         Assert.Contains("_baseLabel.Text = _filledLabel.Text", progressSource, StringComparison.Ordinal);
-        Assert.Contains("Grid.SetColumn(_progress, 1)", source, StringComparison.Ordinal);
+        Assert.Contains("stack.Children.Add(_progress)", source, StringComparison.Ordinal);
+        Assert.Contains("_progress.Margin = new Thickness(16, 8, 16, 4)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text = \"🌱\"", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Grid.SetColumn(_percent, 2)", source, StringComparison.Ordinal);
     }
 

@@ -249,9 +249,9 @@
                         <Border
                             x:Name="TodoItemRoot"
                             AllowDrop="True"
-                            Margin="2"
-                            MinHeight="50"
-                            Padding="2"
+                            Margin="2,1"
+                            MinHeight="40"
+                            Padding="1"
                             Style="{StaticResource TodoCardBorderStyle}"
                             DataContextChanged="TodoItem_DataContextChanged"
                             Loaded="TodoItem_Loaded"
@@ -263,7 +263,7 @@
                             RightTapped="TodoItem_RightTapped">
                             <Grid ColumnSpacing="2">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="32" />
+                                    <ColumnDefinition Width="26" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
@@ -271,7 +271,7 @@
                                 <Border
                                     x:Name="TodoItemHoverBackground"
                                     Grid.ColumnSpan="3"
-                                    Margin="-2"
+                                    Margin="-1"
                                     CornerRadius="{StaticResource WidgetCornerRadiusSmall}"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                     IsHitTestVisible="False"
@@ -279,7 +279,7 @@
 
                                 <Border
                                     Grid.ColumnSpan="3"
-                                    Margin="-2"
+                                    Margin="-1"
                                     Background="{ThemeResource SubtleFillColorSecondaryBrush}"
                                     CornerRadius="{StaticResource WidgetCornerRadiusSmall}"
                                     IsHitTestVisible="False"
@@ -288,7 +288,7 @@
 
                                 <Border
                                     Grid.ColumnSpan="3"
-                                    Margin="-2"
+                                    Margin="-1"
                                     Background="{ThemeResource SubtleFillColorTertiaryBrush}"
                                     CornerRadius="{StaticResource WidgetCornerRadiusSmall}"
                                     IsHitTestVisible="False"
@@ -299,7 +299,7 @@
                                     x:Name="TodoDetailSelectionIndicator"
                                     Grid.ColumnSpan="3"
                                     Width="2"
-                                    Margin="-2"
+                                    Margin="-1"
                                     HorizontalAlignment="Left"
                                     Background="{ThemeResource ControlStrongStrokeColorDefaultBrush}"
                                     CornerRadius="1"
@@ -319,7 +319,7 @@
                                     Grid.Column="1"
                                     Width="3"
                                     Height="20"
-                                    Margin="0,0,5,0"
+                                    Margin="0,0,3,0"
                                     VerticalAlignment="Center"
                                     Background="{Binding ColorMarkerBrush}"
                                     CornerRadius="1.5"

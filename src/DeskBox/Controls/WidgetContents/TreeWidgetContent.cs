@@ -66,16 +66,11 @@ public sealed partial class TreeWidgetContent : UserControl, IDisposable
         ConfigureMotion();
 
         var stack = new StackPanel { Spacing = 2, HorizontalAlignment = HorizontalAlignment.Stretch };
-        var progressRow = new Grid { Margin = new Thickness(16, 8, 16, 4), ColumnSpacing = 7 };
-        progressRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        progressRow.ColumnDefinitions.Add(new ColumnDefinition());
-        progressRow.Children.Add(new TextBlock { Text = "🌱", FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
-        Grid.SetColumn(_progress, 1);
-        progressRow.Children.Add(_progress);
+        _progress.Margin = new Thickness(16, 8, 16, 4);
         stack.Children.Add(new Viewbox { Child = _drawing, Height = TreeIllustrationLayout.DisplayHeight, Stretch = Stretch.Uniform });
         stack.Children.Add(_captureStatus);
         stack.Children.Add(_fruitStats);
-        stack.Children.Add(progressRow);
+        stack.Children.Add(_progress);
         Content = stack;
         _treeSurface.Tapped += (_, args) =>
         {
