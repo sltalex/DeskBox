@@ -416,6 +416,106 @@ public sealed class AppUpdateServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DownloadUpdateAsync_ResumesPartialFileWithRange()
+    {
+        byte[] prefix = Encoding.UTF8.GetBytes("deskbox-");
+        byte[] suffix = Encoding.UTF8.GetBytes("installer");
+        byte[] payload = [.. prefix, .. suffix];
+        string version = "1.2.3";
+        string architecture = AppUpdateService.CurrentInstallerArchitectureSuffix;
+        string fileName = $"DeskBox_Setup_{version}_{architecture}.exe";
+        string tempPath = Path.Combine(_tempRoot, version, fileName + ".tmp");
+        Directory.CreateDirectory(Path.GetDirectoryName(tempPath)!);
+        await File.WriteAllBytesAsync(tempPath, prefix);
+        HttpRequestMessage? capturedRequest = null;
+        using var httpClient = CreateHttpClient(request =>
+        {
+            capturedRequest = request;
+            var response = new HttpResponseMessage(HttpStatusCode.PartialContent)
+            {
+                Content = new ByteArrayContent(suffix)
+            };
+            response.Content.Headers.ContentRange = new System.Net.Http.Headers.ContentRangeHeaderValue(
+                prefix.Length,
+                payload.Length - 1,
+                payload.Length);
+            return response;
+        });
+        var service = new AppUpdateService(httpClient, updateRootPath: _tempRoot);
+
+        var result = await service.DownloadUpdateAsync(new AppUpdateManifest
+        {
+            Version = version,
+            DownloadUrl = $"https://github.com/sltalex/DeskBox/releases/download/v{version}/{fileName}",
+            Sha256 = Convert.ToHexString(SHA256.HashData(payload)),
+            Size = payload.Length
+        });
+
+        Assert.True(result.Success, $"{result.FailureKind}: {result.ErrorMessage}");
+        Assert.NotNull(capturedRequest);
+        Assert.Equal(prefix.Length, capturedRequest!.Headers.Range!.Ranges.Single().From);
+        Assert.Equal(payload, await File.ReadAllBytesAsync(result.FilePath!));
+        Assert.False(File.Exists(tempPath));
+    }
+
+    [Fact]
+    public async Task DownloadUpdateAsync_RestartsWhenServerIgnoresRange()
+    {
+        byte[] payload = Encoding.UTF8.GetBytes("complete-installer");
+        string version = "1.2.5";
+        string architecture = AppUpdateService.CurrentInstallerArchitectureSuffix;
+        string fileName = $"DeskBox_Setup_{version}_{architecture}.exe";
+        string tempPath = Path.Combine(_tempRoot, version, fileName + ".tmp");
+        Directory.CreateDirectory(Path.GetDirectoryName(tempPath)!);
+        await File.WriteAllTextAsync(tempPath, "old-prefix");
+        long? requestedOffset = null;
+        using var httpClient = CreateHttpClient(request =>
+        {
+            requestedOffset = request.Headers.Range?.Ranges.Single().From;
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(payload) };
+        });
+        var service = new AppUpdateService(httpClient, updateRootPath: _tempRoot);
+
+        var result = await service.DownloadUpdateAsync(new AppUpdateManifest
+        {
+            Version = version,
+            DownloadUrl = $"https://github.com/sltalex/DeskBox/releases/download/v{version}/{fileName}",
+            Sha256 = Convert.ToHexString(SHA256.HashData(payload)),
+            Size = payload.Length
+        });
+
+        Assert.True(result.Success, $"{result.FailureKind}: {result.ErrorMessage}");
+        Assert.Equal("old-prefix".Length, requestedOffset);
+        Assert.Equal(payload, await File.ReadAllBytesAsync(result.FilePath!));
+    }
+
+    [Fact]
+    public async Task DownloadUpdateAsync_PreservesPartialFileAfterNetworkFailure()
+    {
+        byte[] prefix = Encoding.UTF8.GetBytes("partial");
+        string version = "1.2.4";
+        string architecture = AppUpdateService.CurrentInstallerArchitectureSuffix;
+        string fileName = $"DeskBox_Setup_{version}_{architecture}.exe";
+        string tempPath = Path.Combine(_tempRoot, version, fileName + ".tmp");
+        Directory.CreateDirectory(Path.GetDirectoryName(tempPath)!);
+        await File.WriteAllBytesAsync(tempPath, prefix);
+        using var httpClient = CreateHttpClient(_ => throw new TaskCanceledException("network interruption"));
+        var service = new AppUpdateService(httpClient, updateRootPath: _tempRoot);
+
+        var result = await service.DownloadUpdateAsync(new AppUpdateManifest
+        {
+            Version = version,
+            DownloadUrl = $"https://github.com/sltalex/DeskBox/releases/download/v{version}/{fileName}",
+            Sha256 = new string('A', 64),
+            Size = prefix.Length + 4
+        });
+
+        Assert.False(result.Success);
+        Assert.Equal(AppUpdateDownloadFailureKind.Network, result.FailureKind);
+        Assert.Equal(prefix, await File.ReadAllBytesAsync(tempPath));
+    }
+
+    [Fact]
     public async Task DownloadUpdateAsync_UsesHttpMirrorAfterGitHubFailure()
     {
         byte[] payload = Encoding.UTF8.GetBytes("mirror-installer");

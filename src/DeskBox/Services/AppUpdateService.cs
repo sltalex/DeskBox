@@ -199,57 +199,102 @@ public sealed partial class AppUpdateService : IAppUpdateService
 
         Uri mirrorUri = new(new Uri(DefaultInstallerMirrorBaseUrl), Uri.EscapeDataString(fileName));
         AppUpdateDownloadResult? lastFailure = null;
+        long partialBytes;
+        try
+        {
+            partialBytes = File.Exists(tempPath) ? new FileInfo(tempPath).Length : 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.FileSystem, ex.Message);
+        }
+        if (partialBytes > 0)
+        {
+            progress?.Report(new AppUpdateDownloadProgress(partialBytes, manifest.Size > 0 ? manifest.Size : null));
+        }
+
         foreach (Uri sourceUri in new[] { downloadUri, mirrorUri })
         {
             try
             {
                 Directory.CreateDirectory(targetDirectory);
-                if (File.Exists(tempPath))
+                long requestedOffset = partialBytes;
+                using var request = new HttpRequestMessage(HttpMethod.Get, sourceUri);
+                if (requestedOffset > 0)
                 {
-                    File.Delete(tempPath);
+                    request.Headers.Range = new RangeHeaderValue(requestedOffset, null);
                 }
 
-                using var response = await _httpClient.GetAsync(
-                    sourceUri,
+                using var response = await _httpClient.SendAsync(
+                    request,
                     HttpCompletionOption.ResponseHeadersRead,
                     cancellationToken);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.RequestedRangeNotSatisfiable && requestedOffset > 0)
+                {
+                    TryDelete(tempPath);
+                    partialBytes = 0;
+                    continue;
+                }
+
                 response.EnsureSuccessStatusCode();
 
+                bool append = requestedOffset > 0 &&
+                    response.StatusCode == System.Net.HttpStatusCode.PartialContent &&
+                    response.Content.Headers.ContentRange?.From == requestedOffset;
+                if (!append)
+                {
+                    // A server that ignores Range returned the complete file.
+                    // Start over instead of appending a duplicate prefix.
+                    partialBytes = 0;
+                }
+
+                long bytesReceived = append ? requestedOffset : 0;
                 long? totalBytes = response.Content.Headers.ContentLength;
-                if (totalBytes is null && manifest.Size > 0)
+                if (append && totalBytes is not null)
+                {
+                    totalBytes += requestedOffset;
+                }
+                else if (totalBytes is null && manifest.Size > 0)
                 {
                     totalBytes = manifest.Size;
                 }
 
-                long bytesReceived = 0;
-                string actualSha256;
                 await using (var remoteStream = await response.Content.ReadAsStreamAsync(cancellationToken))
                 await using (var fileStream = new FileStream(
                     tempPath,
-                    FileMode.Create,
+                    append ? FileMode.Append : FileMode.Create,
                     FileAccess.Write,
                     FileShare.None,
                     bufferSize: 1024 * 128,
                     useAsync: true))
-                using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
                 {
                     byte[] buffer = new byte[1024 * 128];
                     int bytesRead;
                     while ((bytesRead = await remoteStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
                     {
                         await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
-                        hash.AppendData(buffer, 0, bytesRead);
                         bytesReceived += bytesRead;
+                        partialBytes = bytesReceived;
                         progress?.Report(new AppUpdateDownloadProgress(bytesReceived, totalBytes));
                     }
 
                     await fileStream.FlushAsync(cancellationToken);
-                    actualSha256 = Convert.ToHexString(hash.GetHashAndReset());
+                }
+
+                string actualSha256;
+                {
+                    await using var completedStream = new FileStream(
+                        tempPath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                        bufferSize: 1024 * 128, useAsync: true);
+                    actualSha256 = Convert.ToHexString(
+                        await SHA256.HashDataAsync(completedStream, cancellationToken));
                 }
 
                 if (!string.Equals(actualSha256, NormalizeSha256(manifest.Sha256), StringComparison.OrdinalIgnoreCase))
                 {
                     TryDelete(tempPath);
+                    partialBytes = 0;
                     lastFailure = AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.HashMismatch);
                     continue;
                 }
@@ -260,17 +305,19 @@ public sealed partial class AppUpdateService : IAppUpdateService
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                TryDelete(tempPath);
+                // Keep the partial file so a later update attempt can resume.
                 return AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.Cancelled);
             }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            catch (Exception ex) when (
+                ex is HttpRequestException or
+                System.Net.Http.HttpIOException or
+                TaskCanceledException)
             {
-                TryDelete(tempPath);
+                // Network failures leave the partial file available for Range.
                 lastFailure = AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.Network, ex.Message);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                TryDelete(tempPath);
                 return AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.FileSystem, ex.Message);
             }
         }
