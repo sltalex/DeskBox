@@ -2816,5 +2816,21 @@
   "Onboarding.Feature.Weather": "自動位置検出によるリアルタイム天気と7日間予報",
   "Onboarding.Feature.Music": "アートワーク由来のカラーでメディア再生を制御",
   "Onboarding.Step2.Note": "既定は「移動」です。元の場所にはコピーが残りません（設定で「コピー」に変更できます）。ウィジェットを選んで Ctrl+V で貼り付けも可能です。逆に、ウィジェットから WeChat やブラウザー、エクスプローラーへドラッグすれば、そのまま実ファイルとして出せます。",
-  "Onboarding.Step3.Hint": "ショートカットが他のアプリと競合する場合は、設定で後から録り直せます。"
+  "Onboarding.Step3.Hint": "ショートカットが他のアプリと競合する場合は、設定で後から録り直せます。",
+  "Settings.Account.Title": "アカウント",
+  "Settings.Account.SyncBenefit": "サインインすると、データをクラウドへ自動同期し、プラットフォーム間で保持して紛失を防げます。",
+  "Settings.Account.Username": "ユーザー名",
+  "Settings.Account.Password": "パスワード",
+  "Settings.Account.SignIn": "サインイン",
+  "Settings.Account.Register": "登録",
+  "Settings.Account.SignOut": "サインアウト",
+  "Settings.Account.SignedInAs": "{0} としてサインイン中",
+  "Settings.Account.Working": "アカウントサービスに接続しています…",
+  "Settings.Account.Error.InvalidUsername": "ユーザー名は3～32文字の英字、数字、またはアンダースコアで入力してください。",
+  "Settings.Account.Error.InvalidPassword": "パスワードは6～128文字で入力してください。",
+  "Settings.Account.Error.UsernameTaken": "このユーザー名はすでに登録されています。",
+  "Settings.Account.Error.InvalidCredentials": "ユーザー名またはパスワードが正しくありません。",
+  "Settings.Account.Error.RateLimited": "試行回数が多すぎます。しばらくしてからもう一度お試しください。",
+  "Settings.Account.Error.Network": "アカウントサービスに接続できません。ネットワークを確認してください。",
+  "Settings.Account.Error.Server": "アカウントサービスは一時的に利用できません。"
 }

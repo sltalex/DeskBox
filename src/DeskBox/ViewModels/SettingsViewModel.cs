@@ -168,6 +168,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         DeskBox.Features.ManagedStorage.ManagedStorageSettingsViewModel managedStorageSettings,
         DeskBox.Features.Maintenance.MaintenanceSettingsViewModel maintenanceSettings,
         DeskBox.Features.Performance.PerformanceSettingsViewModel performanceSettings,
+        IAuthSession authSession,
         LocalizationService? localizationService = null,
         IAppUpdateService? appUpdateService = null)
     {
@@ -190,6 +191,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         _managedStorageSettings = managedStorageSettings;
         _maintenanceSettings = maintenanceSettings;
         _performanceSettings = performanceSettings;
+        _authSession = authSession;
         _themeService = themeService;
         _localizationService = localizationService ?? new LocalizationService(settingsService);
         _widgetContentFactory = new WidgetContentFactory(_localizationService);
@@ -305,6 +307,7 @@ _ = RefreshQuickAccessStateAsync();
         _groupNavigationSettings.PresentationUserChanged += OnGroupNavigationPresentationUserChanged;
         NotifyExistingWidgetGroupPropertiesChanged();
         NotifyCapsuleOverridePropertiesChanged();
+        InitializeAccount();
     }
 
     [RelayCommand]
@@ -334,6 +337,7 @@ _ = RefreshQuickAccessStateAsync();
         _settingsService.SettingsChanged -= OnSettingsChanged;
         _themeService.AppearanceChanged -= OnAppearanceChanged;
         _localizationService.LanguageChanged -= OnLanguageChanged;
+        _authSession.SessionChanged -= OnAccountSessionChanged;
         _weatherSettings.AutoLocationUserChanged -= OnWeatherAutoLocationUserChanged;
         // Cancel the live city search; its owning invocation disposes the
         // source in its own finally once it unwinds on the canceled token

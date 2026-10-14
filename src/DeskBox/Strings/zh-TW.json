@@ -2816,5 +2816,21 @@
   "Onboarding.Feature.Weather": "即時天氣和 7 天預報，自動定位",
   "Onboarding.Feature.Music": "控制媒體播放，並從封面提取背景色",
   "Onboarding.Step2.Note": "預設為「移動」：來源位置不保留副本，可在設定中改為複製。也可以選取格子按 Ctrl+V 貼上；反過來，從格子拖曳到 WeChat、瀏覽器或檔案總管，拖出去的就是真實檔案。",
-  "Onboarding.Step3.Hint": "若按鍵與其他軟體衝突，稍後可在設定中重新錄製。"
+  "Onboarding.Step3.Hint": "若按鍵與其他軟體衝突，稍後可在設定中重新錄製。",
+  "Settings.Account.Title": "帳號登入",
+  "Settings.Account.SyncBenefit": "登入帳號可享資料自動雲端同步，跨平台保留資料，資料不遺失。",
+  "Settings.Account.Username": "帳號",
+  "Settings.Account.Password": "密碼",
+  "Settings.Account.SignIn": "登入",
+  "Settings.Account.Register": "註冊",
+  "Settings.Account.SignOut": "登出",
+  "Settings.Account.SignedInAs": "已登入：{0}",
+  "Settings.Account.Working": "正在連線帳號服務…",
+  "Settings.Account.Error.InvalidUsername": "帳號須為 3–32 位字母、數字或底線。",
+  "Settings.Account.Error.InvalidPassword": "密碼須為 6–128 個字元。",
+  "Settings.Account.Error.UsernameTaken": "此帳號已被註冊。",
+  "Settings.Account.Error.InvalidCredentials": "帳號或密碼不正確。",
+  "Settings.Account.Error.RateLimited": "嘗試次數過多，請稍後再試。",
+  "Settings.Account.Error.Network": "無法連線帳號服務，請檢查網路。",
+  "Settings.Account.Error.Server": "帳號服務暫時無法使用。"
 }

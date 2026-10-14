@@ -3,6 +3,14 @@ namespace DeskBox.ViewModels;
 
 [WinRT.GeneratedBindableCustomProperty([
     nameof(AppVersion),
+    nameof(AccountActionsEnabled),
+    nameof(AccountSignedInText),
+    nameof(AccountSignedInVisibility),
+    nameof(AccountSignedOutVisibility),
+    nameof(AccountStatusText),
+    nameof(AccountStatusVisibility),
+    nameof(AccountUsername),
+    nameof(IsAccountBusy),
     nameof(AutoCheckForUpdates),
     nameof(AutoStart),
     nameof(AutoStartStatusText),

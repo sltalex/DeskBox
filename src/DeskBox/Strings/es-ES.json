@@ -2816,5 +2816,21 @@
   "Onboarding.Feature.Weather": "Clima en tiempo real y pronóstico de 7 días con ubicación automática",
   "Onboarding.Feature.Music": "Controle la reproducción multimedia con colores derivados de ilustraciones",
   "Onboarding.Step2.Note": "Por defecto se mueven: no queda copia en el origen — puedes cambiarlo a Copiar en Configuración. También puedes seleccionar el widget y pulsar Ctrl+V, o arrastrar archivos hacia WeChat, un navegador o el Explorador: salen como archivos reales.",
-  "Onboarding.Step3.Hint": "Si el atajo entra en conflicto con otra aplicación, puedes grabar otro más tarde en Configuración."
+  "Onboarding.Step3.Hint": "Si el atajo entra en conflicto con otra aplicación, puedes grabar otro más tarde en Configuración.",
+  "Settings.Account.Title": "Cuenta",
+  "Settings.Account.SyncBenefit": "Inicia sesión para sincronizar automáticamente tus datos en la nube, conservarlos entre plataformas y evitar su pérdida.",
+  "Settings.Account.Username": "Nombre de usuario",
+  "Settings.Account.Password": "Contraseña",
+  "Settings.Account.SignIn": "Iniciar sesión",
+  "Settings.Account.Register": "Registrarse",
+  "Settings.Account.SignOut": "Cerrar sesión",
+  "Settings.Account.SignedInAs": "Sesión iniciada como {0}",
+  "Settings.Account.Working": "Conectando con el servicio de cuentas…",
+  "Settings.Account.Error.InvalidUsername": "El nombre de usuario debe tener entre 3 y 32 letras, números o guiones bajos.",
+  "Settings.Account.Error.InvalidPassword": "La contraseña debe tener entre 6 y 128 caracteres.",
+  "Settings.Account.Error.UsernameTaken": "Este nombre de usuario ya está registrado.",
+  "Settings.Account.Error.InvalidCredentials": "El nombre de usuario o la contraseña son incorrectos.",
+  "Settings.Account.Error.RateLimited": "Demasiados intentos. Vuelve a intentarlo más tarde.",
+  "Settings.Account.Error.Network": "No se pudo conectar con el servicio de cuentas. Comprueba tu red.",
+  "Settings.Account.Error.Server": "El servicio de cuentas no está disponible temporalmente."
 }

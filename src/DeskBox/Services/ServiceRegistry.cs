@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using DeskBox.Contracts;
 
 namespace DeskBox.Services;
 
@@ -18,6 +19,8 @@ public static class ServiceRegistry
         services.AddSingleton<SettingsService>();
         services.AddSingleton<DeskBoxDataBackupService>();
         services.AddSingleton<ICredentialStore>(_ => new PasswordVaultCredentialStore());
+        services.AddSingleton<IAuthSession>(sp =>
+            new DeskBoxAuthSession(sp.GetRequiredService<ICredentialStore>()));
         services.AddSingleton<CloudBackupService>(sp =>
             new CloudBackupService(
                 sp.GetRequiredService<DeskBoxDataBackupService>(),

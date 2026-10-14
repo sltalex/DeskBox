@@ -2816,5 +2816,21 @@
   "SystemMonitor.Network": "Network",
   "SystemMonitor.Download": "Down",
   "SystemMonitor.Upload": "Up",
-  "SystemMonitor.Unavailable": "Unavailable"
+  "SystemMonitor.Unavailable": "Unavailable",
+  "Settings.Account.Title": "Account",
+  "Settings.Account.SyncBenefit": "Sign in for automatic cloud sync, cross-platform data retention, and protection against data loss.",
+  "Settings.Account.Username": "Username",
+  "Settings.Account.Password": "Password",
+  "Settings.Account.SignIn": "Sign in",
+  "Settings.Account.Register": "Register",
+  "Settings.Account.SignOut": "Sign out",
+  "Settings.Account.SignedInAs": "Signed in as {0}",
+  "Settings.Account.Working": "Connecting to the account service…",
+  "Settings.Account.Error.InvalidUsername": "Username must be 3–32 letters, numbers, or underscores.",
+  "Settings.Account.Error.InvalidPassword": "Password must be 6–128 characters.",
+  "Settings.Account.Error.UsernameTaken": "This username is already registered.",
+  "Settings.Account.Error.InvalidCredentials": "The username or password is incorrect.",
+  "Settings.Account.Error.RateLimited": "Too many attempts. Please try again later.",
+  "Settings.Account.Error.Network": "Could not connect to the account service. Check your network.",
+  "Settings.Account.Error.Server": "The account service is temporarily unavailable."
 }

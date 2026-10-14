@@ -32,6 +32,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             ["src/DeskBox/Services/AppUpdateService.cs"] = 2,
             ["src/DeskBox/Services/CitySearchService.cs"] = 1,
             ["src/DeskBox/Services/DeskBoxAttachmentHealthService.cs"] = 1,
+            ["src/DeskBox/Services/DeskBoxAuthSession.cs"] = 7,
             ["src/DeskBox/Services/DeskBoxDataBackupService.cs"] = 12,
             ["src/DeskBox/Services/DeskBoxDiagnosticsBundleService.cs"] = 1,
             ["src/DeskBox/Services/DesktopAutoOrganizationSuppressionRegistry.cs"] = 2,
@@ -76,8 +77,8 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             Assert.Equal(expectedCount, actual[path]);
         }
 
-        Assert.Equal(38, actual.Count);
-        Assert.Equal(88, actual.Values.Sum());
+        Assert.Equal(39, actual.Count);
+        Assert.Equal(95, actual.Values.Sum());
 
         string[] expectedContextOwners =
         [
@@ -94,6 +95,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             "src/DeskBox/App.AotTodoNotificationLifecycleSmoke.cs",
             "src/DeskBox/App.AotTodoRecurrenceReminderSmoke.cs",
             "src/DeskBox/Services/AppUpdateService.cs",
+            "src/DeskBox/Services/AuthJsonModels.cs",
             "src/DeskBox/Services/DeskBoxDataBackupService.cs",
             "src/DeskBox/Services/DeskBoxDiagnosticsBundleService.cs",
             "src/DeskBox/Services/DesktopOrganizationHistoryStore.cs",
@@ -124,7 +126,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             .Order()
             .ToArray();
 
-        Assert.Equal(34, actualContextOwners.Length);
+        Assert.Equal(35, actualContextOwners.Length);
         Assert.Equal(expectedContextOwners, actualContextOwners);
     }
 

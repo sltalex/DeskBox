@@ -3306,6 +3306,75 @@ svc:Localized.DescriptionKey="Settings.DefaultWidth.Description"
                     <TextBlock Style="{StaticResource SectionTitleTextStyle}" svc:Localized.Key="Settings.Section.General" />
                     <StackPanel Margin="0,8,0,0" Spacing="4">
                         <toolkit:SettingsCard
+                            HorizontalContentAlignment="Stretch"
+                            svc:Localized.DescriptionKey="Settings.Account.SyncBenefit"
+                            svc:Localized.HeaderKey="Settings.Account.Title">
+                            <toolkit:SettingsCard.HeaderIcon>
+                                <FontIcon Glyph="&#xE77B;" />
+                            </toolkit:SettingsCard.HeaderIcon>
+                            <Grid MinWidth="320">
+                                <StackPanel
+                                    Spacing="8"
+                                    Visibility="{Binding AccountSignedOutVisibility}">
+                                    <TextBlock Style="{StaticResource SettingDescriptionTextStyle}" svc:Localized.Key="Settings.Account.Username" />
+                                    <TextBox
+                                        x:Name="AccountUsernameTextBox"
+                                        IsEnabled="{Binding AccountActionsEnabled}"
+                                        MaxLength="32"
+                                        Text="{Binding AccountUsername, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Style="{StaticResource SettingDescriptionTextStyle}" svc:Localized.Key="Settings.Account.Password" />
+                                    <PasswordBox
+                                        x:Name="AccountPasswordBox"
+                                        IsEnabled="{Binding AccountActionsEnabled}"
+                                        MaxLength="128" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button
+                                            x:Name="AccountSignInButton"
+                                            Click="AccountSignInButton_Click"
+                                            IsEnabled="{Binding AccountActionsEnabled}"
+                                            Style="{StaticResource ActionButtonStyle}">
+                                            <TextBlock svc:Localized.Key="Settings.Account.SignIn" />
+                                        </Button>
+                                        <Button
+                                            x:Name="AccountRegisterButton"
+                                            Click="AccountRegisterButton_Click"
+                                            IsEnabled="{Binding AccountActionsEnabled}"
+                                            Style="{StaticResource ActionButtonStyle}">
+                                            <TextBlock svc:Localized.Key="Settings.Account.Register" />
+                                        </Button>
+                                        <ProgressRing
+                                            Width="20"
+                                            Height="20"
+                                            IsActive="{Binding IsAccountBusy}"
+                                            Visibility="{Binding IsAccountBusy, Converter={StaticResource SettingsBoolToVisibilityConverter}}" />
+                                    </StackPanel>
+                                    <TextBlock
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                        Style="{StaticResource SettingDescriptionTextStyle}"
+                                        Text="{Binding AccountStatusText}"
+                                        TextWrapping="Wrap"
+                                        Visibility="{Binding AccountStatusVisibility}" />
+                                </StackPanel>
+                                <StackPanel
+                                    Orientation="Horizontal"
+                                    Spacing="12"
+                                    Visibility="{Binding AccountSignedInVisibility}">
+                                    <TextBlock
+                                        VerticalAlignment="Center"
+                                        Style="{StaticResource SettingDescriptionTextStyle}"
+                                        Text="{Binding AccountSignedInText}" />
+                                    <Button
+                                        x:Name="AccountSignOutButton"
+                                        Click="AccountSignOutButton_Click"
+                                        IsEnabled="{Binding AccountActionsEnabled}"
+                                        Style="{StaticResource ActionButtonStyle}">
+                                        <TextBlock svc:Localized.Key="Settings.Account.SignOut" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </toolkit:SettingsCard>
+
+                        <toolkit:SettingsCard
                             HorizontalContentAlignment="Right"
                             svc:Localized.DescriptionKey="Settings.Language.Description"
                             svc:Localized.HeaderKey="Settings.Language.Title">

@@ -196,7 +196,8 @@ public sealed partial class SettingsWindow : Window
         DeskBox.Features.Music.MusicSettingsViewModel musicSettings,
         DeskBox.Features.ManagedStorage.ManagedStorageSettingsViewModel managedStorageSettings,
         DeskBox.Features.Maintenance.MaintenanceSettingsViewModel maintenanceSettings,
-        DeskBox.Features.Performance.PerformanceSettingsViewModel performanceSettings)
+        DeskBox.Features.Performance.PerformanceSettingsViewModel performanceSettings,
+        IAuthSession authSession)
     {
         var constructionStopwatch = Stopwatch.StartNew();
         long previousCheckpointMilliseconds = 0;
@@ -234,8 +235,8 @@ public sealed partial class SettingsWindow : Window
             backupSettings, quickCaptureSettings, quickCaptureSettingsEditor, searchFeatureSettings, appearanceSettings,
             capsuleSettings, interactionSettings, fileDisplaySettings, fileStackSettings,
             groupNavigationSettings, featureWidgetsSettings, musicSettings,
-            managedStorageSettings, maintenanceSettings, performanceSettings, localizationService,
-            App.Current.AppUpdateService);
+            managedStorageSettings, maintenanceSettings, performanceSettings, authSession,
+            localizationService, App.Current.AppUpdateService);
         LogConstructionCheckpoint("view-model");
         _settingsRootPointerPressedHandler = SettingsRoot_PointerPressedHandled;
         _settingsRootPointerReleasedHandler = SettingsRoot_PointerReleasedHandled;

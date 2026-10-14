@@ -2816,5 +2816,21 @@
   "Onboarding.Feature.Weather": "वास्तविक समय मौसम और ऑटो स्थान के साथ 7-दिन का पूर्वानुमान",
   "Onboarding.Feature.Music": "कलाकृति-व्युत्पन्न रंगों के साथ मीडिया प्लेबैक को नियंत्रित करें",
   "Onboarding.Step2.Note": "डिफ़ॉल्ट «मूव» है: मूल स्थान पर कोई कॉपी नहीं बचती — सेटिंग में इसे «कॉपी» में बदला जा सकता है। विजेट चुनकर Ctrl+V से पेस्ट भी कर सकते हैं। इसके उलट, विजेट से WeChat, ब्राउज़र या फ़ाइल एक्सप्लोरर में खींचें — वे असली फ़ाइलों के रूप में निकलती हैं।",
-  "Onboarding.Step3.Hint": "अगर शॉर्टकट किसी अन्य ऐप से टकराता है, तो बाद में सेटिंग में नया रिकॉर्ड किया जा सकता है।"
+  "Onboarding.Step3.Hint": "अगर शॉर्टकट किसी अन्य ऐप से टकराता है, तो बाद में सेटिंग में नया रिकॉर्ड किया जा सकता है।",
+  "Settings.Account.Title": "खाता",
+  "Settings.Account.SyncBenefit": "स्वचालित क्लाउड सिंक, सभी प्लेटफ़ॉर्म पर डेटा बनाए रखने और डेटा हानि से बचाव के लिए साइन इन करें।",
+  "Settings.Account.Username": "उपयोगकर्ता नाम",
+  "Settings.Account.Password": "पासवर्ड",
+  "Settings.Account.SignIn": "साइन इन करें",
+  "Settings.Account.Register": "पंजीकरण करें",
+  "Settings.Account.SignOut": "साइन आउट करें",
+  "Settings.Account.SignedInAs": "{0} के रूप में साइन इन",
+  "Settings.Account.Working": "खाता सेवा से कनेक्ट किया जा रहा है…",
+  "Settings.Account.Error.InvalidUsername": "उपयोगकर्ता नाम में 3–32 अक्षर, संख्याएँ या अंडरस्कोर होने चाहिए।",
+  "Settings.Account.Error.InvalidPassword": "पासवर्ड 6–128 वर्णों का होना चाहिए।",
+  "Settings.Account.Error.UsernameTaken": "यह उपयोगकर्ता नाम पहले से पंजीकृत है।",
+  "Settings.Account.Error.InvalidCredentials": "उपयोगकर्ता नाम या पासवर्ड गलत है।",
+  "Settings.Account.Error.RateLimited": "बहुत अधिक प्रयास किए गए। कृपया बाद में फिर प्रयास करें।",
+  "Settings.Account.Error.Network": "खाता सेवा से कनेक्ट नहीं हो सका। अपना नेटवर्क जाँचें।",
+  "Settings.Account.Error.Server": "खाता सेवा अस्थायी रूप से अनुपलब्ध है।"
 }

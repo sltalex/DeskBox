@@ -2,6 +2,7 @@
 
 using CommunityToolkit.Mvvm.Input;
 using DeskBox.Controls.WidgetContents;
+using DeskBox.Contracts;
 using DeskBox.Features.Todo;
 using DeskBox.Features.Search;
 using DeskBox.Features.Backup;
@@ -984,6 +985,9 @@ public partial class App : Application
                 LocalizationService = Services.GetRequiredService<LocalizationService>();
                 LocalizationService.LanguageChanged += OnLanguageChanged;
             });
+            Task authSessionRestoreTask = RunOptionalStartupStepAsync(
+                "auth-session-restore",
+                () => Services.GetRequiredService<IAuthSession>().RestoreAsync());
 
             // Feature-runtime ownership ledger (roadmap §2): the registry owns
             // the runtime instances; feature flows borrow through it instead
@@ -1067,6 +1071,7 @@ public partial class App : Application
             RunOptionalStartupStep("lifecycle-recovery-watcher", InitializeLifecycleRecoveryWatcher);
 
             await themeTask;
+            await authSessionRestoreTask;
 
             if (FeatureWidgetSettings.IsEnabled(SettingsService.Settings, WidgetKind.Search))
             {
@@ -2992,7 +2997,8 @@ public partial class App : Application
                 _performanceSettings ?? throw new InvalidOperationException("Performance settings are not initialized."),
                 _interactionSettings ?? throw new InvalidOperationException("Interaction settings are not initialized."),
                 LocalizationService.T,
-                () => LocalizationService.IsChinese));
+                () => LocalizationService.IsChinese),
+            Services.GetRequiredService<IAuthSession>());
         _settingsWindow.Closed += SettingsWindow_ClosedForApp;
         return _settingsWindow;
     }

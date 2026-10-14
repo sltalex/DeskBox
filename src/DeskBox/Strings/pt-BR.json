@@ -2816,5 +2816,21 @@
   "Onboarding.Feature.Weather": "Clima em tempo real e previsão de 7 dias com localização automática",
   "Onboarding.Feature.Music": "Controle a reprodução de mídia com cores derivadas da arte do álbum",
   "Onboarding.Step2.Note": "O padrão é Mover: nenhuma cópia fica na origem — mude para Copiar nas Configurações quando quiser. Também é possível selecionar o widget e pressionar Ctrl+V, ou arrastar arquivos para o WeChat, o navegador ou o Explorador de Arquivos — eles saem como arquivos de verdade.",
-  "Onboarding.Step3.Hint": "Se o atalho conflitar com outro aplicativo, grave um novo depois em Configurações."
+  "Onboarding.Step3.Hint": "Se o atalho conflitar com outro aplicativo, grave um novo depois em Configurações.",
+  "Settings.Account.Title": "Conta",
+  "Settings.Account.SyncBenefit": "Entre na conta para sincronizar os dados automaticamente na nuvem, mantê-los entre plataformas e evitar perdas.",
+  "Settings.Account.Username": "Nome de usuário",
+  "Settings.Account.Password": "Senha",
+  "Settings.Account.SignIn": "Entrar",
+  "Settings.Account.Register": "Cadastrar",
+  "Settings.Account.SignOut": "Sair",
+  "Settings.Account.SignedInAs": "Conectado como {0}",
+  "Settings.Account.Working": "Conectando ao serviço de contas…",
+  "Settings.Account.Error.InvalidUsername": "O nome de usuário deve ter de 3 a 32 letras, números ou sublinhados.",
+  "Settings.Account.Error.InvalidPassword": "A senha deve ter de 6 a 128 caracteres.",
+  "Settings.Account.Error.UsernameTaken": "Este nome de usuário já está cadastrado.",
+  "Settings.Account.Error.InvalidCredentials": "O nome de usuário ou a senha está incorreto.",
+  "Settings.Account.Error.RateLimited": "Muitas tentativas. Tente novamente mais tarde.",
+  "Settings.Account.Error.Network": "Não foi possível conectar ao serviço de contas. Verifique sua rede.",
+  "Settings.Account.Error.Server": "O serviço de contas está temporariamente indisponível."
 }

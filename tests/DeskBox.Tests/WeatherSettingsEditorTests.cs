@@ -579,6 +579,6 @@ public sealed class WeatherSettingsEditorTests : IDisposable
         Assert.Contains("nameof(CitySuggestionItems)", bridge, StringComparison.Ordinal);
         Assert.Equal(25, Regex.Matches(bridge, @"nameof\(").Count);
         Assert.DoesNotContain("nameof(AvailableDisplayOptions)", bridge, StringComparison.Ordinal);
-        Assert.Equal(30, Regex.Matches(bindableShell, @"nameof\(").Count);
+        Assert.Equal(38, Regex.Matches(bindableShell, @"nameof\(").Count);
     }
 }

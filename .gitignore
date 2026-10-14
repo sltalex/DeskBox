@@ -57,6 +57,7 @@ fail2ban-nginx.conf
 deskbox-site/node_modules/
 deskbox-site/.next/
 deskbox-site/out/
+server/deskbox-api/api/_config.local.php
 
 # Local backup patches
 backups/

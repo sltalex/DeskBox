@@ -16,6 +16,7 @@ public partial class SettingsViewModel
 {
 private void OnLanguageChanged()
 {
+    RefreshAccountPresentation();
     RefreshLocalizedProperties();
     _musicSettings.RefreshLocalization();
     _interactionSettings.RefreshLocalization();

@@ -2816,5 +2816,21 @@
   "Onboarding.Feature.Weather": "الطقس في الوقت الحقيقي والتنبؤات لمدة 7 أيام مع الموقع التلقائي",
   "Onboarding.Feature.Music": "التحكم في تشغيل الوسائط باستخدام الألوان المشتقة من العمل الفني",
   "Onboarding.Step2.Note": "الوضع الافتراضي هو «نقل»: لا تبقى نسخة في الموقع الأصلي — ويمكن التبديل إلى «نسخ» في الإعدادات. يمكنك أيضًا تحديد الأداة والضغط على Ctrl+V للصق. وبالعكس، اسحب الملفات من الأداة إلى WeChat أو المتصفح أو مستكشف الملفات — فتخرج كملفات حقيقية.",
-  "Onboarding.Step3.Hint": "إذا تعارض الاختصار مع تطبيق آخر، يمكنك تسجيل اختصار جديد لاحقًا من الإعدادات."
+  "Onboarding.Step3.Hint": "إذا تعارض الاختصار مع تطبيق آخر، يمكنك تسجيل اختصار جديد لاحقًا من الإعدادات.",
+  "Settings.Account.Title": "الحساب",
+  "Settings.Account.SyncBenefit": "سجّل الدخول لمزامنة البيانات تلقائيًا عبر السحابة والاحتفاظ بها عبر الأنظمة الأساسية وحمايتها من الفقدان.",
+  "Settings.Account.Username": "اسم المستخدم",
+  "Settings.Account.Password": "كلمة المرور",
+  "Settings.Account.SignIn": "تسجيل الدخول",
+  "Settings.Account.Register": "إنشاء حساب",
+  "Settings.Account.SignOut": "تسجيل الخروج",
+  "Settings.Account.SignedInAs": "تم تسجيل الدخول باسم {0}",
+  "Settings.Account.Working": "جارٍ الاتصال بخدمة الحساب…",
+  "Settings.Account.Error.InvalidUsername": "يجب أن يتكون اسم المستخدم من 3 إلى 32 حرفًا أو رقمًا أو شرطة سفلية.",
+  "Settings.Account.Error.InvalidPassword": "يجب أن تتكون كلمة المرور من 6 إلى 128 حرفًا.",
+  "Settings.Account.Error.UsernameTaken": "اسم المستخدم هذا مسجل بالفعل.",
+  "Settings.Account.Error.InvalidCredentials": "اسم المستخدم أو كلمة المرور غير صحيحة.",
+  "Settings.Account.Error.RateLimited": "محاولات كثيرة جدًا. يرجى المحاولة مرة أخرى لاحقًا.",
+  "Settings.Account.Error.Network": "تعذر الاتصال بخدمة الحساب. تحقق من الشبكة.",
+  "Settings.Account.Error.Server": "خدمة الحساب غير متاحة مؤقتًا."
 }

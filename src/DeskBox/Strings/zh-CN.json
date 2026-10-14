@@ -2816,5 +2816,21 @@
   "SystemMonitor.Network": "网络",
   "SystemMonitor.Download": "下载",
   "SystemMonitor.Upload": "上传",
-  "SystemMonitor.Unavailable": "不可用"
+  "SystemMonitor.Unavailable": "不可用",
+  "Settings.Account.Title": "账号登录",
+  "Settings.Account.SyncBenefit": "登录账号可享资料自动云同步，跨平台保留资料，资料不丢失。",
+  "Settings.Account.Username": "账号",
+  "Settings.Account.Password": "密码",
+  "Settings.Account.SignIn": "登录",
+  "Settings.Account.Register": "注册",
+  "Settings.Account.SignOut": "退出登录",
+  "Settings.Account.SignedInAs": "已登录：{0}",
+  "Settings.Account.Working": "正在连接账号服务…",
+  "Settings.Account.Error.InvalidUsername": "账号须为 3–32 位字母、数字或下划线。",
+  "Settings.Account.Error.InvalidPassword": "密码须为 6–128 个字符。",
+  "Settings.Account.Error.UsernameTaken": "该账号已被注册。",
+  "Settings.Account.Error.InvalidCredentials": "账号或密码不正确。",
+  "Settings.Account.Error.RateLimited": "尝试次数过多，请稍后再试。",
+  "Settings.Account.Error.Network": "无法连接账号服务，请检查网络。",
+  "Settings.Account.Error.Server": "账号服务暂时不可用。"
 }
