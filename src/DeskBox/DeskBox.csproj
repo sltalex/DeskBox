@@ -6,6 +6,9 @@
     <!-- Keep the compile-time SDK modern while declaring the supported Win10 floor explicitly. -->
     <SupportedOSPlatformVersion>10.0.19044.0</SupportedOSPlatformVersion>
     <RootNamespace>DeskBox</RootNamespace>
+    <Product>SltBox</Product>
+    <Title>SltBox</Title>
+    <Description>SltBox desktop organizer</Description>
     <Version>2026101304</Version>
     <AssemblyVersion>2026.10.13.4</AssemblyVersion>
     <FileVersion>2026.10.13.4</FileVersion>

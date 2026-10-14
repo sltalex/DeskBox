@@ -52,6 +52,62 @@ public sealed class AccountCloudBackupAndTreeSurfaceTests
     }
 
     [Fact]
+    public void TreeSettings_SeparatesLocalProgressRefreshFromLeaderboardRefresh()
+    {
+        string source = File.ReadAllText(TestPaths.FromRepository("src/DeskBox/Views/SettingsSections/TreeSettingsSection.cs"));
+
+        Assert.Contains("_counter.Changed += OnProgressChanged", source, StringComparison.Ordinal);
+        Assert.Contains("_cloud.LeaderboardChanged += OnLeaderboardChanged", source, StringComparison.Ordinal);
+        Assert.Contains("private void OnProgressChanged()", source, StringComparison.Ordinal);
+        Assert.Contains("private void OnLeaderboardChanged()", source, StringComparison.Ordinal);
+        int progressStart = source.IndexOf("private void OnProgressChanged()", StringComparison.Ordinal);
+        int progressEnd = source.IndexOf("private void OnLeaderboardChanged()", progressStart, StringComparison.Ordinal);
+        Assert.True(progressStart >= 0 && progressEnd > progressStart);
+        Assert.DoesNotContain("RenderLeaderboard();", source[progressStart..progressEnd], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TreeSettings_UsesDedicatedToggleLabelRows()
+    {
+        string source = File.ReadAllText(TestPaths.FromRepository("src/DeskBox/Views/SettingsSections/TreeSettingsSection.cs"));
+
+        Assert.Contains("CreateToggleRow(_enableLabel, _enable)", source, StringComparison.Ordinal);
+        Assert.Contains("CreateToggleRow(_statisticsLabel, _statistics)", source, StringComparison.Ordinal);
+        Assert.Contains("CreateToggleRow(_participationLabel, _participation)", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("_enable.Header", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("_statistics.Header", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("_participation.Header", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ApplicationBrand_IsSltBox()
+    {
+        foreach (string file in Directory.EnumerateFiles(TestPaths.FromRepository("src/DeskBox/Resources"), "Resources.resw", SearchOption.AllDirectories))
+        {
+            string source = File.ReadAllText(file);
+            int marker = source.IndexOf("name=\"AppDisplayName\"", StringComparison.Ordinal);
+            Assert.True(marker >= 0, $"{file} misses AppDisplayName");
+            string value = source[(marker)..source.IndexOf("</data>", marker, StringComparison.Ordinal)];
+            Assert.Contains("<value>SltBox</value>", value, StringComparison.Ordinal);
+        }
+
+        foreach (string file in Directory.EnumerateFiles(TestPaths.FromRepository("src/DeskBox/Strings"), "*.json"))
+        {
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(file));
+            Assert.Equal("SltBox", document.RootElement.GetProperty("Search.Tab.DeskBox").GetString());
+            Assert.Contains("SltBox", document.RootElement.GetProperty("Window.Settings.Title").GetString(), StringComparison.Ordinal);
+            Assert.Contains("SltBox", document.RootElement.GetProperty("Window.Onboarding.Title").GetString(), StringComparison.Ordinal);
+            Assert.Contains("sltalex/DeskBox", document.RootElement.GetProperty("Settings.Update.Detail.Ready").GetString(), StringComparison.Ordinal);
+        }
+
+        string project = File.ReadAllText(TestPaths.FromRepository("src/DeskBox/DeskBox.csproj"));
+        Assert.Contains("<Product>SltBox</Product>", project, StringComparison.Ordinal);
+        Assert.Contains("<Title>SltBox</Title>", project, StringComparison.Ordinal);
+        string manifest = File.ReadAllText(TestPaths.FromRepository("src/DeskBox/Package.appxmanifest"));
+        Assert.Contains("DisplayName=\"SltBox\"", manifest, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void EveryLanguage_DefinesAccountBackupAndTreeLeaderboardKeys()
     {
         string[] keys =

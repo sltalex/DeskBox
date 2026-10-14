@@ -146,10 +146,10 @@ public partial class App
         try
         {
             Win32Helper.ShowFatalError(
-                "DeskBox could not finish starting and is about to close.\n\n" +
+                "SltBox could not finish starting and is about to close.\n\n" +
                 $"Details were written to the log:\n{LogPath}\n\n" +
-                "You can start DeskBox again in a moment.",
-                "DeskBox");
+                "You can start SltBox again in a moment.",
+                "SltBox");
         }
         catch (Exception dialogFailure)
         {

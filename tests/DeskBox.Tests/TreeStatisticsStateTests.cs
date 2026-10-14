@@ -59,7 +59,7 @@ public sealed class TreeStatisticsStateTests
         Assert.Contains(".IsEnabled = statistics.ToggleEnabled;", source);
         Assert.Contains(".IsOn = statistics.ToggleOn;", source);
         Assert.Contains("T(statistics.OffContentKey)", source);
-        Assert.Contains("_statistics.Header = _localization.T(\"Tree.Settings.EnableStatistics\")", source);
+        Assert.Contains("_statisticsLabel.Text = _localization.T(\"Tree.Settings.EnableStatistics\")", source);
         Assert.Contains("_statistics.OnContent = _localization.T(\"Tree.Settings.StatisticsRunning\")", source);
         Assert.Contains("if (_updating || !_statistics.IsEnabled) return;", source);
     }

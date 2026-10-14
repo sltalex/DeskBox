@@ -62,7 +62,7 @@
           <uap5:StartupTask
             TaskId="DeskBoxStartupTask"
             Enabled="false"
-            DisplayName="DeskBox" />
+            DisplayName="SltBox" />
         </uap5:Extension>
         <desktop:Extension Category="windows.toastNotificationActivation">
           <desktop:ToastNotificationActivation ToastActivatorCLSID="4D54EEC6-13BE-4C8F-A8F7-81FE72F4B2C9" />
@@ -72,8 +72,8 @@
             <com:ExeServer
               Executable="DeskBox.exe"
               Arguments="----AppNotificationActivated:"
-              DisplayName="DeskBox">
-              <com:Class Id="4D54EEC6-13BE-4C8F-A8F7-81FE72F4B2C9" DisplayName="DeskBox" />
+              DisplayName="SltBox">
+              <com:Class Id="4D54EEC6-13BE-4C8F-A8F7-81FE72F4B2C9" DisplayName="SltBox" />
             </com:ExeServer>
           </com:ComServer>
         </com:Extension>

@@ -17,6 +17,9 @@ public sealed partial class TreeSettingsSection : UserControl
     private readonly ToggleSwitch _enable = new() { OnContent = "", OffContent = "", MinWidth = 0 };
     private readonly ToggleSwitch _statistics = new() { MinWidth = 0 };
     private readonly ToggleSwitch _participation = new() { OnContent = "", OffContent = "", MinWidth = 0 };
+    private readonly TextBlock _enableLabel = new() { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _statisticsLabel = new() { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _participationLabel = new() { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _status = new() { FontSize = 17, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
     private readonly TextBlock _growthSummary = new() { FontSize = 13, Opacity = 0.75, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _nextStageProgress = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };
@@ -31,12 +34,14 @@ public sealed partial class TreeSettingsSection : UserControl
     private readonly SettingsCard _switchesCard = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch };
     private readonly SettingsCard _progressCard = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch };
     private readonly SettingsCard _leaderboardCard = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch };
+    private readonly Grid _participationRow;
     private SettingsViewModel? _viewModel;
     private LocalizationService? _localization;
     private IAuthSession? _auth;
     private TreeCloudSyncService? _cloud;
     private bool _updating;
-    private int _refreshQueued;
+    private int _progressRefreshQueued;
+    private int _leaderboardRefreshQueued;
 
     public event EventHandler<SettingsSectionNavigationRequestedEventArgs>? NavigationRequested;
 
@@ -48,8 +53,8 @@ public sealed partial class TreeSettingsSection : UserControl
         _currentCard.Content = current;
 
         var switches = new StackPanel { Spacing = 10 };
-        switches.Children.Add(_enable);
-        switches.Children.Add(_statistics);
+        switches.Children.Add(CreateToggleRow(_enableLabel, _enable));
+        switches.Children.Add(CreateToggleRow(_statisticsLabel, _statistics));
         _switchesCard.Content = switches;
 
         var progress = new StackPanel { Spacing = 8 };
@@ -61,7 +66,8 @@ public sealed partial class TreeSettingsSection : UserControl
 
         _loginButton.Click += (_, _) => NavigationRequested?.Invoke(this, new("General"));
         var leaderboardPanel = new StackPanel { Spacing = 10 };
-        leaderboardPanel.Children.Add(_participation);
+        _participationRow = CreateToggleRow(_participationLabel, _participation);
+        leaderboardPanel.Children.Add(_participationRow);
         leaderboardPanel.Children.Add(_leaderboardHint);
         leaderboardPanel.Children.Add(_currentRankHint);
         leaderboardPanel.Children.Add(_loginButton);
@@ -82,13 +88,13 @@ public sealed partial class TreeSettingsSection : UserControl
             _viewModel.SetWidgetEnabled(WidgetKind.Tree, _enable.IsOn);
             if (_enable.IsOn && !wasEnabled) _counter.SetPaused(false);
             _counter.SetEnabled(_enable.IsOn);
-            Refresh();
+            RefreshProgress();
         };
         _statistics.Toggled += (_, _) =>
         {
             if (_updating || !_statistics.IsEnabled) return;
             _counter.SetPaused(TreeStatisticsState.PausedFromToggle(_statistics.IsOn));
-            Refresh();
+            RefreshProgress();
         };
         _participation.Toggled += async (_, _) =>
         {
@@ -112,10 +118,10 @@ public sealed partial class TreeSettingsSection : UserControl
 
     private void TreeSettingsSection_Loaded(object sender, RoutedEventArgs e)
     {
-        _counter.Changed += OnChanged;
+        _counter.Changed += OnProgressChanged;
         if (_localization is not null) _localization.LanguageChanged += OnLanguageChanged;
-        if (_auth is not null) _auth.SessionChanged += OnChanged;
-        if (_cloud is not null) _cloud.LeaderboardChanged += OnChanged;
+        if (_auth is not null) _auth.SessionChanged += OnLeaderboardChanged;
+        if (_cloud is not null) _cloud.LeaderboardChanged += OnLeaderboardChanged;
         RenderLabels();
         Refresh();
         if (_auth?.IsAuthenticated == true && _cloud is not null) _ = _cloud.RefreshLeaderboardAsync();
@@ -123,10 +129,10 @@ public sealed partial class TreeSettingsSection : UserControl
 
     private void TreeSettingsSection_Unloaded(object sender, RoutedEventArgs e)
     {
-        _counter.Changed -= OnChanged;
+        _counter.Changed -= OnProgressChanged;
         if (_localization is not null) _localization.LanguageChanged -= OnLanguageChanged;
-        if (_auth is not null) _auth.SessionChanged -= OnChanged;
-        if (_cloud is not null) _cloud.LeaderboardChanged -= OnChanged;
+        if (_auth is not null) _auth.SessionChanged -= OnLeaderboardChanged;
+        if (_cloud is not null) _cloud.LeaderboardChanged -= OnLeaderboardChanged;
     }
 
     private void RenderLabels()
@@ -138,27 +144,62 @@ public sealed partial class TreeSettingsSection : UserControl
         _progressCard.Header = _localization.T("Tree.Settings.Card.Progress");
         _leaderboardCard.Header = _localization.T("Tree.Settings.Card.Leaderboard");
         _leaderboardCard.Description = _localization.T("Tree.Settings.Card.Leaderboard.Description");
-        _enable.Header = _localization.T("Tree.Settings.Enable");
-        _statistics.Header = _localization.T("Tree.Settings.EnableStatistics");
+        _enableLabel.Text = _localization.T("Tree.Settings.Enable");
+        _statisticsLabel.Text = _localization.T("Tree.Settings.EnableStatistics");
         _statistics.OnContent = _localization.T("Tree.Settings.StatisticsRunning");
         _statistics.OffContent = _localization.T("Tree.Settings.StatisticsPaused");
-        _participation.Header = _localization.T("Tree.Settings.Leaderboard.Participate");
+        _participationLabel.Text = _localization.T("Tree.Settings.Leaderboard.Participate");
         _loginButton.Content = _localization.T("Tree.Settings.Leaderboard.SignInAction");
     }
 
-    private void OnChanged()
+    private static Grid CreateToggleRow(TextBlock label, ToggleSwitch toggle)
     {
-        if (Interlocked.Exchange(ref _refreshQueued, 1) != 0) return;
+        var row = new Grid
+        {
+            MinHeight = 46,
+            ColumnSpacing = 16,
+            HorizontalAlignment = HorizontalAlignment.Stretch
+        };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        toggle.HorizontalAlignment = HorizontalAlignment.Right;
+        toggle.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(label, 0);
+        Grid.SetColumn(toggle, 1);
+        row.Children.Add(label);
+        row.Children.Add(toggle);
+        return row;
+    }
+
+    private void OnProgressChanged()
+    {
+        if (Interlocked.Exchange(ref _progressRefreshQueued, 1) != 0) return;
         if (!_uiQueue.TryEnqueue(() =>
             {
-                try { if (IsLoaded) Refresh(); }
-                finally { Interlocked.Exchange(ref _refreshQueued, 0); }
-            })) Interlocked.Exchange(ref _refreshQueued, 0);
+                try { if (IsLoaded) RefreshProgress(); }
+                finally { Interlocked.Exchange(ref _progressRefreshQueued, 0); }
+            })) Interlocked.Exchange(ref _progressRefreshQueued, 0);
+    }
+
+    private void OnLeaderboardChanged()
+    {
+        if (Interlocked.Exchange(ref _leaderboardRefreshQueued, 1) != 0) return;
+        if (!_uiQueue.TryEnqueue(() =>
+            {
+                try { if (IsLoaded) RefreshLeaderboardSurface(); }
+                finally { Interlocked.Exchange(ref _leaderboardRefreshQueued, 0); }
+            })) Interlocked.Exchange(ref _leaderboardRefreshQueued, 0);
     }
 
     private void OnLanguageChanged() { RenderLabels(); Refresh(); }
 
     private void Refresh()
+    {
+        RefreshProgress();
+        RefreshLeaderboardSurface();
+    }
+
+    private void RefreshProgress()
     {
         if (_viewModel is null || _localization is null) return;
         _updating = true;
@@ -179,8 +220,18 @@ public sealed partial class TreeSettingsSection : UserControl
                 : _localization.Format("Tree.Settings.NextStageProgress", snapshot.NextStagePercentage, snapshot.NextStageRemainingEnergy);
             _totalGrowthProgress.Text = _localization.Format("Tree.Settings.TotalGrowthProgress", snapshot.TotalEnergy, snapshot.MaturityPercentage);
 
+        }
+        finally { _updating = false; }
+    }
+
+    private void RefreshLeaderboardSurface()
+    {
+        if (_viewModel is null || _localization is null) return;
+        _updating = true;
+        try
+        {
             bool signedIn = _auth?.IsAuthenticated == true;
-            _participation.Visibility = signedIn ? Visibility.Visible : Visibility.Collapsed;
+            _participationRow.Visibility = signedIn ? Visibility.Visible : Visibility.Collapsed;
             _leaderboard.Visibility = signedIn ? Visibility.Visible : Visibility.Collapsed;
             _loginButton.Visibility = signedIn ? Visibility.Collapsed : Visibility.Visible;
             _participation.IsOn = _cloud?.CurrentUserRank.Participating ?? true;

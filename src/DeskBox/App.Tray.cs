@@ -134,7 +134,7 @@ public partial class App
         _trayContextMenu = contextMenu;
         PrepareTrayContextMenu(contextMenu);
 
-        _trayWindow = new Window { Title = "DeskBox Tray Host" };
+        _trayWindow = new Window { Title = "SltBox Tray Host" };
         AppBranding.ApplyWindowIcon(_trayWindow.AppWindow);
         // Early-logon sessions can reject these windowing calls (E_NOTIMPL is
         // observed on IsShownInSwitchers); a 1x1 host window that leaks into
@@ -1220,7 +1220,7 @@ public partial class App
         // Same shape as the tray host (1x1, out of the switcher), never
         // activated: the native hwnd exists from construction, and creating
         // the window now assigns it to the active virtual desktop.
-        var helper = new Window { Title = "DeskBox Picker Host" };
+        var helper = new Window { Title = "SltBox Picker Host" };
         WindowShellState.TryHideFromSwitchers(helper.AppWindow);
         try
         {

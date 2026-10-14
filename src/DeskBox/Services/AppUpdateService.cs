@@ -189,7 +189,7 @@ public sealed partial class AppUpdateService : IAppUpdateService
         {
             return AppUpdateDownloadResult.Failed(
                 AppUpdateDownloadFailureKind.InvalidManifest,
-                "The installer architecture does not match this DeskBox process.");
+                "The installer architecture does not match this SltBox process.");
         }
 
         string targetDirectory = Path.Combine(_updateRootPath, SanitizePathSegment(manifest.Version));
@@ -341,7 +341,7 @@ public sealed partial class AppUpdateService : IAppUpdateService
         if (!TryGetInstallDirectory(appPath, out string installDirectory))
         {
             return AppUpdateInstallResult.Failed(
-                "DeskBox could not determine the current installation directory. Please use the manual installer instead.");
+                "SltBox could not determine the current installation directory. Please use the manual installer instead.");
         }
 
         try
@@ -660,18 +660,18 @@ public sealed partial class AppUpdateService : IAppUpdateService
                 },
             Summary =
             {
-                ["zh-CN"] = $"DeskBox {version} 已发布，可从 GitHub Releases 下载更新。",
-                ["zh-TW"] = $"DeskBox {version} 已發布，可從 GitHub Releases 下載更新。",
-                ["en-US"] = $"DeskBox {version} is available from GitHub Releases.",
-                ["ja-JP"] = $"DeskBox {version} は GitHub Releases から入手できます。",
-                ["de-DE"] = $"DeskBox {version} ist über GitHub Releases verfügbar.",
-                ["pt-BR"] = $"O DeskBox {version} está disponível no GitHub Releases.",
-                ["hi-IN"] = $"DeskBox {version} GitHub Releases से उपलब्ध है।",
-                ["es-ES"] = $"DeskBox {version} está disponible en GitHub Releases.",
-                ["fr-FR"] = $"DeskBox {version} est disponible sur GitHub Releases.",
-                ["ar-SA"] = $"يتوفر DeskBox {version} في إصدارات GitHub.",
-                ["bn-BD"] = $"DeskBox {version} GitHub Releases-এ পাওয়া যাচ্ছে।",
-                ["ru-RU"] = $"DeskBox {version} доступен в GitHub Releases."
+                ["zh-CN"] = $"SltBox {version} 已发布，可从 GitHub Releases 下载更新。",
+                ["zh-TW"] = $"SltBox {version} 已發布，可從 GitHub Releases 下載更新。",
+                ["en-US"] = $"SltBox {version} is available from GitHub Releases.",
+                ["ja-JP"] = $"SltBox {version} は GitHub Releases から入手できます。",
+                ["de-DE"] = $"SltBox {version} ist über GitHub Releases verfügbar.",
+                ["pt-BR"] = $"O SltBox {version} está disponível no GitHub Releases.",
+                ["hi-IN"] = $"SltBox {version} GitHub Releases से उपलब्ध है।",
+                ["es-ES"] = $"SltBox {version} está disponible en GitHub Releases.",
+                ["fr-FR"] = $"SltBox {version} est disponible sur GitHub Releases.",
+                ["ar-SA"] = $"يتوفر SltBox {version} في إصدارات GitHub.",
+                ["bn-BD"] = $"SltBox {version} GitHub Releases-এ পাওয়া যাচ্ছে।",
+                ["ru-RU"] = $"SltBox {version} доступен в GitHub Releases."
             }
         };
     }
