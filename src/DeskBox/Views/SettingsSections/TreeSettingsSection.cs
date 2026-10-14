@@ -1,9 +1,12 @@
+using CommunityToolkit.WinUI.Controls;
+using DeskBox.Contracts;
 using DeskBox.Models;
 using DeskBox.Services;
 using DeskBox.ViewModels;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace DeskBox.Views.SettingsSections;
 
@@ -11,30 +14,65 @@ public sealed partial class TreeSettingsSection : UserControl
 {
     private readonly TreeCounterService _counter = TreeCounterService.Instance;
     private readonly DispatcherQueue _uiQueue = DispatcherQueue.GetForCurrentThread();
-    private readonly ToggleSwitch _enable = new() { OnContent = "", OffContent = "" };
-    private readonly ToggleSwitch _statistics = new();
-    private readonly TextBlock _title = new() { FontSize = 24, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
-    private readonly TextBlock _status = new() { FontSize = 13, Opacity = 0.75, TextWrapping = TextWrapping.Wrap };
+    private readonly ToggleSwitch _enable = new() { OnContent = "", OffContent = "", MinWidth = 0 };
+    private readonly ToggleSwitch _statistics = new() { MinWidth = 0 };
+    private readonly ToggleSwitch _participation = new() { OnContent = "", OffContent = "", MinWidth = 0 };
+    private readonly TextBlock _status = new() { FontSize = 17, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
+    private readonly TextBlock _growthSummary = new() { FontSize = 13, Opacity = 0.75, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _nextStageProgress = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };
     private readonly ProgressBar _nextStageBar = new() { Minimum = 0, Maximum = 100, Height = 8 };
     private readonly TextBlock _totalGrowthProgress = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };
     private readonly ProgressBar _totalGrowthBar = new() { Minimum = 0, Maximum = 100, Height = 8 };
+    private readonly TextBlock _leaderboardHint = new() { FontSize = 12, Opacity = 0.72, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _currentRankHint = new() { FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };
+    private readonly Button _loginButton = new() { HorizontalAlignment = HorizontalAlignment.Left };
+    private readonly ListView _leaderboard = new() { SelectionMode = ListViewSelectionMode.None };
+    private readonly SettingsCard _currentCard = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch };
+    private readonly SettingsCard _switchesCard = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch };
+    private readonly SettingsCard _progressCard = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch };
+    private readonly SettingsCard _leaderboardCard = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch };
     private SettingsViewModel? _viewModel;
     private LocalizationService? _localization;
+    private IAuthSession? _auth;
+    private TreeCloudSyncService? _cloud;
     private bool _updating;
     private int _refreshQueued;
 
+    public event EventHandler<SettingsSectionNavigationRequestedEventArgs>? NavigationRequested;
+
     public TreeSettingsSection()
     {
-        var panel = new StackPanel { Spacing = 14, Margin = new Thickness(24) };
-        panel.Children.Add(_title);
-        panel.Children.Add(_status);
-        panel.Children.Add(_nextStageProgress);
-        panel.Children.Add(_nextStageBar);
-        panel.Children.Add(_totalGrowthProgress);
-        panel.Children.Add(_totalGrowthBar);
-        panel.Children.Add(_enable);
-        panel.Children.Add(_statistics);
+        var current = new StackPanel { Spacing = 4 };
+        current.Children.Add(_status);
+        current.Children.Add(_growthSummary);
+        _currentCard.Content = current;
+
+        var switches = new StackPanel { Spacing = 10 };
+        switches.Children.Add(_enable);
+        switches.Children.Add(_statistics);
+        _switchesCard.Content = switches;
+
+        var progress = new StackPanel { Spacing = 8 };
+        progress.Children.Add(_nextStageProgress);
+        progress.Children.Add(_nextStageBar);
+        progress.Children.Add(_totalGrowthProgress);
+        progress.Children.Add(_totalGrowthBar);
+        _progressCard.Content = progress;
+
+        _loginButton.Click += (_, _) => NavigationRequested?.Invoke(this, new("General"));
+        var leaderboardPanel = new StackPanel { Spacing = 10 };
+        leaderboardPanel.Children.Add(_participation);
+        leaderboardPanel.Children.Add(_leaderboardHint);
+        leaderboardPanel.Children.Add(_currentRankHint);
+        leaderboardPanel.Children.Add(_loginButton);
+        leaderboardPanel.Children.Add(_leaderboard);
+        _leaderboardCard.Content = leaderboardPanel;
+
+        var panel = new StackPanel { Spacing = 10, Margin = new Thickness(24) };
+        panel.Children.Add(_currentCard);
+        panel.Children.Add(_switchesCard);
+        panel.Children.Add(_progressCard);
+        panel.Children.Add(_leaderboardCard);
         Content = panel;
 
         _enable.Toggled += (_, _) =>
@@ -42,11 +80,7 @@ public sealed partial class TreeSettingsSection : UserControl
             if (_updating || _viewModel is null) return;
             bool wasEnabled = _viewModel.IsWidgetEnabled(WidgetKind.Tree);
             _viewModel.SetWidgetEnabled(WidgetKind.Tree, _enable.IsOn);
-            // Enabling the feature is an explicit opt-in to keyboard
-            // counting too.  A prior pause must not leave a newly enabled
-            // tree appearing active while its energy remains at zero.
-            if (_enable.IsOn && !wasEnabled)
-                _counter.SetPaused(false);
+            if (_enable.IsOn && !wasEnabled) _counter.SetPaused(false);
             _counter.SetEnabled(_enable.IsOn);
             Refresh();
         };
@@ -56,60 +90,77 @@ public sealed partial class TreeSettingsSection : UserControl
             _counter.SetPaused(TreeStatisticsState.PausedFromToggle(_statistics.IsOn));
             Refresh();
         };
-        Loaded += (_, _) =>
+        _participation.Toggled += async (_, _) =>
         {
-            _counter.Changed += OnChanged;
-            if (_localization is not null) _localization.LanguageChanged += OnLanguageChanged;
-            RenderLabels();
-            Refresh();
+            if (_updating || _cloud is null || _auth?.IsAuthenticated != true) return;
+            try { await _cloud.SetParticipationAsync(_participation.IsOn); }
+            catch (Exception ex) { App.Log($"[TreeCloud] Participation update failed: {ex.GetType().Name}"); Refresh(); }
         };
-        Unloaded += (_, _) =>
-        {
-            _counter.Changed -= OnChanged;
-            if (_localization is not null) _localization.LanguageChanged -= OnLanguageChanged;
-        };
+        Loaded += TreeSettingsSection_Loaded;
+        Unloaded += TreeSettingsSection_Unloaded;
     }
 
-    public void Configure(SettingsViewModel viewModel, LocalizationService localization)
+    internal void Configure(SettingsViewModel viewModel, LocalizationService localization, IAuthSession auth, TreeCloudSyncService cloud)
     {
         _viewModel = viewModel;
         _localization = localization;
+        _auth = auth;
+        _cloud = cloud;
         RenderLabels();
         Refresh();
+    }
+
+    private void TreeSettingsSection_Loaded(object sender, RoutedEventArgs e)
+    {
+        _counter.Changed += OnChanged;
+        if (_localization is not null) _localization.LanguageChanged += OnLanguageChanged;
+        if (_auth is not null) _auth.SessionChanged += OnChanged;
+        if (_cloud is not null) _cloud.LeaderboardChanged += OnChanged;
+        RenderLabels();
+        Refresh();
+        if (_auth?.IsAuthenticated == true && _cloud is not null) _ = _cloud.RefreshLeaderboardAsync();
+    }
+
+    private void TreeSettingsSection_Unloaded(object sender, RoutedEventArgs e)
+    {
+        _counter.Changed -= OnChanged;
+        if (_localization is not null) _localization.LanguageChanged -= OnLanguageChanged;
+        if (_auth is not null) _auth.SessionChanged -= OnChanged;
+        if (_cloud is not null) _cloud.LeaderboardChanged -= OnChanged;
     }
 
     private void RenderLabels()
     {
         if (_localization is null) return;
-        _title.Text = _localization.T("Tree.Title");
+        _currentCard.Header = _localization.T("Tree.Settings.Card.Current");
+        _currentCard.Description = _localization.T("Tree.Settings.Card.Current.Description");
+        _switchesCard.Header = _localization.T("Tree.Settings.Card.Switches");
+        _progressCard.Header = _localization.T("Tree.Settings.Card.Progress");
+        _leaderboardCard.Header = _localization.T("Tree.Settings.Card.Leaderboard");
+        _leaderboardCard.Description = _localization.T("Tree.Settings.Card.Leaderboard.Description");
         _enable.Header = _localization.T("Tree.Settings.Enable");
         _statistics.Header = _localization.T("Tree.Settings.EnableStatistics");
         _statistics.OnContent = _localization.T("Tree.Settings.StatisticsRunning");
         _statistics.OffContent = _localization.T("Tree.Settings.StatisticsPaused");
+        _participation.Header = _localization.T("Tree.Settings.Leaderboard.Participate");
+        _loginButton.Content = _localization.T("Tree.Settings.Leaderboard.SignInAction");
     }
 
     private void OnChanged()
     {
-        // Keyboard hooks run on their own thread. Never read a XAML property
-        // there: even IsLoaded is a thread-affine COM call.
         if (Interlocked.Exchange(ref _refreshQueued, 1) != 0) return;
         if (!_uiQueue.TryEnqueue(() =>
             {
                 try { if (IsLoaded) Refresh(); }
                 finally { Interlocked.Exchange(ref _refreshQueued, 0); }
-            }))
-            Interlocked.Exchange(ref _refreshQueued, 0);
+            })) Interlocked.Exchange(ref _refreshQueued, 0);
     }
 
-    private void OnLanguageChanged()
-    {
-        RenderLabels();
-        Refresh();
-    }
+    private void OnLanguageChanged() { RenderLabels(); Refresh(); }
 
     private void Refresh()
     {
-        if (_viewModel is null) return;
+        if (_viewModel is null || _localization is null) return;
         _updating = true;
         try
         {
@@ -118,21 +169,89 @@ public sealed partial class TreeSettingsSection : UserControl
             TreeStatisticsState statistics = TreeStatisticsState.FromProgress(_enable.IsOn, snapshot.Paused);
             _statistics.IsEnabled = statistics.ToggleEnabled;
             _statistics.IsOn = statistics.ToggleOn;
-            _statistics.OffContent = _localization?.T(statistics.OffContentKey) ?? string.Empty;
-            _status.Text = _localization?.T($"Tree.Stage.{snapshot.Stage}") ?? string.Empty;
+            _statistics.OffContent = _localization.T(statistics.OffContentKey);
+            _status.Text = _localization.T($"Tree.Stage.{snapshot.Stage}");
+            _growthSummary.Text = _localization.Format("Tree.Settings.Current.Summary", snapshot.TodayKeys, snapshot.TotalEnergy, snapshot.FruitInventory);
             _nextStageBar.Value = snapshot.NextStagePercentage;
             _totalGrowthBar.Value = snapshot.MaturityPercentage;
             _nextStageProgress.Text = snapshot.Stage >= 5
-                ? _localization?.T("Tree.Settings.NextStageComplete") ?? string.Empty
-                : _localization?.Format(
-                    "Tree.Settings.NextStageProgress",
-                    snapshot.NextStagePercentage,
-                    snapshot.NextStageRemainingEnergy) ?? string.Empty;
-            _totalGrowthProgress.Text = _localization?.Format(
-                "Tree.Settings.TotalGrowthProgress",
-                snapshot.TotalEnergy,
-                snapshot.MaturityPercentage) ?? string.Empty;
+                ? _localization.T("Tree.Settings.NextStageComplete")
+                : _localization.Format("Tree.Settings.NextStageProgress", snapshot.NextStagePercentage, snapshot.NextStageRemainingEnergy);
+            _totalGrowthProgress.Text = _localization.Format("Tree.Settings.TotalGrowthProgress", snapshot.TotalEnergy, snapshot.MaturityPercentage);
+
+            bool signedIn = _auth?.IsAuthenticated == true;
+            _participation.Visibility = signedIn ? Visibility.Visible : Visibility.Collapsed;
+            _leaderboard.Visibility = signedIn ? Visibility.Visible : Visibility.Collapsed;
+            _loginButton.Visibility = signedIn ? Visibility.Collapsed : Visibility.Visible;
+            _participation.IsOn = _cloud?.CurrentUserRank.Participating ?? true;
+            _leaderboardHint.Text = !signedIn
+                ? _localization.T("Tree.Settings.Leaderboard.SignIn")
+                : _cloud?.IsOffline == true
+                    ? _localization.T("Tree.Settings.Leaderboard.Offline")
+                    : _localization.T("Tree.Settings.Leaderboard.Online");
+            int? currentRank = _cloud?.CurrentUserRank.Rank;
+            _currentRankHint.Visibility = signedIn && currentRank.HasValue ? Visibility.Visible : Visibility.Collapsed;
+            _currentRankHint.Text = currentRank.HasValue
+                ? _localization.Format("Tree.Settings.Leaderboard.CurrentRank", currentRank.Value)
+                : string.Empty;
+            RenderLeaderboard();
         }
         finally { _updating = false; }
+    }
+
+    private void RenderLeaderboard()
+    {
+        _leaderboard.Items.Clear();
+        if (_cloud is null || _localization is null) return;
+        foreach (TreeLeaderboardEntryDto entry in _cloud.Leaderboard)
+        {
+            string medal = entry.Rank switch { 1 => "🥇", 2 => "🥈", 3 => "🥉", _ => "🌿" };
+            var grid = new Grid
+            {
+                Padding = new Thickness(10, 7, 10, 7),
+                ColumnSpacing = 12,
+                Background = entry.IsCurrentUser ? new SolidColorBrush(Microsoft.UI.Colors.PaleGreen) : null,
+                CornerRadius = new CornerRadius(8)
+            };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(54) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition());
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            AddCell(grid, $"{medal} {entry.Rank}", 0, true);
+            AddCell(grid, entry.IsCurrentUser ? _localization.Format("Tree.Settings.Leaderboard.Me", entry.Username) : entry.Username, 1, entry.IsCurrentUser);
+            AddStageCell(grid, _localization.T($"Tree.Stage.{entry.Stage}"), entry.Stage, 2);
+            AddCell(grid, $"+{entry.TodayGrowth:N0}", 3, false);
+            AddCell(grid, $"⚡ {entry.TotalEnergy:N0}  🍎 {entry.FruitTotal:N0}", 4, false);
+            _leaderboard.Items.Add(grid);
+        }
+    }
+
+    private static void AddCell(Grid grid, string text, int column, bool strong)
+    {
+        var block = new TextBlock { Text = text, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(2), TextTrimming = TextTrimming.CharacterEllipsis };
+        if (strong) block.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+        Grid.SetColumn(block, column);
+        grid.Children.Add(block);
+    }
+
+    private static void AddStageCell(Grid grid, string text, int stage, int column)
+    {
+        var badge = new Border
+        {
+            Background = new SolidColorBrush(stage switch
+            {
+                1 => Microsoft.UI.Colors.LightGreen,
+                2 => Microsoft.UI.Colors.LightBlue,
+                3 => Microsoft.UI.Colors.Khaki,
+                4 => Microsoft.UI.Colors.PeachPuff,
+                _ => Microsoft.UI.Colors.Plum
+            }),
+            CornerRadius = new CornerRadius(10),
+            Padding = new Thickness(8, 3, 8, 3),
+            Child = new TextBlock { Text = text, FontSize = 12, Foreground = new SolidColorBrush(Microsoft.UI.Colors.DarkSlateGray) }
+        };
+        Grid.SetColumn(badge, column);
+        grid.Children.Add(badge);
     }
 }

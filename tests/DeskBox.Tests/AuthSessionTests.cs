@@ -77,6 +77,68 @@ public sealed class AuthSessionTests
     }
 
     [Fact]
+    public async Task AuthenticatedApi_RefreshesAndReplaysExactlyOnce()
+    {
+        var credentials = new MemoryCredentialStore();
+        int protectedCalls = 0;
+        int refreshCalls = 0;
+        using var http = Client((request, _) =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/login.php", StringComparison.Ordinal))
+                return Json(HttpStatusCode.OK, SessionJson("user-1", "Simon", "access-1", "refresh-1"));
+            if (request.RequestUri.AbsolutePath.EndsWith("/refresh.php", StringComparison.Ordinal))
+            {
+                refreshCalls++;
+                return Json(HttpStatusCode.OK, SessionJson("user-1", "Simon", "access-2", "refresh-2"));
+            }
+
+            protectedCalls++;
+            string token = request.Headers.Authorization?.Parameter ?? string.Empty;
+            return token == "access-2"
+                ? Json(HttpStatusCode.OK, "{\"snapshots\":[]}")
+                : Json(HttpStatusCode.Unauthorized, "{\"code\":\"invalid_session\",\"message\":\"Expired.\"}");
+        });
+        var session = new DeskBoxAuthSession(credentials, http);
+        await session.SignInAsync("Simon", "secret1");
+
+        using HttpResponseMessage response = await ((IAuthenticatedAccountApi)session).SendAsync(
+            HttpMethod.Get, "../backup/list.php", null, null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(2, protectedCalls);
+        Assert.Equal(1, refreshCalls);
+    }
+
+    [Fact]
+    public async Task AuthenticatedApi_SecondUnauthorizedClearsSessionWithoutLooping()
+    {
+        var credentials = new MemoryCredentialStore();
+        int protectedCalls = 0;
+        int refreshCalls = 0;
+        using var http = Client((request, _) =>
+        {
+            if (request.RequestUri!.AbsolutePath.EndsWith("/login.php", StringComparison.Ordinal))
+                return Json(HttpStatusCode.OK, SessionJson("user-1", "Simon", "access-1", "refresh-1"));
+            if (request.RequestUri.AbsolutePath.EndsWith("/refresh.php", StringComparison.Ordinal))
+            {
+                refreshCalls++;
+                return Json(HttpStatusCode.OK, SessionJson("user-1", "Simon", "access-2", "refresh-2"));
+            }
+            protectedCalls++;
+            return Json(HttpStatusCode.Unauthorized, "{\"code\":\"invalid_session\",\"message\":\"Expired.\"}");
+        });
+        var session = new DeskBoxAuthSession(credentials, http);
+        await session.SignInAsync("Simon", "secret1");
+
+        await Assert.ThrowsAsync<AuthApiException>(() => ((IAuthenticatedAccountApi)session).SendAsync(
+            HttpMethod.Get, "../backup/list.php", null, null));
+
+        Assert.Equal(2, protectedCalls);
+        Assert.Equal(1, refreshCalls);
+        Assert.False(session.IsAuthenticated);
+    }
+
+    [Fact]
     public async Task SignOut_ClearsLocalSessionEvenWhenServerIsUnavailable()
     {
         var credentials = new MemoryCredentialStore();

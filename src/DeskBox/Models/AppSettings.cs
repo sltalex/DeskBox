@@ -792,4 +792,16 @@ public class AppSettings
 
     /// <inheritdoc cref="CloudBackupSettingsSlice.CloudBackupLastUnverifiedUtcTicks"/>
     public long CloudBackupLastUnverifiedUtcTicks { get => CloudBackup.CloudBackupLastUnverifiedUtcTicks; set => CloudBackup.CloudBackupLastUnverifiedUtcTicks = value; }
+
+    /// <inheritdoc cref="CloudBackupSettingsSlice.AccountCloudBackupEnabled"/>
+    public bool AccountCloudBackupEnabled { get => CloudBackup.AccountCloudBackupEnabled; set => CloudBackup.AccountCloudBackupEnabled = value; }
+
+    /// <inheritdoc cref="CloudBackupSettingsSlice.AccountCloudBackupOwnerUserId"/>
+    public string AccountCloudBackupOwnerUserId { get => CloudBackup.AccountCloudBackupOwnerUserId; set => CloudBackup.AccountCloudBackupOwnerUserId = value; }
+
+    /// <inheritdoc cref="CloudBackupSettingsSlice.AccountCloudBackupLastSuccessUtcTicks"/>
+    public long AccountCloudBackupLastSuccessUtcTicks { get => CloudBackup.AccountCloudBackupLastSuccessUtcTicks; set => CloudBackup.AccountCloudBackupLastSuccessUtcTicks = value; }
+
+    /// <inheritdoc cref="CloudBackupSettingsSlice.AccountCloudBackupLastFailureUtcTicks"/>
+    public long AccountCloudBackupLastFailureUtcTicks { get => CloudBackup.AccountCloudBackupLastFailureUtcTicks; set => CloudBackup.AccountCloudBackupLastFailureUtcTicks = value; }
 }

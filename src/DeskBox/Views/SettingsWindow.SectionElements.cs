@@ -217,4 +217,15 @@ public sealed partial class SettingsWindow
     // so a consumer can run before creation or against a torn-down window.
     // Callers must null-guard; a visible section's lookup is typed-correct.
     private global::Microsoft.UI.Xaml.Controls.PasswordBox? CloudBackupPasswordBox => FindCloudBackupPasswordBox();
+
+    private global::Microsoft.UI.Xaml.Controls.ToggleSwitch AccountCloudBackupToggle =>
+        FindCreatedSectionElement<global::Microsoft.UI.Xaml.Controls.ToggleSwitch>("CloudBackupSettings", "AccountCloudBackupToggle")!;
+    private global::Microsoft.UI.Xaml.Controls.TextBlock AccountCloudBackupStatusText =>
+        FindCreatedSectionElement<global::Microsoft.UI.Xaml.Controls.TextBlock>("CloudBackupSettings", "AccountCloudBackupStatusText")!;
+    private global::Microsoft.UI.Xaml.Controls.Button AccountCloudBackupRefreshButton =>
+        FindCreatedSectionElement<global::Microsoft.UI.Xaml.Controls.Button>("CloudBackupSettings", "AccountCloudBackupRefreshButton")!;
+    private global::Microsoft.UI.Xaml.Controls.TextBlock AccountCloudBackupEmptyText =>
+        FindCreatedSectionElement<global::Microsoft.UI.Xaml.Controls.TextBlock>("CloudBackupSettings", "AccountCloudBackupEmptyText")!;
+    private global::Microsoft.UI.Xaml.Controls.ListView AccountCloudBackupSnapshotsList =>
+        FindCreatedSectionElement<global::Microsoft.UI.Xaml.Controls.ListView>("CloudBackupSettings", "AccountCloudBackupSnapshotsList")!;
 }

@@ -5,7 +5,7 @@ using DeskBox.Contracts;
 
 namespace DeskBox.Services;
 
-internal sealed class DeskBoxAuthSession : IAuthSession
+internal sealed class DeskBoxAuthSession : IAuthSession, IAuthenticatedAccountApi
 {
     internal const string DefaultApiBaseUrl = "http://sltbox.2leaves.cn/api/v1/auth/";
     internal const string SessionCredentialKey = "deskbox-cloud:auth:session";
@@ -136,6 +136,42 @@ internal sealed class DeskBoxAuthSession : IAuthSession
             }
 
             await ClearLocalSessionAsync(cancellationToken);
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
+    }
+
+    async Task<HttpResponseMessage> IAuthenticatedAccountApi.SendAsync(
+        HttpMethod method,
+        string relativePath,
+        byte[]? jsonBody,
+        string? contentEncoding,
+        CancellationToken cancellationToken)
+    {
+        await _operationGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (_session is null)
+                throw new AuthApiException("invalid_session", "Sign in is required.", HttpStatusCode.Unauthorized);
+
+            HttpResponseMessage response = await SendAuthenticatedAsync(
+                method, relativePath, jsonBody, contentEncoding, _session.AccessToken, cancellationToken);
+            if (response.StatusCode != HttpStatusCode.Unauthorized)
+                return response;
+
+            response.Dispose();
+            await RefreshCoreAsync(cancellationToken);
+            response = await SendAuthenticatedAsync(
+                method, relativePath, jsonBody, contentEncoding, _session!.AccessToken, cancellationToken);
+            if (response.StatusCode != HttpStatusCode.Unauthorized)
+                return response;
+
+            response.Dispose();
+            await ClearLocalSessionAsync(cancellationToken);
+            throw new AuthApiException(
+                "invalid_session", "The saved session is no longer valid.", HttpStatusCode.Unauthorized);
         }
         finally
         {
@@ -351,6 +387,26 @@ internal sealed class DeskBoxAuthSession : IAuthSession
         if (!string.IsNullOrEmpty(bearerToken))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
+        }
+        return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+    }
+
+    private async Task<HttpResponseMessage> SendAuthenticatedAsync(
+        HttpMethod method,
+        string relativePath,
+        byte[]? jsonBody,
+        string? contentEncoding,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(method, relativePath);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        if (jsonBody is not null)
+        {
+            request.Content = new ByteArrayContent(jsonBody);
+            request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+            if (!string.IsNullOrWhiteSpace(contentEncoding))
+                request.Content.Headers.ContentEncoding.Add(contentEncoding);
         }
         return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
     }

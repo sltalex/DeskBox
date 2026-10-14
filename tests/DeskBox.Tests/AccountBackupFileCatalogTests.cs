@@ -1,0 +1,183 @@
+using System.Security.Cryptography;
+using System.Text;
+using DeskBox.Services;
+using DeskBox.Core.Persistence;
+
+namespace DeskBox.Tests;
+
+public sealed class AccountBackupFileCatalogTests : IDisposable
+{
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "DeskBoxAccountBackupTests", Guid.NewGuid().ToString("N"));
+
+    [Fact]
+    public async Task Capture_IncludesOnlyManagedPrimaryJsonFiles()
+    {
+        Write("settings.json", "{}");
+        Write("widget-layout.json", "[]");
+        Write("tree/progress.json", "{\"energy\":1}");
+        Write("glance/state.json", "{}");
+        Write("cache/result.json", "{}");
+        Write("sync/tree/state.json", "{}");
+        Write("todo/attachments/file.json", "{}");
+        Write("quick-capture/attachments/meta.json", "{}");
+        Write("weather-cache.json", "{}");
+        Write("settings.json.bak", "{}");
+        Write("state.tmp", "{}");
+        Write("plain.txt", "{}");
+
+        var catalog = new AccountBackupFileCatalog(Path.Combine(_root, "data"));
+        AccountBackupFileDto[] files = await catalog.CaptureAsync();
+
+        Assert.Equal(
+            ["glance/state.json", "settings.json", "tree/progress.json", "widget-layout.json"],
+            files.Select(file => file.Path).ToArray());
+        Assert.All(files, file => Assert.Equal(
+            Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(file.Content))).ToLowerInvariant(),
+            file.Sha256));
+    }
+
+    [Fact]
+    public async Task Restore_ReplacesEligibleSetButPreservesExcludedData()
+    {
+        Write("settings.json", "{\"old\":true}");
+        Write("obsolete.json", "{}");
+        Write("todo/attachments/keep.json", "{\"attachment\":true}");
+        Write("cache/keep.json", "{}");
+        Write("sync/tree/keep.json", "{}");
+        var catalog = new AccountBackupFileCatalog(Path.Combine(_root, "data"));
+        string content = "{\"new\":true}";
+        var snapshot = new AccountBackupSnapshotDownloadDto
+        {
+            Id = new string('a', 32),
+            Files =
+            [
+                new AccountBackupFileDto
+                {
+                    Path = "settings.json", Content = content, Bytes = Encoding.UTF8.GetByteCount(content),
+                    Sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant()
+                }
+            ]
+        };
+        bool safetyCreated = false;
+
+        await catalog.PrepareRestoreAsync(snapshot, "user-1", _ => { safetyCreated = true; return Task.CompletedTask; });
+        AccountBackupRestoreResult result = await catalog.ApplyPendingRestoreAsync();
+
+        Assert.True(result.Applied);
+        Assert.True(safetyCreated);
+        Assert.Equal(content, File.ReadAllText(Path.Combine(_root, "data", "settings.json")));
+        Assert.False(File.Exists(Path.Combine(_root, "data", "obsolete.json")));
+        Assert.True(File.Exists(Path.Combine(_root, "data", "todo", "attachments", "keep.json")));
+        Assert.True(File.Exists(Path.Combine(_root, "data", "cache", "keep.json")));
+        Assert.True(File.Exists(Path.Combine(_root, "data", "sync", "tree", "keep.json")));
+    }
+
+    [Fact]
+    public async Task Restore_RejectsTamperedDownloadedContent()
+    {
+        var catalog = new AccountBackupFileCatalog(Path.Combine(_root, "data"));
+        var snapshot = new AccountBackupSnapshotDownloadDto
+        {
+            Id = new string('b', 32),
+            Files = [new AccountBackupFileDto { Path = "settings.json", Content = "{}", Bytes = 2, Sha256 = new string('0', 64) }]
+        };
+
+        await Assert.ThrowsAsync<InvalidDataException>(() => catalog.PrepareRestoreAsync(snapshot, "user-1", _ => Task.CompletedTask));
+    }
+
+    [Fact]
+    public async Task Restore_FailureRollsBackWholeManagedJsonSetAndKeepsMarkerForRetry()
+    {
+        Write("settings.json", "{\"old\":true}");
+        Write("obsolete.json", "{\"keepUntilCommit\":true}");
+        AccountBackupSnapshotDownloadDto snapshot = Snapshot(
+            ("settings.json", "{\"new\":true}"),
+            ("widget-layout.json", "[]"));
+        var failing = new AccountBackupFileCatalog(
+            Path.Combine(_root, "data"),
+            relative => relative.Equals("widget-layout.json", StringComparison.Ordinal));
+
+        await failing.PrepareRestoreAsync(snapshot, "user-1", _ => Task.CompletedTask);
+        AccountBackupRestoreResult failed = await failing.ApplyPendingRestoreAsync();
+
+        Assert.False(failed.Applied);
+        Assert.Equal("{\"old\":true}", File.ReadAllText(Path.Combine(_root, "data", "settings.json")));
+        Assert.True(File.Exists(Path.Combine(_root, "data", "obsolete.json")));
+        Assert.False(File.Exists(Path.Combine(_root, "data", "widget-layout.json")));
+
+        var retry = new AccountBackupFileCatalog(Path.Combine(_root, "data"));
+        AccountBackupRestoreResult applied = await retry.ApplyPendingRestoreAsync();
+
+        Assert.True(applied.Applied);
+        Assert.Equal("{\"new\":true}", File.ReadAllText(Path.Combine(_root, "data", "settings.json")));
+        Assert.Equal("[]", File.ReadAllText(Path.Combine(_root, "data", "widget-layout.json")));
+        Assert.False(File.Exists(Path.Combine(_root, "data", "obsolete.json")));
+    }
+
+    [Fact]
+    public async Task Restore_FailureWithNoOriginalManagedFilesRemovesPartiallyAppliedSet()
+    {
+        AccountBackupSnapshotDownloadDto snapshot = Snapshot(
+            ("settings.json", "{\"new\":true}"),
+            ("widget-layout.json", "[]"));
+        int applyCount = 0;
+        var failing = new AccountBackupFileCatalog(
+            Path.Combine(_root, "data"),
+            _ => Interlocked.Increment(ref applyCount) == 2);
+
+        await failing.PrepareRestoreAsync(snapshot, "user-1", _ => Task.CompletedTask);
+        AccountBackupRestoreResult failed = await failing.ApplyPendingRestoreAsync();
+
+        Assert.False(failed.Applied);
+        Assert.False(File.Exists(Path.Combine(_root, "data", "settings.json")));
+        Assert.False(File.Exists(Path.Combine(_root, "data", "widget-layout.json")));
+
+        var retry = new AccountBackupFileCatalog(Path.Combine(_root, "data"));
+        AccountBackupRestoreResult applied = await retry.ApplyPendingRestoreAsync();
+
+        Assert.True(applied.Applied);
+        Assert.Equal("{\"new\":true}", File.ReadAllText(Path.Combine(_root, "data", "settings.json")));
+        Assert.Equal("[]", File.ReadAllText(Path.Combine(_root, "data", "widget-layout.json")));
+    }
+
+    [Fact]
+    public async Task CancelPreparedRestorePreventsADeferredRestore()
+    {
+        Write("settings.json", "{\"old\":true}");
+        var catalog = new AccountBackupFileCatalog(Path.Combine(_root, "data"));
+        await catalog.PrepareRestoreAsync(
+            Snapshot(("settings.json", "{\"new\":true}")),
+            "user-1",
+            _ => Task.CompletedTask);
+
+        catalog.CancelPreparedRestore();
+        AccountBackupRestoreResult result = await catalog.ApplyPendingRestoreAsync();
+
+        Assert.False(result.Found);
+        Assert.Equal("{\"old\":true}", File.ReadAllText(Path.Combine(_root, "data", "settings.json")));
+    }
+
+    private static AccountBackupSnapshotDownloadDto Snapshot(params (string Path, string Content)[] files) => new()
+    {
+        Id = new string('c', 32),
+        Files = files.Select(file => new AccountBackupFileDto
+        {
+            Path = file.Path,
+            Content = file.Content,
+            Bytes = Encoding.UTF8.GetByteCount(file.Content),
+            Sha256 = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(file.Content))).ToLowerInvariant()
+        }).ToArray()
+    };
+
+    private void Write(string relativePath, string content)
+    {
+        string path = Path.Combine(_root, "data", relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, content);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+    }
+}

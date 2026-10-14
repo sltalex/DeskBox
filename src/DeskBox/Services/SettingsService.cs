@@ -675,6 +675,10 @@ settings.WeatherRefreshIntervalMinutes = 60;
             CloudBackupSettingsPolicy.DefaultRetentionCount;
         settings.CloudBackup.CloudBackupIntervalMinutes =
             CloudBackupSettingsPolicy.DefaultIntervalMinutes;
+        settings.CloudBackup.AccountCloudBackupEnabled = false;
+        settings.CloudBackup.AccountCloudBackupOwnerUserId = string.Empty;
+        settings.CloudBackup.AccountCloudBackupLastSuccessUtcTicks = 0;
+        settings.CloudBackup.AccountCloudBackupLastFailureUtcTicks = 0;
         settings.GlobalHotkeyEnabled = DefaultGlobalHotkeyEnabled;
         settings.GlobalHotkeyActivationKind = DefaultGlobalHotkeyActivationKind;
         settings.GlobalHotkeyModifiers = DefaultGlobalHotkeyModifiers;

@@ -214,6 +214,8 @@ internal static class SettingsSearchCatalog
         new("BackupRestoreSettings", "Settings.DataBackup.AutomaticBackupRetention.Title", "Settings.DataBackup.AutomaticBackupRetention.Description"),
         new("BackupRestoreSettings", "Settings.DataBackup.AutomaticBackupDirectory.Title", "Settings.DataBackup.AutomaticBackupDirectory.Description"),
         new("BackupRestoreSettings", "Settings.DataBackup.Title", "Settings.DataBackup.Description"),
+        new("CloudBackupSettings", "Settings.AccountBackup.Enable.Title", "Settings.AccountBackup.Enable.Description"),
+        new("CloudBackupSettings", "Settings.AccountBackup.Restore.Title", "Settings.AccountBackup.Restore.Description"),
         new("CloudBackupSettings", "Settings.CloudBackup.Provider.Title", "Settings.CloudBackup.Provider.Description"),
         new("CloudBackupSettings", "Settings.CloudBackup.Connection.Title", "Settings.CloudBackup.Connection.Description"),
         new("CloudBackupSettings", "Settings.CloudBackup.TodoData.Title", "Settings.CloudBackup.TodoData.Description"),

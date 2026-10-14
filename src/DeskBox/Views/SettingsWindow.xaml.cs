@@ -138,6 +138,9 @@ public sealed partial class SettingsWindow : Window
     private readonly BackupSettingsViewModel _backupSettingsViewModel;
     private readonly BackupRestoreActions _backupRestoreActions;
     private readonly IBackupCommands _backupCommands;
+    private readonly AccountCloudBackupService _accountCloudBackupService;
+    private readonly TreeCloudSyncService _treeCloudSyncService;
+    private readonly IAuthSession _authSession;
     private readonly DeskBox.Features.Music.MusicSettingsViewModel _musicSettingsViewModel;
     private readonly DeskBox.Features.QuickCapture.QuickCaptureSettingsViewModel _quickCaptureSettingsViewModel;
     private readonly TodoSettingsViewModel _todoSettingsViewModel;
@@ -177,7 +180,7 @@ public sealed partial class SettingsWindow : Window
     public DeskBox.Features.FileStack.FileStackSettingsViewModel FileStackSettings =>
         _fileStackSettingsViewModel;
 
-    public SettingsWindow(SettingsService settingsService, ThemeService themeService, LocalizationService localizationService,
+    internal SettingsWindow(SettingsService settingsService, ThemeService themeService, LocalizationService localizationService,
         TodoSettingsViewModel todoSettings,
         DeskBox.Features.Weather.WeatherSettingsViewModel weatherSettings,
         SearchSettingsViewModel searchSettings,
@@ -197,7 +200,9 @@ public sealed partial class SettingsWindow : Window
         DeskBox.Features.ManagedStorage.ManagedStorageSettingsViewModel managedStorageSettings,
         DeskBox.Features.Maintenance.MaintenanceSettingsViewModel maintenanceSettings,
         DeskBox.Features.Performance.PerformanceSettingsViewModel performanceSettings,
-        IAuthSession authSession)
+        IAuthSession authSession,
+        AccountCloudBackupService accountCloudBackupService,
+        TreeCloudSyncService treeCloudSyncService)
     {
         var constructionStopwatch = Stopwatch.StartNew();
         long previousCheckpointMilliseconds = 0;
@@ -216,6 +221,9 @@ public sealed partial class SettingsWindow : Window
         _searchSettingsViewModel = searchSettings;
         _backupSettingsViewModel = backupSettings;
         _backupRestoreActions = backupRestoreActions;
+        _accountCloudBackupService = accountCloudBackupService;
+        _treeCloudSyncService = treeCloudSyncService;
+        _authSession = authSession;
         _musicSettingsViewModel = musicSettings;
         _quickCaptureSettingsViewModel = quickCaptureSettingsEditor;
         _todoSettingsViewModel = todoSettings;

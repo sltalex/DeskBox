@@ -19,8 +19,20 @@ public static class ServiceRegistry
         services.AddSingleton<SettingsService>();
         services.AddSingleton<DeskBoxDataBackupService>();
         services.AddSingleton<ICredentialStore>(_ => new PasswordVaultCredentialStore());
-        services.AddSingleton<IAuthSession>(sp =>
+        services.AddSingleton<DeskBoxAuthSession>(sp =>
             new DeskBoxAuthSession(sp.GetRequiredService<ICredentialStore>()));
+        services.AddSingleton<IAuthSession>(sp => sp.GetRequiredService<DeskBoxAuthSession>());
+        services.AddSingleton<IAuthenticatedAccountApi>(sp => sp.GetRequiredService<DeskBoxAuthSession>());
+        services.AddSingleton<AccountCloudBackupService>(sp =>
+            new AccountCloudBackupService(
+                sp.GetRequiredService<IAuthenticatedAccountApi>(),
+                sp.GetRequiredService<IAuthSession>(),
+                sp.GetRequiredService<SettingsService>(),
+                sp.GetRequiredService<DeskBoxDataBackupService>()));
+        services.AddSingleton<TreeCloudSyncService>(sp =>
+            new TreeCloudSyncService(
+                sp.GetRequiredService<IAuthenticatedAccountApi>(),
+                sp.GetRequiredService<IAuthSession>()));
         services.AddSingleton<CloudBackupService>(sp =>
             new CloudBackupService(
                 sp.GetRequiredService<DeskBoxDataBackupService>(),

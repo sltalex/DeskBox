@@ -20,15 +20,31 @@ public sealed partial class SettingsWindow
 {
     private bool _cloudBackupSnapshotSyncHooked;
     private NotifyCollectionChangedEventHandler? _cloudBackupCollectionChanged;
+    private bool _accountCloudBackupSyncing;
+    private bool _accountCloudBackupHooked;
+    private bool _accountCloudBackupListOffline;
 
     internal Task StopCloudBackupActionsAsync()
     {
+        if (_accountCloudBackupHooked)
+        {
+            _accountCloudBackupService.StateChanged -= OnAccountCloudBackupStateChanged;
+            _accountCloudBackupHooked = false;
+        }
         _backupSettingsViewModel.Deactivate();
         return _backupRestoreActions.StopAsync();
     }
 
     private Task InitializeCloudBackupSectionAsync()
     {
+        if (!_accountCloudBackupHooked)
+        {
+            _accountCloudBackupHooked = true;
+            _accountCloudBackupService.StateChanged += OnAccountCloudBackupStateChanged;
+        }
+        SyncAccountCloudBackupUi();
+        if (ViewModel.IsAccountAuthenticated)
+            _ = RefreshAccountCloudBackupSnapshotsAsync();
         if (!_cloudBackupSnapshotSyncHooked)
         {
             _cloudBackupSnapshotSyncHooked = true;
@@ -40,6 +56,161 @@ public sealed partial class SettingsWindow
         SyncCloudBackupSnapshotList();
         return Task.CompletedTask;
     }
+
+    private void OnAccountCloudBackupStateChanged()
+    {
+        if (DispatcherQueue.HasThreadAccess) SyncAccountCloudBackupUi();
+        else DispatcherQueue.TryEnqueue(SyncAccountCloudBackupUi);
+    }
+
+    private void SyncAccountCloudBackupUi()
+    {
+        if (AccountCloudBackupToggle is null) return;
+        AccountCloudBackupService service = _accountCloudBackupService;
+        _accountCloudBackupSyncing = true;
+        try { AccountCloudBackupToggle.IsOn = service.IsEnabledForCurrentAccount; }
+        finally { _accountCloudBackupSyncing = false; }
+        bool signedIn = ViewModel.IsAccountAuthenticated;
+        AccountCloudBackupToggle.IsEnabled = !service.IsBusy;
+        AccountCloudBackupRefreshButton.IsEnabled = signedIn && !service.IsBusy;
+        AccountCloudBackupSnapshotsList.IsEnabled = signedIn && !service.IsBusy;
+        string accountStatus = !signedIn
+            ? _localizationService.T("Settings.AccountBackup.Status.SignedOut")
+            : _localizationService.Format(
+                "Settings.AccountBackup.Status.SignedIn",
+                ViewModel.AccountSignedInText,
+                service.IsEnabledForCurrentAccount
+                    ? _localizationService.T("Settings.AccountBackup.Status.Enabled")
+                    : _localizationService.T("Settings.AccountBackup.Status.Disabled"));
+        if (signedIn && service.IsBoundToCurrentAccount)
+        {
+            var cloud = _settingsService.Settings.CloudBackup;
+            string recentStatus = cloud.AccountCloudBackupLastFailureUtcTicks > 0
+                ? _localizationService.Format(
+                    "Settings.AccountBackup.Status.LastFailure",
+                    new DateTimeOffset(cloud.AccountCloudBackupLastFailureUtcTicks, TimeSpan.Zero).ToLocalTime().ToString("g"))
+                : cloud.AccountCloudBackupLastSuccessUtcTicks > 0
+                    ? _localizationService.Format(
+                        "Settings.AccountBackup.Status.LastSuccess",
+                        new DateTimeOffset(cloud.AccountCloudBackupLastSuccessUtcTicks, TimeSpan.Zero).ToLocalTime().ToString("g"))
+                    : _localizationService.T("Settings.AccountBackup.Status.Never");
+            accountStatus += Environment.NewLine + recentStatus;
+        }
+        AccountCloudBackupStatusText.Text = _accountCloudBackupListOffline
+            ? accountStatus + Environment.NewLine + _localizationService.T("Settings.AccountBackup.Status.Offline")
+            : accountStatus;
+        AccountBackupSnapshotItem[] items = service.Snapshots.Select(snapshot => new AccountBackupSnapshotItem
+        {
+            Id = snapshot.Id,
+            Title = snapshot.CreatedAt.ToLocalTime().ToString("g"),
+            Details = _localizationService.Format(
+                "Settings.AccountBackup.Record.Details",
+                snapshot.DeviceId,
+                snapshot.FileCount,
+                FormatAccountBackupSize(snapshot.TotalBytes))
+        }).ToArray();
+        AccountCloudBackupSnapshotsList.ItemsSource = items.Cast<object>().ToArray();
+        AccountCloudBackupEmptyText.Visibility = items.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private async void AccountCloudBackupToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_accountCloudBackupSyncing) return;
+        bool requested = AccountCloudBackupToggle.IsOn;
+        try
+        {
+            AccountBackupEnableResult result = await _accountCloudBackupService.SetEnabledAsync(requested);
+            if (result == AccountBackupEnableResult.SignInRequired)
+            {
+                _accountCloudBackupSyncing = true;
+                AccountCloudBackupToggle.IsOn = false;
+                _accountCloudBackupSyncing = false;
+                var dialog = new ContentDialog
+                {
+                    XamlRoot = SettingsRoot.XamlRoot,
+                    Title = _localizationService.T("Settings.AccountBackup.SignInRequired.Title"),
+                    Content = _localizationService.T("Settings.AccountBackup.SignInRequired.Body"),
+                    PrimaryButtonText = _localizationService.T("Settings.AccountBackup.SignInRequired.Action"),
+                    CloseButtonText = _localizationService.T("Common.Cancel"),
+                    DefaultButton = ContentDialogButton.Primary
+                };
+                if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+                {
+                    NavigateToSettingsSection("General");
+                    AccountUsernameTextBox.StartBringIntoView();
+                    AccountUsernameTextBox.Focus(FocusState.Programmatic);
+                }
+            }
+            else if (requested)
+            {
+                await RefreshAccountCloudBackupSnapshotsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[AccountBackup] Toggle failed: {ex}");
+            await ShowInfoDialogAsync(
+                _localizationService.T("Settings.AccountBackup.Error.Title"),
+                _localizationService.T("Settings.AccountBackup.Error.Body"));
+        }
+        finally { SyncAccountCloudBackupUi(); }
+    }
+
+    private async void AccountCloudBackupRefreshButton_Click(object sender, RoutedEventArgs e) =>
+        await RefreshAccountCloudBackupSnapshotsAsync();
+
+    private async Task RefreshAccountCloudBackupSnapshotsAsync()
+    {
+        if (!ViewModel.IsAccountAuthenticated) { SyncAccountCloudBackupUi(); return; }
+        try
+        {
+            await _accountCloudBackupService.RefreshSnapshotsAsync();
+            _accountCloudBackupListOffline = false;
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[AccountBackup] Snapshot list failed: {ex.GetType().Name}");
+            _accountCloudBackupListOffline = true;
+        }
+        finally { SyncAccountCloudBackupUi(); }
+    }
+
+    private async void AccountCloudBackupRestoreButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string snapshotId } || string.IsNullOrWhiteSpace(snapshotId)) return;
+        var confirm = new ContentDialog
+        {
+            XamlRoot = SettingsRoot.XamlRoot,
+            Title = _localizationService.T("Settings.AccountBackup.RestoreConfirm.Title"),
+            Content = _localizationService.T("Settings.AccountBackup.RestoreConfirm.Body"),
+            PrimaryButtonText = _localizationService.T("Settings.AccountBackup.RestoreConfirm.Action"),
+            CloseButtonText = _localizationService.T("Common.Cancel"),
+            DefaultButton = ContentDialogButton.Close
+        };
+        if (await confirm.ShowAsync() != ContentDialogResult.Primary) return;
+        try
+        {
+            await _accountCloudBackupService.PrepareRestoreAsync(snapshotId);
+            AppRelaunchScheduleResult relaunch = _backupRestoreActions.ScheduleRelaunch();
+            if (!relaunch.Started)
+            {
+                _accountCloudBackupService.CancelPreparedRestore();
+                throw new InvalidOperationException(relaunch.ErrorMessage);
+            }
+            await _backupRestoreActions.ShutdownForRestartAsync();
+        }
+        catch (Exception ex)
+        {
+            App.Log($"[AccountBackup] Restore failed: {ex}");
+            await ShowInfoDialogAsync(
+                _localizationService.T("Settings.AccountBackup.Error.Title"),
+                _localizationService.T("Settings.AccountBackup.Restore.Error"));
+        }
+    }
+
+    private static string FormatAccountBackupSize(long bytes) => bytes >= 1024 * 1024
+        ? $"{bytes / (1024d * 1024d):0.0} MB"
+        : $"{Math.Max(1, bytes / 1024d):0.0} KB";
 
     private bool CurrentCloudBackupVisit(long endpointGeneration, int visitGeneration) =>
         !_isClosed && !_backupCommands.IsStopping && _backupSettingsViewModel.IsActive &&

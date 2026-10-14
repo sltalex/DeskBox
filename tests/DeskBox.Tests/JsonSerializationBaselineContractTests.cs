@@ -29,6 +29,8 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             ["src/DeskBox/App.AotTodoNotificationLifecycleSmoke.cs"] = 1,
             ["src/DeskBox/App.AotTodoNotificationActivationSmoke.cs"] = 1,
             ["src/DeskBox/App.AotTodoNotificationForwardingSmoke.cs"] = 1,
+            ["src/DeskBox/Services/AccountBackupFileCatalog.cs"] = 5,
+            ["src/DeskBox/Services/AccountCloudBackupService.cs"] = 4,
             ["src/DeskBox/Services/AppUpdateService.cs"] = 2,
             ["src/DeskBox/Services/CitySearchService.cs"] = 1,
             ["src/DeskBox/Services/DeskBoxAttachmentHealthService.cs"] = 1,
@@ -52,6 +54,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             ["src/DeskBox/Services/SyncStateStore.cs"] = 2,
             ["src/DeskBox/Services/TodoWidgetStore.cs"] = 3,
             ["src/DeskBox/Services/TreeProgressFileStore.cs"] = 2,
+            ["src/DeskBox/Services/TreeCloudSyncService.cs"] = 6,
             ["src/DeskBox/Services/WeatherService.cs"] = 5,
             ["src/DeskBox/Services/WidgetFileStackSettings.cs"] = 7,
             ["src/DeskBox/Services/WidgetLayoutStore.cs"] = 2,
@@ -77,8 +80,8 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             Assert.Equal(expectedCount, actual[path]);
         }
 
-        Assert.Equal(39, actual.Count);
-        Assert.Equal(95, actual.Values.Sum());
+        Assert.Equal(42, actual.Count);
+        Assert.Equal(110, actual.Values.Sum());
 
         string[] expectedContextOwners =
         [
@@ -94,6 +97,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             "src/DeskBox/App.AotTodoNotificationForwardingSmoke.cs",
             "src/DeskBox/App.AotTodoNotificationLifecycleSmoke.cs",
             "src/DeskBox/App.AotTodoRecurrenceReminderSmoke.cs",
+            "src/DeskBox/Services/AccountCloudJsonModels.cs",
             "src/DeskBox/Services/AppUpdateService.cs",
             "src/DeskBox/Services/AuthJsonModels.cs",
             "src/DeskBox/Services/DeskBoxDataBackupService.cs",
@@ -126,7 +130,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             .Order()
             .ToArray();
 
-        Assert.Equal(35, actualContextOwners.Length);
+        Assert.Equal(36, actualContextOwners.Length);
         Assert.Equal(expectedContextOwners, actualContextOwners);
     }
 

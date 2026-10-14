@@ -169,6 +169,8 @@ public partial class App : Application
     public SettingsService SettingsService { get; private set; } = null!;
     public DeskBoxDataBackupService DataBackupService { get; private set; } = null!;
     internal CloudBackupService CloudBackupService { get; private set; } = null!;
+    internal AccountCloudBackupService AccountCloudBackupService { get; private set; } = null!;
+    internal TreeCloudSyncService TreeCloudSyncService { get; private set; } = null!;
     public DeskBoxAttachmentHealthService AttachmentHealthService { get; private set; } = null!;
     public FileService FileService { get; private set; } = null!;
     public OrganizerService OrganizerService { get; private set; } = null!;
@@ -311,6 +313,8 @@ public partial class App : Application
         DataBackupService.AutomaticSnapshotFallbackDetected += OnAutomaticBackupFallbackDetected;
         CloudBackupService = Services.GetRequiredService<CloudBackupService>();
         CloudBackupService.BackupRunCompleted += OnCloudBackupRunCompleted;
+        AccountCloudBackupService = Services.GetRequiredService<AccountCloudBackupService>();
+        TreeCloudSyncService = Services.GetRequiredService<TreeCloudSyncService>();
         _ = LegacySearchIndexCleanupService.TryCleanup();
         AttachmentHealthService = Services.GetRequiredService<DeskBoxAttachmentHealthService>();
         DiagnosticsBundleService = Services.GetRequiredService<DeskBoxDiagnosticsBundleService>();
@@ -926,6 +930,9 @@ public partial class App : Application
             await RunOptionalStartupStepAsync(
                 "apply-pending-restore",
                 async () => restoreResult = await DataBackupService.ApplyPendingRestoreAsync());
+            await RunOptionalStartupStepAsync(
+                "apply-pending-account-restore",
+                async () => _ = await AccountCloudBackupService.ApplyPendingRestoreAsync());
             bool hadSettingsBeforeStartup = File.Exists(Path.Combine(
                 DeskBoxDataPathService.Current.DataDirectory,
                 "settings.json"));
@@ -1072,6 +1079,8 @@ public partial class App : Application
 
             await themeTask;
             await authSessionRestoreTask;
+            RunOptionalStartupStep("account-cloud-backup", AccountCloudBackupService.Start);
+            RunOptionalStartupStep("tree-cloud-sync", TreeCloudSyncService.Start);
 
             if (FeatureWidgetSettings.IsEnabled(SettingsService.Settings, WidgetKind.Search))
             {
@@ -2998,7 +3007,9 @@ public partial class App : Application
                 _interactionSettings ?? throw new InvalidOperationException("Interaction settings are not initialized."),
                 LocalizationService.T,
                 () => LocalizationService.IsChinese),
-            Services.GetRequiredService<IAuthSession>());
+            Services.GetRequiredService<IAuthSession>(),
+            AccountCloudBackupService,
+            TreeCloudSyncService);
         _settingsWindow.Closed += SettingsWindow_ClosedForApp;
         return _settingsWindow;
     }
@@ -4617,6 +4628,11 @@ public partial class App : Application
             ShutdownStep.Bounded("backup-runtime", () =>
                 _backupRuntime?.StopAsync() ?? Task.CompletedTask,
                 shutdownGrace),
+            ShutdownStep.Bounded("account-cloud-services", async () =>
+            {
+                await TreeCloudSyncService.DisposeAsync();
+                await AccountCloudBackupService.DisposeAsync();
+            }, shutdownGrace),
             ShutdownStep.Bounded("todo-settings", () =>
             {
 #if DEBUG
@@ -4698,9 +4714,11 @@ public partial class App : Application
             ShutdownStep.Sync("tray-icon", () => { _trayIcon?.Dispose(); _trayIcon = null; }),
             ShutdownStep.Sync("activation-registration", () => { _activationRegistration?.Unregister(null); _activationRegistration = null; }),
             ShutdownStep.Sync("activation-event", () => { _activationEvent?.Dispose(); _activationEvent = null; }),
-            // The currently registered disposables are synchronous; container
-            // disposal stays on the UI thread for ThemeService's WinRT objects.
-            ShutdownStep.Sync("service-container", () => Services.Dispose()),
+            // Account cloud services own asynchronous timers. They stop in their
+            // earlier bounded step, and idempotent async disposal lets the
+            // container release every tracked service without rejecting them.
+            ShutdownStep.Bounded("service-container", async () =>
+                await Services.DisposeAsync(), shutdownGrace),
             ShutdownStep.Sync("log-drain", DrainLogQueue),
             ShutdownStep.Sync("single-instance", () =>
             {

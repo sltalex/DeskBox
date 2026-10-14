@@ -44,6 +44,8 @@ public partial class SettingsViewModel
 
     public bool AccountActionsEnabled => !IsAccountBusy;
 
+    public bool IsAccountAuthenticated => _authSession.IsAuthenticated;
+
     public Visibility AccountSignedOutVisibility => _authSession.IsAuthenticated
         ? Visibility.Collapsed
         : Visibility.Visible;

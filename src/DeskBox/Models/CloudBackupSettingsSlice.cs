@@ -52,4 +52,16 @@ public sealed class CloudBackupSettingsSlice
     /// the flag describes the newest run against the current endpoint.
     /// </summary>
     public long CloudBackupLastUnverifiedUtcTicks { get; set; }
+
+    /// <summary>Independent DeskBox account snapshot channel.</summary>
+    public bool AccountCloudBackupEnabled { get; set; }
+
+    /// <summary>The account that explicitly enabled this channel.</summary>
+    public string AccountCloudBackupOwnerUserId { get; set; } = string.Empty;
+
+    /// <summary>UTC ticks of the last accepted account snapshot.</summary>
+    public long AccountCloudBackupLastSuccessUtcTicks { get; set; }
+
+    /// <summary>UTC ticks of the last failed account snapshot attempt.</summary>
+    public long AccountCloudBackupLastFailureUtcTicks { get; set; }
 }

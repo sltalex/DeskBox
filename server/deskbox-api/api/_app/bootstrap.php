@@ -46,17 +46,26 @@ function api_json(array $body, int $status): never
     exit;
 }
 
-function api_body(): array
+function api_body(int $maximumBytes = 8192, bool $allowGzip = false, int $maximumExpandedBytes = 8192): array
 {
-    if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 8192) { throw new ApiError('request_too_large', 'Request body is too large.', 413); }
-    $raw = file_get_contents('php://input', false, null, 0, 8193);
-    if ($raw === false || strlen($raw) > 8192) { throw new ApiError('request_too_large', 'Request body is too large.', 413); }
-    return api_decode_body($raw);
+    if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > $maximumBytes) { throw new ApiError('request_too_large', 'Request body is too large.', 413); }
+    $raw = file_get_contents('php://input', false, null, 0, $maximumBytes + 1);
+    if ($raw === false || strlen($raw) > $maximumBytes) { throw new ApiError('request_too_large', 'Request body is too large.', 413); }
+    $encoding = strtolower(trim((string)($_SERVER['HTTP_CONTENT_ENCODING'] ?? '')));
+    if ($encoding !== '') {
+        if (!$allowGzip || $encoding !== 'gzip') { throw new ApiError('unsupported_content_encoding', 'Unsupported content encoding.', 415); }
+        $expanded = gzdecode($raw, $maximumExpandedBytes);
+        if ($expanded === false || strlen($expanded) > $maximumExpandedBytes) {
+            throw new ApiError('request_too_large', 'Expanded request body is too large.', 413);
+        }
+        $raw = $expanded;
+    }
+    return api_decode_body($raw, $maximumExpandedBytes);
 }
 
-function api_decode_body(string $raw): array
+function api_decode_body(string $raw, int $maximumBytes = 8192): array
 {
-    if (strlen($raw) > 8192) { throw new ApiError('request_too_large', 'Request body is too large.', 413); }
+    if (strlen($raw) > $maximumBytes) { throw new ApiError('request_too_large', 'Request body is too large.', 413); }
     try { $body = json_decode($raw, false, 16, JSON_THROW_ON_ERROR); }
     catch (JsonException) { throw new ApiError('invalid_json', 'Request body must be valid JSON.', 400); }
     if (!is_object($body)) { throw new ApiError('invalid_json', 'Request body must be a JSON object.', 400); }

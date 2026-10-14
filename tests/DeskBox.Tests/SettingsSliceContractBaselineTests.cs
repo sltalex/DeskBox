@@ -237,6 +237,10 @@ public sealed class SettingsSliceContractBaselineTests
         Assert.Equal(24 * 60, s.CloudBackupIntervalMinutes);
         Assert.Equal(0L, s.CloudBackupLastSuccessUtcTicks);
         Assert.Equal(0L, s.CloudBackupLastFailureUtcTicks);
+        Assert.False(s.AccountCloudBackupEnabled);
+        Assert.Equal(string.Empty, s.AccountCloudBackupOwnerUserId);
+        Assert.Equal(0L, s.AccountCloudBackupLastSuccessUtcTicks);
+        Assert.Equal(0L, s.AccountCloudBackupLastFailureUtcTicks);
     }
 
     [Fact]
@@ -491,5 +495,9 @@ public sealed class SettingsSliceContractBaselineTests
         "cloudBackupLastSuccessUtcTicks",
         "cloudBackupLastFailureUtcTicks",
         "cloudBackupLastUnverifiedUtcTicks",
+        "accountCloudBackupEnabled",
+        "accountCloudBackupOwnerUserId",
+        "accountCloudBackupLastSuccessUtcTicks",
+        "accountCloudBackupLastFailureUtcTicks",
     ];
 }
