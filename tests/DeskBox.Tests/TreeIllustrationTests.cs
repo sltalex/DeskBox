@@ -262,7 +262,7 @@ public sealed class TreeIllustrationTests
     }
 
     [Fact]
-    public void TreeProgressPercent_SitsInsideTheNarrowRectangularGrowthTrack()
+    public void TreeProgressTrack_DoesNotRenderPercentageText()
     {
         string source = File.ReadAllText(TestPaths.FromRepository(
             "src/DeskBox/Controls/WidgetContents/TreeWidgetContent.cs"));
@@ -270,7 +270,9 @@ public sealed class TreeIllustrationTests
             "src/DeskBox/Controls/WidgetContents/TreeBubbleProgressBar.cs"));
         Assert.Contains("CornerRadius = new CornerRadius(0)", progressSource, StringComparison.Ordinal);
         Assert.Contains("Height = 16", progressSource, StringComparison.Ordinal);
-        Assert.Contains("_baseLabel.Text = _filledLabel.Text", progressSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_baseLabel", progressSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("_filledLabel", progressSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("$\"{next:0.00}%\"", progressSource, StringComparison.Ordinal);
         Assert.Contains("stack.Children.Add(_progress)", source, StringComparison.Ordinal);
         Assert.Contains("_progress.Margin = new Thickness(16, 8, 16, 4)", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Text = \"🌱\"", source, StringComparison.Ordinal);

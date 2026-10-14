@@ -7,7 +7,6 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Shapes;
-using Microsoft.UI.Text;
 using Windows.Foundation;
 
 namespace DeskBox.Controls.WidgetContents;
@@ -20,25 +19,6 @@ internal sealed partial class TreeBubbleProgressBar : UserControl, IDisposable
     private readonly Grid _fill = new() { HorizontalAlignment = HorizontalAlignment.Left, Width = 0 };
     private readonly Canvas _bubbles = new() { IsHitTestVisible = false };
     private readonly RectangleGeometry _fillClip = new();
-    private readonly RectangleGeometry _labelClip = new();
-    private readonly TextBlock _baseLabel = new()
-    {
-        Text = "0.00%",
-        FontSize = 10,
-        FontWeight = FontWeights.SemiBold,
-        TextAlignment = TextAlignment.Center,
-        VerticalAlignment = VerticalAlignment.Center,
-        Foreground = new SolidColorBrush(ColorHelper.FromArgb(255, 37, 76, 46))
-    };
-    private readonly TextBlock _filledLabel = new()
-    {
-        Text = "0.00%",
-        FontSize = 10,
-        FontWeight = FontWeights.SemiBold,
-        TextAlignment = TextAlignment.Center,
-        VerticalAlignment = VerticalAlignment.Center,
-        Foreground = new SolidColorBrush(Colors.White)
-    };
     private readonly DispatcherTimer _spawnTimer = new();
     private readonly List<Storyboard> _animations = [];
     private double _value;
@@ -63,9 +43,6 @@ internal sealed partial class TreeBubbleProgressBar : UserControl, IDisposable
         _fill.Clip = _fillClip;
         _fill.Children.Add(_bubbles);
         _viewport.Children.Add(_fill);
-        _viewport.Children.Add(_baseLabel);
-        _filledLabel.Clip = _labelClip;
-        _viewport.Children.Add(_filledLabel);
         Content = new Border
         {
             CornerRadius = new CornerRadius(0),
@@ -89,7 +66,6 @@ internal sealed partial class TreeBubbleProgressBar : UserControl, IDisposable
             if (_value == next) return;
             double previous = _value;
             _value = next;
-            _baseLabel.Text = _filledLabel.Text = $"{next:0.00}%";
             UpdateFill();
             FrameworkElementAutomationPeer.FromElement(this)?.RaisePropertyChangedEvent(
                 RangeValuePatternIdentifiers.ValueProperty, previous, next);
@@ -106,7 +82,7 @@ internal sealed partial class TreeBubbleProgressBar : UserControl, IDisposable
     {
         _fill.Width = Math.Max(0, _viewport.ActualWidth) * _value / 100;
         var fillRect = new Rect(0, 0, _fill.Width, Math.Max(0, _viewport.ActualHeight));
-        _fillClip.Rect = _labelClip.Rect = fillRect;
+        _fillClip.Rect = fillRect;
         UpdateAnimationState();
     }
 
