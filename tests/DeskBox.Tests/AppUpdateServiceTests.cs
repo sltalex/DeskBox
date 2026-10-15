@@ -1,7 +1,9 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using System.Text;
+using DeskBox.Core.Persistence;
 using DeskBox.Models;
 using DeskBox.Services;
 using DeskBox.ViewModels;
@@ -412,6 +414,41 @@ public sealed class AppUpdateServiceTests : IDisposable
 
         Assert.True(result.Success, $"{result.FailureKind}: {result.ErrorMessage}");
         Assert.True(File.Exists(result.FilePath));
+        Assert.Equal(payload, await File.ReadAllBytesAsync(result.FilePath!));
+    }
+
+    [Fact]
+    public async Task DownloadUpdateAsync_UsesConcurrentRangesForLargeInstaller()
+    {
+        byte[] payload = new byte[checked((int)(ResumableRangeDownloader.DefaultPartSize * 2 + 123))];
+        Random.Shared.NextBytes(payload);
+        int requests = 0;
+        using var httpClient = CreateHttpClient(request =>
+        {
+            Interlocked.Increment(ref requests);
+            long start = request.Headers.Range?.Ranges.Single().From ?? 0;
+            long end = request.Headers.Range?.Ranges.Single().To ?? payload.LongLength - 1;
+            end = Math.Min(end, payload.LongLength - 1);
+            var response = new HttpResponseMessage(HttpStatusCode.PartialContent)
+            {
+                Content = new ByteArrayContent(payload.AsSpan((int)start, (int)(end - start + 1)).ToArray())
+            };
+            response.Headers.ETag = new EntityTagHeaderValue("\"fixture\"");
+            response.Content.Headers.ContentRange = new ContentRangeHeaderValue(start, end, payload.LongLength);
+            return response;
+        });
+        var service = new AppUpdateService(httpClient, updateRootPath: _tempRoot);
+
+        var result = await service.DownloadUpdateAsync(new AppUpdateManifest
+        {
+            Version = "1.2.9",
+            DownloadUrl = "https://github.com/sltalex/DeskBox/releases/download/v1.2.9/DeskBox_Setup_1.2.9_x64.exe",
+            Sha256 = Convert.ToHexString(SHA256.HashData(payload)),
+            Size = payload.LongLength
+        });
+
+        Assert.True(result.Success, $"{result.FailureKind}: {result.ErrorMessage}");
+        Assert.True(requests >= 3);
         Assert.Equal(payload, await File.ReadAllBytesAsync(result.FilePath!));
     }
 

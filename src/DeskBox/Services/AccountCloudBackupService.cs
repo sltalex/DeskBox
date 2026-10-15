@@ -1,5 +1,7 @@
 using System.IO.Compression;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using DeskBox.Contracts;
 using DeskBox.Core.Persistence;
@@ -117,9 +119,68 @@ internal sealed class AccountCloudBackupService : IAsyncDisposable
                     await gzip.WriteAsync(json, cancellationToken);
                 compressed = output.ToArray();
             }
-            using HttpResponseMessage response = await _api.SendAsync(
-                HttpMethod.Post, "../backup/create.php", compressed, "gzip", cancellationToken);
-            await EnsureSuccessAsync(response, cancellationToken);
+            string packageHash = Convert.ToHexString(SHA256.HashData(compressed));
+            var initRequest = new AccountBackupUploadInitRequest
+            {
+                DeviceId = request.DeviceId, AppVersion = request.AppVersion,
+                TotalBytes = compressed.LongLength, Sha256 = packageHash
+            };
+            byte[] initJson = SerializeUploadInit(initRequest);
+            using HttpResponseMessage initResponse = await _api.SendAsync(HttpMethod.Post, "../backup/upload/init.php", initJson, null, cancellationToken);
+            await EnsureSuccessAsync(initResponse, cancellationToken);
+            AccountBackupUploadInitResponse? upload = null;
+            try
+            {
+                await using Stream initStream = await initResponse.Content.ReadAsStreamAsync(cancellationToken);
+                using JsonDocument document = await JsonDocument.ParseAsync(initStream, cancellationToken: cancellationToken);
+                JsonElement root = document.RootElement;
+                upload = new AccountBackupUploadInitResponse
+                {
+                    UploadId = root.TryGetProperty("upload_id", out JsonElement id) ? id.GetString() ?? string.Empty : string.Empty,
+                    ChunkSize = root.TryGetProperty("chunk_size", out JsonElement size) ? size.GetInt32() : 0,
+                    Received = root.TryGetProperty("received", out JsonElement ranges)
+                        ? ranges.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.Array && item.GetArrayLength() >= 2)
+                            .Select(item => new[] { item[0].GetInt64(), item[1].GetInt64() }).ToArray()
+                        : []
+                };
+            }
+            catch (JsonException) { }
+            if (upload is null || string.IsNullOrWhiteSpace(upload.UploadId) || upload.ChunkSize <= 0)
+            {
+                // Compatibility with an older server during a rolling deployment.
+                using HttpResponseMessage legacy = await _api.SendAsync(HttpMethod.Post, "../backup/create.php", compressed, "gzip", cancellationToken);
+                await EnsureSuccessAsync(legacy, cancellationToken);
+            }
+            else
+            {
+                int chunkSize = Math.Clamp(upload.ChunkSize, 64 * 1024, 4 * 1024 * 1024);
+                var received = upload.Received.Select(range => range.Length >= 2 ? (Start: range[0], End: range[1]) : (Start: -1L, End: -1L)).ToArray();
+                using var gate = new SemaphoreSlim(4);
+                var chunkTasks = Enumerable.Range(0, (int)((compressed.LongLength + chunkSize - 1) / chunkSize))
+                    .Where(index => !received.Any(range => range.Start <= index * (long)chunkSize && range.End >= Math.Min(compressed.LongLength - 1, (index + 1L) * chunkSize - 1)))
+                    .Select(async index =>
+                    {
+                        await gate.WaitAsync(cancellationToken);
+                        try
+                        {
+                            long start = index * (long)chunkSize;
+                            long end = Math.Min(compressed.LongLength - 1, start + chunkSize - 1);
+                            byte[] chunk = compressed.AsSpan((int)start, (int)(end - start + 1)).ToArray();
+                            var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                            {
+                                ["Content-Range"] = $"bytes {start}-{end}/{compressed.LongLength}",
+                                ["X-Chunk-Sha256"] = Convert.ToHexString(SHA256.HashData(chunk))
+                            };
+                            using HttpResponseMessage chunkResponse = await _api.SendBinaryAsync(HttpMethod.Put, $"../backup/upload/chunk.php?upload_id={Uri.EscapeDataString(upload.UploadId)}", chunk, headers, cancellationToken);
+                            await EnsureSuccessAsync(chunkResponse, cancellationToken);
+                        }
+                        finally { gate.Release(); }
+                    });
+                await Task.WhenAll(chunkTasks);
+                byte[] completeJson = Encoding.UTF8.GetBytes($"{{\"upload_id\":\"{upload.UploadId}\"}}");
+                using HttpResponseMessage complete = await _api.SendAsync(HttpMethod.Post, "../backup/upload/complete.php", completeJson, null, cancellationToken);
+                await EnsureSuccessAsync(complete, cancellationToken);
+            }
             cloud.AccountCloudBackupLastSuccessUtcTicks = _clock().UtcTicks;
             cloud.AccountCloudBackupLastFailureUtcTicks = 0;
             cancellationToken.ThrowIfCancellationRequested();
@@ -225,6 +286,21 @@ internal sealed class AccountCloudBackupService : IAsyncDisposable
         }
         catch (JsonException) { }
         throw new AuthApiException(error?.Code ?? "server_error", error?.Message ?? "Account backup request failed.", response.StatusCode);
+    }
+
+    private static byte[] SerializeUploadInit(AccountBackupUploadInitRequest request)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            writer.WriteStartObject();
+            writer.WriteString("device_id", request.DeviceId);
+            writer.WriteString("app_version", request.AppVersion);
+            writer.WriteNumber("total_bytes", request.TotalBytes);
+            writer.WriteString("sha256", request.Sha256);
+            writer.WriteEndObject();
+        }
+        return stream.ToArray();
     }
 
     private void SetBusy(bool value) { IsBusy = value; RaiseStateChanged(); }

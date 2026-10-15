@@ -54,6 +54,26 @@ internal sealed class AccountBackupCreateResponse
     public AccountBackupSnapshotDto Snapshot { get; set; } = new();
 }
 
+internal sealed class AccountBackupUploadInitRequest
+{
+    [JsonPropertyName("device_id")] public string DeviceId { get; set; } = string.Empty;
+    [JsonPropertyName("app_version")] public string AppVersion { get; set; } = string.Empty;
+    [JsonPropertyName("total_bytes")] public long TotalBytes { get; set; }
+    [JsonPropertyName("sha256")] public string Sha256 { get; set; } = string.Empty;
+}
+
+internal sealed class AccountBackupUploadInitResponse
+{
+    [JsonPropertyName("upload_id")] public string UploadId { get; set; } = string.Empty;
+    [JsonPropertyName("chunk_size")] public int ChunkSize { get; set; }
+    [JsonPropertyName("received")] public long[][] Received { get; set; } = [];
+}
+
+internal sealed class AccountBackupUploadCompleteRequest
+{
+    [JsonPropertyName("upload_id")] public string UploadId { get; set; } = string.Empty;
+}
+
 internal sealed class AccountBackupListResponse
 {
     [JsonPropertyName("snapshots")]
@@ -164,6 +184,9 @@ internal sealed class TreePendingOperation
 [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(AccountBackupCreateRequest))]
 [JsonSerializable(typeof(AccountBackupCreateResponse))]
+[JsonSerializable(typeof(AccountBackupUploadInitRequest))]
+[JsonSerializable(typeof(AccountBackupUploadInitResponse))]
+[JsonSerializable(typeof(AccountBackupUploadCompleteRequest))]
 [JsonSerializable(typeof(AccountBackupListResponse))]
 [JsonSerializable(typeof(AccountBackupDownloadResponse))]
 [JsonSerializable(typeof(AccountRestoreMarker))]

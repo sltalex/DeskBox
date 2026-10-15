@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using DeskBox.Core.Persistence;
 using DeskBox.Models;
 
 namespace DeskBox.Services;
@@ -218,6 +219,37 @@ public sealed partial class AppUpdateService : IAppUpdateService
             try
             {
                 Directory.CreateDirectory(targetDirectory);
+                if (manifest.Size >= ResumableRangeDownloader.DefaultPartSize)
+                {
+                    ResumableRangeDownloader.Result ranged = await ResumableRangeDownloader.DownloadAsync(
+                        _httpClient,
+                        sourceUri,
+                        tempPath,
+                        manifest.Size,
+                        progress,
+                        cancellationToken: cancellationToken);
+                    if (ranged == ResumableRangeDownloader.Result.Unsupported)
+                        ResumableRangeDownloader.DiscardState(tempPath);
+                    if (ranged == ResumableRangeDownloader.Result.Completed)
+                    {
+                        string rangedHash;
+                        await using (var completedStream = new FileStream(
+                            tempPath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                            bufferSize: 1024 * 128, useAsync: true))
+                        {
+                            rangedHash = Convert.ToHexString(await SHA256.HashDataAsync(completedStream, cancellationToken));
+                        }
+                        if (!string.Equals(rangedHash, NormalizeSha256(manifest.Sha256), StringComparison.OrdinalIgnoreCase))
+                        {
+                            TryDelete(tempPath);
+                            lastFailure = AppUpdateDownloadResult.Failed(AppUpdateDownloadFailureKind.HashMismatch);
+                            continue;
+                        }
+                        File.Move(tempPath, targetPath, overwrite: true);
+                        progress?.Report(new AppUpdateDownloadProgress(manifest.Size, manifest.Size));
+                        return AppUpdateDownloadResult.Completed(targetPath);
+                    }
+                }
                 long requestedOffset = partialBytes;
                 using var request = new HttpRequestMessage(HttpMethod.Get, sourceUri);
                 if (requestedOffset > 0)

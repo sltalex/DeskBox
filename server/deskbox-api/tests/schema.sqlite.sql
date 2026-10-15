@@ -83,3 +83,24 @@ CREATE TABLE tree_progress_operations (
     PRIMARY KEY (user_id, operation_id),
     FOREIGN KEY (user_id) REFERENCES auth_users(id) ON DELETE CASCADE
 );
+
+CREATE TABLE account_backup_uploads (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    device_id TEXT NOT NULL,
+    app_version TEXT NOT NULL,
+    total_bytes INTEGER NOT NULL,
+    sha256 TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES auth_users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE account_backup_upload_parts (
+    upload_id TEXT NOT NULL,
+    part_start INTEGER NOT NULL,
+    part_end INTEGER NOT NULL,
+    sha256 TEXT NOT NULL,
+    PRIMARY KEY (upload_id, part_start),
+    FOREIGN KEY (upload_id) REFERENCES account_backup_uploads(id) ON DELETE CASCADE
+);

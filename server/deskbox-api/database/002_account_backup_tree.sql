@@ -54,3 +54,25 @@ CREATE TABLE IF NOT EXISTS tree_progress_operations (
     PRIMARY KEY (user_id, operation_id), KEY ix_tree_operations_created (created_at),
     CONSTRAINT fk_tree_operation_user FOREIGN KEY (user_id) REFERENCES auth_users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS account_backup_uploads (
+    id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    user_id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    device_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    app_version VARCHAR(64) NOT NULL,
+    total_bytes BIGINT UNSIGNED NOT NULL,
+    sha256 CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id), KEY ix_account_backup_upload_user (user_id, updated_at),
+    CONSTRAINT fk_account_backup_upload_user FOREIGN KEY (user_id) REFERENCES auth_users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS account_backup_upload_parts (
+    upload_id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    part_start BIGINT UNSIGNED NOT NULL,
+    part_end BIGINT UNSIGNED NOT NULL,
+    sha256 CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    PRIMARY KEY (upload_id, part_start),
+    CONSTRAINT fk_account_backup_upload_part FOREIGN KEY (upload_id) REFERENCES account_backup_uploads (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

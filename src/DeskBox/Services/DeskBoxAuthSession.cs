@@ -179,6 +179,51 @@ internal sealed class DeskBoxAuthSession : IAuthSession, IAuthenticatedAccountAp
         }
     }
 
+    async Task<HttpResponseMessage> IAuthenticatedAccountApi.SendBinaryAsync(
+        HttpMethod method,
+        string relativePath,
+        byte[] body,
+        IReadOnlyDictionary<string, string>? headers,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+        string accessToken;
+        await _operationGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (_session is null)
+                throw new AuthApiException("invalid_session", "Sign in is required.", HttpStatusCode.Unauthorized);
+            accessToken = _session.AccessToken;
+        }
+        finally { _operationGate.Release(); }
+
+        HttpResponseMessage response = await SendRawAuthenticatedAsync(
+            method, relativePath, body, headers, accessToken, cancellationToken);
+        if (response.StatusCode != HttpStatusCode.Unauthorized)
+            return response;
+        response.Dispose();
+
+        await _operationGate.WaitAsync(cancellationToken);
+        try
+        {
+            if (_session is null)
+                throw new AuthApiException("invalid_session", "Sign in is required.", HttpStatusCode.Unauthorized);
+            await RefreshCoreAsync(cancellationToken);
+            accessToken = _session!.AccessToken;
+        }
+        finally { _operationGate.Release(); }
+
+        response = await SendRawAuthenticatedAsync(
+            method, relativePath, body, headers, accessToken, cancellationToken);
+        if (response.StatusCode != HttpStatusCode.Unauthorized)
+            return response;
+        response.Dispose();
+        await _operationGate.WaitAsync(cancellationToken);
+        try { await ClearLocalSessionAsync(cancellationToken); }
+        finally { _operationGate.Release(); }
+        throw new AuthApiException("invalid_session", "The saved session is no longer valid.", HttpStatusCode.Unauthorized);
+    }
+
     private async Task<AuthUser> AuthenticateAsync(
         string endpoint,
         string username,
@@ -407,6 +452,30 @@ internal sealed class DeskBoxAuthSession : IAuthSession, IAuthenticatedAccountAp
             request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
             if (!string.IsNullOrWhiteSpace(contentEncoding))
                 request.Content.Headers.ContentEncoding.Add(contentEncoding);
+        }
+        return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+    }
+
+    private async Task<HttpResponseMessage> SendRawAuthenticatedAsync(
+        HttpMethod method,
+        string relativePath,
+        byte[] body,
+        IReadOnlyDictionary<string, string>? headers,
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(method, relativePath);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        request.Content = new ByteArrayContent(body);
+        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        if (headers is not null)
+        {
+            foreach (var header in headers)
+            {
+                if (!request.Headers.TryAddWithoutValidation(header.Key, header.Value) &&
+                    !request.Content.Headers.TryAddWithoutValidation(header.Key, header.Value))
+                    throw new InvalidOperationException($"Invalid request header: {header.Key}");
+            }
         }
         return await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
     }

@@ -6,6 +6,8 @@ if (!defined('DESKBOX_API_ENTRY')) { http_response_code(404); exit; }
 const ACCOUNT_BACKUP_MAX_FILES = 128;
 const ACCOUNT_BACKUP_MAX_FILE_BYTES = 2 * 1024 * 1024;
 const ACCOUNT_BACKUP_MAX_TOTAL_BYTES = 16 * 1024 * 1024;
+const ACCOUNT_BACKUP_UPLOAD_MAX_BYTES = 64 * 1024 * 1024;
+const ACCOUNT_BACKUP_UPLOAD_CHUNK_BYTES = 4 * 1024 * 1024;
 
 function account_authenticated_user(PDO $pdo, callable $clock): array
 {
@@ -170,6 +172,99 @@ function backup_manifest_hash(array $files): string
         hash_update($context, $file['path'] . "\0" . $file['sha256'] . "\0" . (string)$file['bytes'] . "\n");
     }
     return hash_final($context);
+}
+
+function backup_upload_init(PDO $pdo, string $userId, array $body, callable $clock): array
+{
+    $deviceId = api_string($body, 'device_id');
+    $appVersion = api_string($body, 'app_version');
+    $total = isset($body['total_bytes']) && is_int($body['total_bytes']) ? $body['total_bytes'] : 0;
+    $sha = strtolower(api_string($body, 'sha256'));
+    if ($deviceId === '' || strlen($deviceId) > 128 || strlen($appVersion) > 64 || $total < 1 || $total > ACCOUNT_BACKUP_UPLOAD_MAX_BYTES || !preg_match('/\A[a-f0-9]{64}\z/D', $sha)) {
+        throw new ApiError('invalid_upload', 'Backup upload metadata is invalid.', 400);
+    }
+    $existing = $pdo->prepare('SELECT id FROM account_backup_uploads WHERE user_id = :user_id AND device_id = :device AND total_bytes = :total AND sha256 = :sha ORDER BY updated_at DESC LIMIT 1');
+    $existing->execute([':user_id' => $userId, ':device' => $deviceId, ':total' => $total, ':sha' => $sha]);
+    $existingId = $existing->fetchColumn();
+    if (is_string($existingId) && $existingId !== '') {
+        return ['upload_id' => $existingId, 'chunk_size' => ACCOUNT_BACKUP_UPLOAD_CHUNK_BYTES, 'received' => backup_upload_received($pdo, $existingId)];
+    }
+    $id = auth_random_id(); $now = $clock();
+    $insert = $pdo->prepare('INSERT INTO account_backup_uploads (id, user_id, device_id, app_version, total_bytes, sha256, created_at, updated_at) VALUES (:id, :user_id, :device, :version, :total, :sha, :created, :updated)');
+    $insert->execute([':id' => $id, ':user_id' => $userId, ':device' => $deviceId, ':version' => $appVersion, ':total' => $total, ':sha' => $sha, ':created' => auth_sql_time($now), ':updated' => auth_sql_time($now)]);
+    return ['upload_id' => $id, 'chunk_size' => ACCOUNT_BACKUP_UPLOAD_CHUNK_BYTES, 'received' => []];
+}
+
+function backup_upload_root(): string
+{
+    $root = dirname(__DIR__, 2) . '/_private_uploads';
+    if (!is_dir($root) && !mkdir($root, 0700, true) && !is_dir($root)) { throw new RuntimeException('Upload storage is unavailable.'); }
+    return $root;
+}
+
+function backup_upload_read(PDO $pdo, string $userId, string $uploadId): array
+{
+    if (!preg_match('/\A[a-f0-9]{32}\z/D', $uploadId)) { throw new ApiError('upload_not_found', 'Backup upload was not found.', 404); }
+    $statement = $pdo->prepare('SELECT * FROM account_backup_uploads WHERE id = :id AND user_id = :user_id LIMIT 1');
+    $statement->execute([':id' => $uploadId, ':user_id' => $userId]);
+    $upload = $statement->fetch(PDO::FETCH_ASSOC);
+    if (!is_array($upload)) { throw new ApiError('upload_not_found', 'Backup upload was not found.', 404); }
+    return $upload;
+}
+
+function backup_upload_received(PDO $pdo, string $uploadId): array
+{
+    $statement = $pdo->prepare('SELECT part_start, part_end FROM account_backup_upload_parts WHERE upload_id = :id ORDER BY part_start');
+    $statement->execute([':id' => $uploadId]);
+    return array_map(static fn(array $row): array => [(int)$row['part_start'], (int)$row['part_end']], $statement->fetchAll(PDO::FETCH_ASSOC));
+}
+
+function backup_upload_chunk(PDO $pdo, string $userId, string $uploadId, callable $clock): array
+{
+    $upload = backup_upload_read($pdo, $userId, $uploadId);
+    $range = (string)($_SERVER['HTTP_CONTENT_RANGE'] ?? '');
+    if (!preg_match('/\Abytes (\d+)-(\d+)\/(\d+)\z/D', $range, $matches)) { throw new ApiError('invalid_range', 'Content-Range is required.', 400); }
+    $start = (int)$matches[1]; $end = (int)$matches[2]; $total = (int)$matches[3];
+    if ($total !== (int)$upload['total_bytes'] || $start < 0 || $end < $start || $end >= $total || $end - $start + 1 > ACCOUNT_BACKUP_UPLOAD_CHUNK_BYTES) { throw new ApiError('invalid_range', 'Backup upload range is invalid.', 400); }
+    $raw = file_get_contents('php://input', false, null, 0, $end - $start + 2);
+    if ($raw === false || strlen($raw) !== $end - $start + 1) { throw new ApiError('invalid_chunk', 'Backup upload chunk size is invalid.', 400); }
+    $hash = strtolower((string)($_SERVER['HTTP_X_CHUNK_SHA256'] ?? ''));
+    if (!preg_match('/\A[a-f0-9]{64}\z/D', $hash) || !hash_equals($hash, hash('sha256', $raw))) { throw new ApiError('chunk_hash_mismatch', 'Backup upload chunk hash does not match.', 400); }
+    $path = backup_upload_root() . '/' . $uploadId . '.bin';
+    $handle = fopen($path, 'c+b');
+    if ($handle === false) { throw new RuntimeException('Upload storage is unavailable.'); }
+    try {
+        if (!flock($handle, LOCK_EX)) { throw new RuntimeException('Upload storage is busy.'); }
+        fseek($handle, $start); fwrite($handle, $raw); fflush($handle); flock($handle, LOCK_UN);
+    } finally { fclose($handle); }
+    $driver = (string)$pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    $sql = $driver === 'sqlite'
+        ? 'INSERT INTO account_backup_upload_parts (upload_id, part_start, part_end, sha256) VALUES (:id, :start, :end, :sha) ON CONFLICT(upload_id, part_start) DO UPDATE SET part_end = excluded.part_end, sha256 = excluded.sha256'
+        : 'INSERT INTO account_backup_upload_parts (upload_id, part_start, part_end, sha256) VALUES (:id, :start, :end, :sha) ON DUPLICATE KEY UPDATE part_end = VALUES(part_end), sha256 = VALUES(sha256)';
+    $statement = $pdo->prepare($sql); $statement->execute([':id' => $uploadId, ':start' => $start, ':end' => $end, ':sha' => $hash]);
+    $touch = $pdo->prepare('UPDATE account_backup_uploads SET updated_at = :updated WHERE id = :id AND user_id = :user_id');
+    $touch->execute([':updated' => auth_sql_time($clock()), ':id' => $uploadId, ':user_id' => $userId]);
+    return ['upload_id' => $uploadId, 'received' => backup_upload_received($pdo, $uploadId)];
+}
+
+function backup_upload_complete(PDO $pdo, string $userId, string $uploadId, callable $clock): array
+{
+    $upload = backup_upload_read($pdo, $userId, $uploadId);
+    $parts = backup_upload_received($pdo, $uploadId); $cursor = 0;
+    foreach ($parts as $part) { if ($part[0] !== $cursor) { throw new ApiError('upload_incomplete', 'Backup upload is incomplete.', 409); } $cursor = $part[1] + 1; }
+    if ($cursor !== (int)$upload['total_bytes']) { throw new ApiError('upload_incomplete', 'Backup upload is incomplete.', 409); }
+    $path = backup_upload_root() . '/' . $uploadId . '.bin';
+    $actual = hash_file('sha256', $path);
+    if (!is_string($actual) || !hash_equals((string)$upload['sha256'], $actual)) { throw new ApiError('upload_hash_mismatch', 'Backup upload hash does not match.', 400); }
+    $compressed = file_get_contents($path); $expanded = $compressed === false ? false : gzdecode($compressed, 16 * 1024 * 1024);
+    if ($expanded === false) { throw new ApiError('invalid_backup', 'Backup archive is invalid.', 400); }
+    try { $body = json_decode($expanded, true, 16, JSON_THROW_ON_ERROR); }
+    catch (JsonException) { throw new ApiError('invalid_backup_json', 'Backup archive is not valid JSON.', 400); }
+    if (!is_array($body) || !is_array($body['files'] ?? null)) { throw new ApiError('invalid_backup', 'Backup archive is invalid.', 400); }
+    $result = backup_create_snapshot($pdo, $userId, (string)$upload['device_id'], (string)$upload['app_version'], $body['files'], $clock);
+    $pdo->prepare('DELETE FROM account_backup_uploads WHERE id = :id AND user_id = :user_id')->execute([':id' => $uploadId, ':user_id' => $userId]);
+    @unlink($path);
+    return $result;
 }
 
 function backup_public_snapshot(array $row): array
