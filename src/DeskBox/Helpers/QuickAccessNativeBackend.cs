@@ -115,7 +115,7 @@ internal sealed unsafe partial class ShortcutNativeModule
         {
             return QuickAccessCallFailure(
                 QuickAccessNativeCallFailure.MissingExport,
-                $"The DeskBox native export '{QuickAccessExport}' is missing.");
+                $"The SltBox native export '{QuickAccessExport}' is missing.");
         }
 
         var quickAccessExport =

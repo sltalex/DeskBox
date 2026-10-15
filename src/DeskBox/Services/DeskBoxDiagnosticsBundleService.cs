@@ -303,7 +303,7 @@ public sealed partial class DeskBoxDiagnosticsBundleService
     {
         if (string.IsNullOrWhiteSpace(logFilePath) || !File.Exists(logFilePath))
         {
-            return "DeskBox log was not available when the package was created.";
+            return "SltBox log was not available when the package was created.";
         }
 
         await using var stream = new FileStream(

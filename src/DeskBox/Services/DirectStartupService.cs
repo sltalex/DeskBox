@@ -183,13 +183,13 @@ public sealed partial class DirectStartupService : IStartupService
             !IsCommandOwnedBy(existingRun, executablePath) &&
             CommandTargetExists(existingRun))
             return new(StartupRegistrationState.PathMismatch,
-                "The Run entry belongs to another DeskBox installation.");
+                "The Run entry belongs to another SltBox installation.");
 
         DirectStartupTaskRegistration? existingTask = _taskBackend.Read();
         if (existingTask is not null && !existingTask.IsOwnedBy(executablePath) &&
             File.Exists(existingTask.ExecutablePath))
             return new(StartupRegistrationState.PathMismatch,
-                "The startup task belongs to another DeskBox installation.");
+                "The startup task belongs to another SltBox installation.");
 
         if (!TryEnableScheduledTask(executablePath))
         {

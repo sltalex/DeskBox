@@ -497,7 +497,7 @@ internal sealed partial class DirectStartupTaskBackend : IDirectStartupTaskBacke
                     new XElement(TaskNamespace + "Author", "DeskBox"),
                     new XElement(
                         TaskNamespace + "Description",
-                        "Starts DeskBox promptly after this user signs in."),
+                        "Starts SltBox promptly after this user signs in."),
                     new XElement(TaskNamespace + "URI", $"\\{taskName}")),
                 new XElement(
                     TaskNamespace + "Triggers",

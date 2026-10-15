@@ -6,7 +6,7 @@ namespace DeskBox.Tests;
 public sealed class WidgetContentFactoryTests
 {
     [Theory]
-    [InlineData(WidgetKind.File, "DeskBox", WidgetContentStage.Implemented, true, WidgetContentAvailability.Available)]
+    [InlineData(WidgetKind.File, "SltBox", WidgetContentStage.Implemented, true, WidgetContentAvailability.Available)]
     [InlineData(WidgetKind.QuickCapture, "Quick Capture", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]
     [InlineData(WidgetKind.Weather, "Weather", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]
     [InlineData(WidgetKind.Todo, "Todo", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]

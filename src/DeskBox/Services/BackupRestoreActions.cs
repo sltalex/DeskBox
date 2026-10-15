@@ -104,7 +104,7 @@ public sealed class BackupRestoreActions
     {
         lock (_operationGate)
         {
-            if (_stopping) return AppRelaunchScheduleResult.Failed("DeskBox is shutting down.");
+            if (_stopping) return AppRelaunchScheduleResult.Failed("SltBox is shutting down.");
             // Mark the handoff before the restart callback enters App shutdown.
             AppRelaunchScheduleResult result = _scheduleRelaunch();
             if (result.Started) _preservePendingRestore = true;

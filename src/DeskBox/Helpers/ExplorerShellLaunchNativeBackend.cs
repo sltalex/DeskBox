@@ -99,7 +99,7 @@ internal sealed unsafe partial class ShortcutNativeModule
         {
             return ExplorerShellLaunchCallFailure(
                 ExplorerShellLaunchNativeCallFailure.MissingExport,
-                $"The DeskBox native export '{ExplorerShellLaunchExport}' is missing.");
+                $"The SltBox native export '{ExplorerShellLaunchExport}' is missing.");
         }
 
         var launchExport =

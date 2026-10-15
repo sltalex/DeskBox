@@ -64,7 +64,7 @@ public sealed class StoreStartupService : IStartupService
             if (task.State == StartupTaskState.DisabledByUser)
             {
                 const string message =
-                    "Windows Startup apps has disabled the DeskBox startup task.";
+                    "Windows Startup apps has disabled the SltBox startup task.";
                 global::DeskBox.App.Log($"[StoreStartupService] {message}");
                 return new StartupOperationResult(
                     StartupRegistrationState.DisabledByUser,

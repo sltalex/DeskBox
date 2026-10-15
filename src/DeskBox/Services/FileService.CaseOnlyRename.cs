@@ -54,7 +54,7 @@ public sealed partial class FileService
             catch (Exception rollbackException)
             {
                 throw new IOException(
-                    $"The case-only rename failed and DeskBox could not restore " +
+                    $"The case-only rename failed and SltBox could not restore " +
                     $"'{sourcePath}' from its temporary name.",
                     new AggregateException(
                         renameException,

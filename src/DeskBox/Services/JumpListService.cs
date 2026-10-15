@@ -167,7 +167,7 @@ public static class JumpListService
             var item = Windows.UI.StartScreen.JumpListItem.CreateWithArguments(
                 arguments,
                 displayName);
-            item.GroupName = "DeskBox";
+            item.GroupName = "SltBox";
             item.Description = displayName;
             jumpList.Items.Add(item);
         }

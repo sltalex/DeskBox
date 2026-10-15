@@ -481,7 +481,7 @@ public abstract partial class WidgetWindowBase
         try
         {
             App app = App.Current
-                ?? throw new InvalidOperationException("DeskBox application is unavailable.");
+                ?? throw new InvalidOperationException("SltBox application is unavailable.");
             WidgetManager manager = app.WidgetManager
                 ?? throw new InvalidOperationException("Widget manager is unavailable.");
             string caption = app.LocalizationService.T(

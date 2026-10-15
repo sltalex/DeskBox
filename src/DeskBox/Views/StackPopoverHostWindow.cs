@@ -37,7 +37,7 @@ internal sealed class StackPopoverHostWindow : Window
     private static readonly UIntPtr InputSubclassId = new(0xDDB2);
     public StackPopoverHostWindow(IntPtr ownerWindowHandle)
     {
-        Title = "DeskBox Stack Popover";
+        Title = "SltBox Stack Popover";
         _ownerWindowHandle = ownerWindowHandle;
         _inputSubclassProc = InputSubclassProc;
         WindowHandle = WindowNative.GetWindowHandle(this);

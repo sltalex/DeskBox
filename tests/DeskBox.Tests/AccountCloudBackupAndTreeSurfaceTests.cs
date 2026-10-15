@@ -105,6 +105,28 @@ public sealed class AccountCloudBackupAndTreeSurfaceTests
         Assert.Contains("<Title>SltBox</Title>", project, StringComparison.Ordinal);
         string manifest = File.ReadAllText(TestPaths.FromRepository("src/DeskBox/Package.appxmanifest"));
         Assert.Contains("DisplayName=\"SltBox\"", manifest, StringComparison.Ordinal);
+
+        string settingsWindow = File.ReadAllText(TestPaths.FromRepository("src/DeskBox/Views/SettingsWindow.xaml"));
+        Assert.Contains("Title=\"SltBox Settings\"", settingsWindow, StringComparison.Ordinal);
+        Assert.Equal(2, CountOccurrences(settingsWindow, "Text=\"SltBox\""));
+        Assert.DoesNotContain("Title=\"DeskBox Settings\"", settingsWindow, StringComparison.Ordinal);
+        Assert.DoesNotContain("Text=\"DeskBox\"", settingsWindow, StringComparison.Ordinal);
+
+        string searchPopup = File.ReadAllText(TestPaths.FromRepository("src/DeskBox/Views/SearchPopupWindow.xaml.cs"));
+        Assert.Contains("Search.Filter.DeskBox", searchPopup, StringComparison.Ordinal);
+
+        static int CountOccurrences(string value, string token)
+        {
+            int count = 0;
+            int offset = 0;
+            while ((offset = value.IndexOf(token, offset, StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                offset += token.Length;
+            }
+
+            return count;
+        }
     }
 
     [Fact]

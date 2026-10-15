@@ -319,7 +319,7 @@ public sealed partial class DeskBoxDataBackupService
         {
             if (!HasBackupSourceData())
             {
-                throw new InvalidOperationException("DeskBox data directory is empty.");
+                throw new InvalidOperationException("SltBox data directory is empty.");
             }
 
             Directory.CreateDirectory(destinationDirectory);
@@ -488,7 +488,7 @@ public sealed partial class DeskBoxDataBackupService
         archivePath = Path.GetFullPath(archivePath);
         if (!File.Exists(archivePath))
         {
-            throw new FileNotFoundException("The selected DeskBox backup does not exist.", archivePath);
+            throw new FileNotFoundException("The selected SltBox backup does not exist.", archivePath);
         }
 
         await _gate.WaitAsync(cancellationToken);
@@ -583,7 +583,7 @@ public sealed partial class DeskBoxDataBackupService
         archivePath = Path.GetFullPath(archivePath);
         if (!File.Exists(archivePath))
         {
-            throw new FileNotFoundException("The selected DeskBox backup does not exist.", archivePath);
+            throw new FileNotFoundException("The selected SltBox backup does not exist.", archivePath);
         }
 
         await _gate.WaitAsync(cancellationToken);
@@ -1763,7 +1763,7 @@ public sealed partial class DeskBoxDataBackupService
             manifest.SchemaVersion > BackupSchemaVersion)
         {
             throw new InvalidDataException(
-                $"Unsupported DeskBox backup schema version {manifest.SchemaVersion}.")
+                $"Unsupported SltBox backup schema version {manifest.SchemaVersion}.")
             {
                 Data = { [BackupSchemaVersionDataKey] = manifest.SchemaVersion }
             };
@@ -1909,7 +1909,7 @@ public sealed partial class DeskBoxDataBackupService
         bool isScopedArchive = manifest.Domains is { Count: > 0 };
         if (fileCount == 0 && !isScopedArchive)
         {
-            throw new InvalidDataException("The backup contains no DeskBox data files.");
+            throw new InvalidDataException("The backup contains no SltBox data files.");
         }
 
         if (manifest.SchemaVersion >= 2 &&
@@ -2507,7 +2507,7 @@ public sealed partial class DeskBoxDataBackupService
              !IsPathInsideDirectory(snapshotPath, LegacyAutomaticSnapshotDirectory) &&
              !IsPathInsideDirectory(snapshotPath, PreRestoreBackupDirectory)))
         {
-            throw new InvalidOperationException("The selected backup snapshot is not managed by DeskBox.");
+            throw new InvalidOperationException("The selected backup snapshot is not managed by SltBox.");
         }
 
         await _gate.WaitAsync(cancellationToken);
@@ -2588,7 +2588,7 @@ public sealed partial class DeskBoxDataBackupService
         // worth preserving before a restore overwrites them.
         if (requireSettings && !File.Exists(settingsPath))
         {
-            throw new InvalidOperationException("DeskBox settings are not available for backup.");
+            throw new InvalidOperationException("SltBox settings are not available for backup.");
         }
 
         (string SourcePath, string RelativePath)[] sourceFiles = Directory
@@ -2840,7 +2840,7 @@ public sealed partial class DeskBoxDataBackupService
         }
 
         TryDeleteFile(destinationPath);
-        throw new IOException($"DeskBox data file changed while creating a backup snapshot: '{sourcePath}'.");
+        throw new IOException($"SltBox data file changed while creating a backup snapshot: '{sourcePath}'.");
     }
 
     private void PruneAutomaticSnapshots(string directory, int retentionCount)

@@ -234,7 +234,7 @@ internal sealed unsafe partial class ShortcutNativeModule
         {
             return Failure(
                 ShortcutNativeLoadFailure.UnsupportedArchitecture,
-                $"DeskBox native module ABI supports x64 and ARM64; process architecture is {RuntimeInformation.ProcessArchitecture}.");
+                $"SltBox native module ABI supports x64 and ARM64; process architecture is {RuntimeInformation.ProcessArchitecture}.");
         }
 
         string fullPath;
@@ -285,7 +285,7 @@ internal sealed unsafe partial class ShortcutNativeModule
             {
                 return Failure(
                     ShortcutNativeLoadFailure.AbiMismatch,
-                    $"DeskBox native module ABI mismatch: expected {AbiVersion}, found {actualAbi}.");
+                    $"SltBox native module ABI mismatch: expected {AbiVersion}, found {actualAbi}.");
             }
 
             var capabilitiesProbe = (delegate* unmanaged[Cdecl]<ulong>)(void*)capabilities;
@@ -688,7 +688,7 @@ internal sealed unsafe partial class ShortcutNativeModule
             return true;
         }
 
-        detail = $"The DeskBox native export '{name}' is missing.";
+        detail = $"The SltBox native export '{name}' is missing.";
         return false;
     }
 

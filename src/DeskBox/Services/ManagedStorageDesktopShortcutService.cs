@@ -11,7 +11,7 @@ namespace DeskBox.Services;
 public sealed class ManagedStorageDesktopShortcutService
 {
     internal const string ShortcutFileName = "DeskBox Files.lnk";
-    internal const string ShortcutDescription = "DeskBox managed storage";
+    internal const string ShortcutDescription = "SltBox managed storage";
     private const int MaxNumberedShortcutCandidates = 99;
 
     private readonly SettingsService _settingsService;

@@ -124,7 +124,7 @@ public sealed class QuickLookPreviewService
                     if (IsProcessElevated(proc.Id) && !IsCurrentProcessElevated())
                     {
                         App.Log("[QuickLook] Integrity mismatch detected: QuickLook is running as administrator " +
-                                "but DeskBox is not. Windows blocks pipe access between different integrity levels. " +
+                                "but SltBox is not. Windows blocks pipe access between different integrity levels. " +
                                 "To fix: run QuickLook as a normal user (not as administrator).");
                         return;
                     }

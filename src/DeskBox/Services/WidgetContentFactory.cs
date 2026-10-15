@@ -27,7 +27,7 @@ public sealed class WidgetContentFactory
     [
         new(
             WidgetKind.File,
-            "DeskBox",
+            "SltBox",
             "\uE8A5",
             WidgetContentStage.Implemented,
             CanShowInCreateEntry: true,

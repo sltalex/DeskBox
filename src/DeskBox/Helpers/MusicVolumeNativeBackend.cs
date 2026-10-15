@@ -136,7 +136,7 @@ internal sealed unsafe partial class ShortcutNativeModule
         {
             return MusicVolumeCallFailure(
                 MusicVolumeNativeCallFailure.MissingExport,
-                $"The DeskBox native export '{MusicVolumeExport}' is missing.");
+                $"The SltBox native export '{MusicVolumeExport}' is missing.");
         }
 
         var operationExport =

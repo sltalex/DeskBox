@@ -79,7 +79,7 @@ internal sealed unsafe partial class ShortcutNativeModule
         {
             return RecycleBinCallFailure(
                 RecycleBinNativeCallFailure.MissingExport,
-                $"The DeskBox native export '{RecycleBinExport}' is missing.");
+                $"The SltBox native export '{RecycleBinExport}' is missing.");
         }
 
         var recycleBinExport =
