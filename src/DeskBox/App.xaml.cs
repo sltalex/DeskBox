@@ -4652,6 +4652,8 @@ public partial class App : Application
                 CancelBackgroundMemoryCleanup();
                 Interlocked.Increment(ref s_lightMemoryCleanupGeneration);
             }),
+            ShutdownStep.Bounded("system-monitor", () =>
+                SystemMonitorService.Instance.StopAsync(), shutdownGrace),
             // Observers stop before windows, so topology callbacks cannot
             // access partially closed surfaces. Each owner has its own step.
             ShutdownStep.Sync("display-watcher", () => { _displayAreaWatcher?.Dispose(); _displayAreaWatcher = null; }),

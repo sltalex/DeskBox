@@ -35,7 +35,7 @@ internal sealed class TemperatureProbeClient : IDisposable
         lock (_gate) _latest = default;
         if (_process is { HasExited: false })
         {
-            try { _process.Kill(); } catch { }
+            StopProcess(_process);
         }
         if (DateTimeOffset.UtcNow - _lastAttempt < TimeSpan.FromSeconds(10)) return;
         _lastAttempt = DateTimeOffset.UtcNow;
@@ -95,9 +95,19 @@ internal sealed class TemperatureProbeClient : IDisposable
     {
         Interlocked.Increment(ref _generation);
         _stop?.Cancel();
-        try { if (_process is { HasExited: false }) _process.Kill(); }
-        catch { }
+        if (_process is not null) StopProcess(_process);
         _process?.Dispose();
         _stop?.Dispose();
+    }
+
+    private static void StopProcess(Process process)
+    {
+        try
+        {
+            if (process.HasExited) return;
+            process.Kill(entireProcessTree: true);
+            process.WaitForExit(1000);
+        }
+        catch { }
     }
 }

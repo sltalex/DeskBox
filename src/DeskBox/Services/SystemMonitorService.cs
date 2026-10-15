@@ -21,6 +21,27 @@ internal sealed class SystemMonitorService
     public void SetRefreshInterval(int seconds) =>
         Volatile.Write(ref _refreshIntervalSeconds, FeatureWidgetsSettingsCoordinator.NormalizeRefreshInterval(seconds));
 
+    public async Task StopAsync()
+    {
+        CancellationTokenSource? stop;
+        Task running;
+        lock (_gate)
+        {
+            stop = _stop;
+            _stop = null;
+            running = _runningTask;
+            _listeners.Clear();
+            _history.Clear();
+            _latest = null;
+        }
+
+        stop?.Cancel();
+        stop?.Dispose();
+        try { await running.ConfigureAwait(false); }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { App.LogVerbose($"[SystemMonitor] Shutdown failed: {ex.Message}"); }
+    }
+
     private SystemMonitorService() { }
     internal SystemMonitorService(Func<CancellationToken, Task> testRunner) => _testRunner = testRunner;
     internal int SubscriberCount { get { lock (_gate) return _listeners.Count; } }
