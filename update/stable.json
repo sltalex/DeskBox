@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "channel": "stable",
-  "version": "2026101304",
-  "releaseDate": "2026-10-13",
+  "version": "2026101501",
+  "releaseDate": "2026-10-15",
   "mandatory": false,
-  "downloadUrl": "https://github.com/sltalex/DeskBox/releases/download/v2026101304/DeskBox_Setup_2026101304_x64.exe",
-  "mirrorUrl": "http://sltbox.2leaves.cn/releases/DeskBox_Setup_2026101304_x64.exe",
+  "downloadUrl": "https://github.com/sltalex/DeskBox/releases/download/v2026101501/DeskBox_Setup_2026101501_x64.exe",
+  "mirrorUrl": "http://sltbox.2leaves.cn/releases/DeskBox_Setup_2026101501_x64.exe",
   "manualDownloadUrl": "https://github.com/sltalex/DeskBox/releases",
-  "sha256": "9920db200b4313415b10f053179879a571819e929658531fc822dfa2dbadd252",
-  "size": 71814450,
-  "releaseNotesUrl": "https://github.com/sltalex/DeskBox/releases/tag/v2026101304",
+  "sha256": "d4559d67b2e328ae2669c131efb1d93c07a813b6461e93455ed9de086dd1d159",
+  "size": 72052930,
+  "releaseNotesUrl": "https://github.com/sltalex/DeskBox/releases/tag/v2026101501",
   "summary": {
-    "zh-CN": "DeskBox 2026101304 x64 直发版：自动更新先从 GitHub 下载，失败后改用 HTTP 备用站，并按清单 SHA-256 校验安装包。主程序采用 Native AOT，本次暂无 ARM64 安装包。",
-    "en-US": "DeskBox 2026101304 tries GitHub first, then an HTTP mirror if needed, verifying the installer against the manifest SHA-256. The main x64 app uses Native AOT; ARM64 is not available yet."
+    "zh-CN": "DeskBox 2026101501 x64 直发版：账号云备份支持分片断点上传，更新安装包支持多线程断点下载，并按清单 SHA-256 校验。",
+    "en-US": "DeskBox 2026101501 x64 adds resumable parallel account-backup uploads and multi-range update downloads with SHA-256 verification."
   }
 }
