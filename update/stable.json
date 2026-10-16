@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "channel": "stable",
-  "version": "2026101501",
-  "releaseDate": "2026-10-15",
+  "version": "2026101601",
+  "releaseDate": "2026-10-16",
   "mandatory": false,
-  "downloadUrl": "https://github.com/sltalex/DeskBox/releases/download/v2026101501/DeskBox_Setup_2026101501_x64.exe",
-  "mirrorUrl": "http://sltbox.2leaves.cn/releases/DeskBox_Setup_2026101501_x64.exe",
+  "downloadUrl": "https://github.com/sltalex/DeskBox/releases/download/v2026101601/DeskBox_Setup_2026101601_x64.exe",
+  "mirrorUrl": "http://sltbox.2leaves.cn/releases/DeskBox_Setup_2026101601_x64.exe",
   "manualDownloadUrl": "https://github.com/sltalex/DeskBox/releases",
-  "sha256": "d4559d67b2e328ae2669c131efb1d93c07a813b6461e93455ed9de086dd1d159",
-  "size": 72052930,
-  "releaseNotesUrl": "https://github.com/sltalex/DeskBox/releases/tag/v2026101501",
+  "sha256": "aa00d5d308c529a47c1614974c37b64b32ad1582d664cc2f354c8d6e0c0f4040",
+  "size": 78600603,
+  "releaseNotesUrl": "https://github.com/sltalex/DeskBox/releases/tag/v2026101601",
   "summary": {
-    "zh-CN": "DeskBox 2026101501 x64 直发版：账号云备份支持分片断点上传，更新安装包支持多线程断点下载，并按清单 SHA-256 校验。",
-    "en-US": "DeskBox 2026101501 x64 adds resumable parallel account-backup uploads and multi-range update downloads with SHA-256 verification."
+    "zh-CN": "SltBox 2026101601 x64 兼容桥版本：优化钉钉群文档与收藏体验，并按清单 SHA-256 校验。",
+    "en-US": "SltBox 2026101601 x64 compatibility bridge with improved DingTalk group-document browsing and favorites."
   }
 }
