@@ -576,7 +576,7 @@
   "Widget.Error.OperationCanceled": "操作已取消。",
   "QuickCapture.ImageItem": "圖片",
   "Settings.Section.General": "常規",
-  "Settings.Update.Detail.Ready": "更新資訊和安裝套件均來自 GitHub 上的 sltalex/DeskBox 儲存庫。",
+  "Settings.Update.Detail.Ready": "更新資訊和安裝套件均來自 GitHub 上的 sltalex/SltBox 儲存庫。",
   "Widget.Compact.Reorder": "拖動調整順序",
   "Settings.AttachmentHealth.NotChecked": "尚未檢查附件",
   "WidgetTitleIcon.Label.SystemMonitor": "監控",

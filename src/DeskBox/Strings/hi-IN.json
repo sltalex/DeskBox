@@ -1235,7 +1235,7 @@
   "Settings.Update.OneClick.UpdateTo": "{0} पर अपडेट करें",
   "Settings.Update.OpenStore": "स्टोर खोलें",
   "Settings.Update.Status.Ready": "अद्यतनों की जांच के लिए तैयार हैं",
-  "Settings.Update.Detail.Ready": "अपडेट जानकारी और इंस्टॉलर GitHub पर sltalex/DeskBox से आते हैं।",
+  "Settings.Update.Detail.Ready": "अपडेट जानकारी और इंस्टॉलर GitHub पर sltalex/SltBox से आते हैं।",
   "Settings.Update.Status.Checking": "अपडेट के लिए जाँच की जा रही है",
   "Settings.Update.Detail.Checking": "नवीनतम संस्करण मेटाडेटा पढ़ रहा है...",
   "Settings.Update.Status.UpToDate": "आप अप टू डेट हैं",

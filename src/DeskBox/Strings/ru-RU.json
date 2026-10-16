@@ -1235,7 +1235,7 @@
   "Settings.Update.OneClick.UpdateTo": "Обновление до {0}",
   "Settings.Update.OpenStore": "Открыть магазин",
   "Settings.Update.Status.Ready": "Готов проверить наличие обновлений",
-  "Settings.Update.Detail.Ready": "Метаданные обновления и установщики поступают из sltalex/DeskBox на GitHub.",
+  "Settings.Update.Detail.Ready": "Метаданные обновления и установщики поступают из sltalex/SltBox на GitHub.",
   "Settings.Update.Status.Checking": "Проверка обновлений",
   "Settings.Update.Detail.Checking": "Чтение метаданных последней версии...",
   "Settings.Update.Status.UpToDate": "Вы в курсе",

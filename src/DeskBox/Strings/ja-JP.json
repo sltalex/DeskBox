@@ -1232,7 +1232,7 @@
   "Settings.Update.OneClick.UpdateTo": "{0} にワンクリック更新",
   "Settings.Update.OpenStore": "ストアを開く",
   "Settings.Update.Status.Ready": "アップデートを確認する準備ができました",
-  "Settings.Update.Detail.Ready": "更新情報とインストーラーは GitHub の sltalex/DeskBox から取得します。",
+  "Settings.Update.Detail.Ready": "更新情報とインストーラーは GitHub の sltalex/SltBox から取得します。",
   "Settings.Update.Status.Checking": "アップデートを確認中",
   "Settings.Update.Detail.Checking": "最新バージョンのメタデータを読み込み中...",
   "Settings.Update.Status.UpToDate": "最新です",

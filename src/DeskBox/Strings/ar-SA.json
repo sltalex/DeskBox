@@ -1235,7 +1235,7 @@
   "Settings.Update.OneClick.UpdateTo": "التحديث إلى {0}",
   "Settings.Update.OpenStore": "افتح المتجر",
   "Settings.Update.Status.Ready": "على استعداد للتحقق من وجود تحديثات",
-  "Settings.Update.Detail.Ready": "تأتي بيانات التحديث والمُثبّتات من sltalex/DeskBox على GitHub.",
+  "Settings.Update.Detail.Ready": "تأتي بيانات التحديث والمُثبّتات من sltalex/SltBox على GitHub.",
   "Settings.Update.Status.Checking": "التحقق من وجود تحديثات",
   "Settings.Update.Detail.Checking": "قراءة البيانات التعريفية للإصدار الأحدث...",
   "Settings.Update.Status.UpToDate": "أنت على اطلاع",

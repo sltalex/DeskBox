@@ -1235,7 +1235,7 @@
   "Settings.Update.OneClick.UpdateTo": "Mise à jour vers {0}",
   "Settings.Update.OpenStore": "Ouvrir le magasin",
   "Settings.Update.Status.Ready": "Prêt à vérifier les mises à jour",
-  "Settings.Update.Detail.Ready": "Les métadonnées et les installateurs proviennent de sltalex/DeskBox sur GitHub.",
+  "Settings.Update.Detail.Ready": "Les métadonnées et les installateurs proviennent de sltalex/SltBox sur GitHub.",
   "Settings.Update.Status.Checking": "Vérification des mises à jour",
   "Settings.Update.Detail.Checking": "Lecture des métadonnées de la dernière version...",
   "Settings.Update.Status.UpToDate": "Vous êtes à jour",

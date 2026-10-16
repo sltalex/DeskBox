@@ -97,7 +97,7 @@ public sealed class AccountCloudBackupAndTreeSurfaceTests
             Assert.Equal("SltBox", document.RootElement.GetProperty("Search.Tab.DeskBox").GetString());
             Assert.Contains("SltBox", document.RootElement.GetProperty("Window.Settings.Title").GetString(), StringComparison.Ordinal);
             Assert.Contains("SltBox", document.RootElement.GetProperty("Window.Onboarding.Title").GetString(), StringComparison.Ordinal);
-            Assert.Contains("sltalex/DeskBox", document.RootElement.GetProperty("Settings.Update.Detail.Ready").GetString(), StringComparison.Ordinal);
+            Assert.Contains("sltalex/SltBox", document.RootElement.GetProperty("Settings.Update.Detail.Ready").GetString(), StringComparison.Ordinal);
         }
 
         string project = File.ReadAllText(TestPaths.FromRepository("src/DeskBox/DeskBox.csproj"));

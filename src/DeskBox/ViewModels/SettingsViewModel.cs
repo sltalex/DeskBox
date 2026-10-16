@@ -43,7 +43,7 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     private const string AnimationPresetStandard = "Standard";
     private const string AnimationPresetEmphasized = "Emphasized";
     private const string AnimationPresetCustom = "Custom";
-    private const string RepositoryUrl = "https://github.com/sltalex/DeskBox";
+    private const string RepositoryUrl = "https://github.com/sltalex/SltBox";
 
     private readonly SettingsService _settingsService;
     private readonly ThemeService _themeService;

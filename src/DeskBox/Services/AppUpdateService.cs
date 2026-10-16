@@ -13,9 +13,9 @@ namespace DeskBox.Services;
 
 public sealed partial class AppUpdateService : IAppUpdateService
 {
-    public const string DefaultManifestUrl = "https://raw.githubusercontent.com/sltalex/DeskBox/main/update/stable.json";
-    public const string DefaultGitHubLatestReleaseApiUrl = "https://api.github.com/repos/sltalex/DeskBox/releases/latest";
-    public const string DefaultManualDownloadUrl = "https://github.com/sltalex/DeskBox/releases";
+    public const string DefaultManifestUrl = "https://raw.githubusercontent.com/sltalex/SltBox/main/update/stable.json";
+    public const string DefaultGitHubLatestReleaseApiUrl = "https://api.github.com/repos/sltalex/SltBox/releases/latest";
+    public const string DefaultManualDownloadUrl = "https://github.com/sltalex/SltBox/releases";
     public const string DefaultInstallerMirrorBaseUrl = "http://sltbox.2leaves.cn/releases/";
 
     private readonly HttpClient _httpClient;
@@ -607,7 +607,7 @@ public sealed partial class AppUpdateService : IAppUpdateService
         // which therefore must never be trusted as a manifest origin itself.
         return string.Equals(uri.Host, "github.com", StringComparison.OrdinalIgnoreCase) &&
             uri.AbsolutePath.StartsWith(
-                "/sltalex/DeskBox/releases/download/",
+                "/sltalex/SltBox/releases/download/",
                 StringComparison.OrdinalIgnoreCase);
     }
 

@@ -573,7 +573,7 @@
   "Widget.Error.OperationCanceled": "操作已取消。",
   "QuickCapture.ImageItem": "图片",
   "Settings.Section.General": "常规",
-  "Settings.Update.Detail.Ready": "更新信息和安装包均来自 GitHub 上的 sltalex/DeskBox 仓库。",
+  "Settings.Update.Detail.Ready": "更新信息和安装包均来自 GitHub 上的 sltalex/SltBox 仓库。",
   "Widget.Compact.Reorder": "拖动调整顺序",
   "Settings.AttachmentHealth.NotChecked": "尚未检查附件",
   "WidgetTitleIcon.Label.SystemMonitor": "监控",

@@ -1232,7 +1232,7 @@
   "Settings.Update.OneClick.UpdateTo": "Atualizar para {0}",
   "Settings.Update.OpenStore": "Abrir a Loja",
   "Settings.Update.Status.Ready": "Pronto para verificar atualizações",
-  "Settings.Update.Detail.Ready": "Os metadados e instaladores vêm de sltalex/DeskBox no GitHub.",
+  "Settings.Update.Detail.Ready": "Os metadados e instaladores vêm de sltalex/SltBox no GitHub.",
   "Settings.Update.Status.Checking": "Verificando se há atualizações",
   "Settings.Update.Detail.Checking": "Lendo os metadados da versão mais recente...",
   "Settings.Update.Status.UpToDate": "Você está atualizado",
