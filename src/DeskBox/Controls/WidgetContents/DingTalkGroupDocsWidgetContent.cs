@@ -2,8 +2,8 @@ using DeskBox.Models;
 using DeskBox.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml.Automation;
 using Windows.System;
 
 namespace DeskBox.Controls.WidgetContents;
@@ -12,41 +12,65 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
 {
     private readonly LocalizationService _localization;
     private readonly DingTalkGroupDocumentService _service;
+    private readonly DingTalkGroupDocumentFavorites _favorites;
     private readonly DingTalkGroupDocumentSyncService? _sync;
-    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed };
     private readonly TextBox _search;
-    private readonly StackPanel _groups = new() { Spacing = 10 };
+    private readonly StackPanel _groups = new();
     private readonly Button _refresh = new();
-    private readonly ProgressBar _progress = new() { Minimum = 0, Maximum = 1, Height = 8 };
-    private readonly TextBlock _progressText = new() { TextWrapping = TextWrapping.Wrap, Opacity = 0.75 };
+    private readonly Button _allTab = new() { MinWidth = 0, MinHeight = 28, Padding = new Thickness(10, 2, 10, 2) };
+    private readonly Button _favoritesTab = new() { MinWidth = 0, MinHeight = 28, Padding = new Thickness(10, 2, 10, 2) };
+    private readonly ProgressBar _progress = new() { Minimum = 0, Maximum = 1, Height = 6, Visibility = Visibility.Collapsed };
+    private readonly TextBlock _progressText = new() { TextWrapping = TextWrapping.Wrap, Opacity = 0.75, Visibility = Visibility.Collapsed };
     private bool _loaded;
     private bool _disposed;
+    private bool _showFavorites;
     private int _lastRenderedSegment;
 
     public DingTalkGroupDocsWidgetContent(
         LocalizationService localization,
-        DingTalkGroupDocumentService? service = null)
+        DingTalkGroupDocumentService? service = null,
+        DingTalkGroupDocumentFavorites? favorites = null)
     {
         _localization = localization;
         _service = service ?? App.Current?.Services.GetService<DingTalkGroupDocumentService>()
             ?? new DingTalkGroupDocumentService(new DingTalkDwsClient());
+        _favorites = favorites ?? App.Current?.Services.GetService<DingTalkGroupDocumentFavorites>()
+            ?? new DingTalkGroupDocumentFavorites(new DingTalkDwsClient());
         _sync = App.Current?.Services.GetService<DingTalkGroupDocumentSyncService>();
         _search = new TextBox { PlaceholderText = _localization.T("DingTalkGroupDocs.Search") };
+        _groups.Spacing = (double)Application.Current.Resources["SettingsCardSpacing"];
 
         _refresh.Content = _localization.T("DingTalkGroupDocs.Sync.Button");
+        _allTab.Content = _localization.T("DingTalkGroupDocs.Tab.All");
+        _favoritesTab.Content = _localization.T("DingTalkGroupDocs.Tab.Favorites");
         _refresh.Click += Refresh_Click;
         _service.ProgressChanged += ProgressChanged;
+        _favorites.Changed += FavoritesChanged;
         _search.TextChanged += Search_TextChanged;
+        _allTab.Click += (_, _) => { _showFavorites = false; UpdateTabs(); Render(_service.Documents); };
+        _favoritesTab.Click += (_, _) => { _showFavorites = true; UpdateTabs(); Render(_service.Documents); };
         var header = new Grid { ColumnSpacing = 8 };
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        header.Children.Add(_status);
+        _search.MinWidth = 0;
+        header.Children.Add(_search);
         Grid.SetColumn(_refresh, 1);
         header.Children.Add(_refresh);
 
-        var root = new StackPanel { Spacing = 8, Padding = new Thickness(8, 4, 8, 8) };
+        var tabs = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+        tabs.Children.Add(_allTab);
+        tabs.Children.Add(_favoritesTab);
+        UpdateTabs();
+
+        var root = new StackPanel
+        {
+            Spacing = (double)Application.Current.Resources["SettingsCardSpacing"],
+            Padding = (Thickness)Application.Current.Resources["WidgetCompactSectionPadding"]
+        };
         root.Children.Add(header);
-        root.Children.Add(_search);
+        root.Children.Add(tabs);
+        root.Children.Add(_status);
         root.Children.Add(_progress);
         root.Children.Add(_progressText);
         root.Children.Add(new ScrollViewer
@@ -78,9 +102,9 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
     {
         if (_disposed) return;
         _refresh.IsEnabled = false;
-        _progress.IsIndeterminate = true;
-        _progress.Value = 0;
-        _status.Text = _localization.T("DingTalkGroupDocs.Loading");
+        _progress.Visibility = _service.IsSyncing || !loadOnly ? Visibility.Visible : Visibility.Collapsed;
+        _progress.IsIndeterminate = _progress.Visibility == Visibility.Visible;
+        SetStatus(_localization.T("DingTalkGroupDocs.Loading"));
         try
         {
             // The first six-month scan may take a long time. Keep the already
@@ -88,6 +112,7 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
             IReadOnlyList<DingTalkGroupDocument> documents = _service.IsSyncing
                 ? _service.Documents
                 : await _service.LoadAsync();
+            await _favorites.LoadAsync();
             bool syncUnavailable = false;
             if (!loadOnly)
             {
@@ -95,33 +120,34 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
                 documents = _service.Documents;
             }
             Render(documents);
-            _status.Text = syncUnavailable
+            SetStatus(syncUnavailable
                 ? _localization.T("DingTalkGroupDocs.Sync.NotReady")
                 : _service.Documents.Count == 0
                 ? _localization.T("DingTalkGroupDocs.Empty")
-                : _localization.Format("DingTalkGroupDocs.Count", _service.Documents.Count);
+                : string.Empty);
         }
         catch (DingTalkDwsAuthorizationRequiredException)
         {
-            _status.Text = _localization.T("DingTalkGroupDocs.SignIn");
+            SetStatus(_localization.T("DingTalkGroupDocs.SignIn"));
             Render([]);
         }
         catch (DingTalkDwsMessageReadException)
         {
-            _status.Text = _localization.T("DingTalkGroupDocs.Error");
+            SetStatus(_localization.T("DingTalkGroupDocs.Error"));
             Render(_service.Documents);
         }
         catch (InvalidOperationException ex)
         {
             App.Log($"[DingTalkGroupDocs] Refresh failed: {ex.GetType().Name}");
-            _status.Text = _localization.T("DingTalkGroupDocs.Error");
+            SetStatus(_localization.T("DingTalkGroupDocs.Error"));
             Render(_service.Documents);
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or TimeoutException or HttpRequestException or
-            AuthApiException or FileNotFoundException or System.ComponentModel.Win32Exception or OperationCanceledException)
+            AuthApiException or FileNotFoundException or System.ComponentModel.Win32Exception or OperationCanceledException or
+            System.Text.Json.JsonException)
         {
             App.Log($"[DingTalkGroupDocs] Refresh failed: {ex.GetType().Name}");
-            _status.Text = _localization.T("DingTalkGroupDocs.Error");
+            SetStatus(_localization.T("DingTalkGroupDocs.Error"));
             Render(_service.Documents);
         }
         finally
@@ -129,7 +155,8 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
             if (!_service.IsSyncing)
             {
                 _progress.IsIndeterminate = false;
-                _progress.Value = 1;
+                _progress.Visibility = Visibility.Collapsed;
+                _progressText.Visibility = Visibility.Collapsed;
             }
             _refresh.IsEnabled = !_service.IsSyncing;
         }
@@ -141,19 +168,21 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
         {
             if (_disposed) return;
             _refresh.IsEnabled = !progress.IsRunning;
+            _progress.Visibility = progress.IsRunning ? Visibility.Visible : Visibility.Collapsed;
+            _progressText.Visibility = progress.IsRunning ? Visibility.Visible : Visibility.Collapsed;
             _progress.IsIndeterminate = progress.IsRunning && progress.TotalSegments <= 0;
             _progress.Value = progress.IsRunning && progress.TotalSegments > 0
                 ? progress.EstimatedCompletion
-                : progress.IsRunning ? 0 : 1;
+                : 0;
             if (progress.IsRunning && progress.CompletedSegments == 0 && progress.PagesFetched == 0)
                 _lastRenderedSegment = 0;
             if (progress.IsRunning && progress.CompletedSegments > _lastRenderedSegment)
             {
                 _lastRenderedSegment = progress.CompletedSegments;
                 Render(_service.Documents);
-                _status.Text = _service.Documents.Count == 0
+                SetStatus(_service.Documents.Count == 0
                     ? _localization.T("DingTalkGroupDocs.Empty")
-                    : _localization.Format("DingTalkGroupDocs.Count", _service.Documents.Count);
+                    : string.Empty);
             }
             _progressText.Text = !progress.IsRunning
                 ? string.Empty
@@ -164,11 +193,31 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
         });
     }
 
+    private void FavoritesChanged() => DispatcherQueue.TryEnqueue(() =>
+    {
+        if (!_disposed) Render(_service.Documents);
+    });
+
+    private void SetStatus(string text)
+    {
+        _status.Text = text;
+        _status.Visibility = string.IsNullOrWhiteSpace(text) ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void UpdateTabs()
+    {
+        _allTab.FontWeight = _showFavorites ? Microsoft.UI.Text.FontWeights.Normal : Microsoft.UI.Text.FontWeights.SemiBold;
+        _favoritesTab.FontWeight = _showFavorites ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal;
+        _allTab.Opacity = _showFavorites ? 0.65 : 1;
+        _favoritesTab.Opacity = _showFavorites ? 1 : 0.65;
+    }
+
     private void Render(IReadOnlyList<DingTalkGroupDocument> documents)
     {
         if (_disposed) return;
         string filter = _search.Text?.Trim() ?? string.Empty;
         var groups = documents
+            .Where(document => !_showFavorites || _favorites.IsFavorite(document.Url))
             .Where(document => string.IsNullOrWhiteSpace(filter) ||
                 document.GroupName.Contains(filter, StringComparison.CurrentCultureIgnoreCase) ||
                 document.Title.Contains(filter, StringComparison.CurrentCultureIgnoreCase))
@@ -181,13 +230,12 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
         {
             var card = new Border
             {
-                Padding = new Thickness(10, 8, 10, 8),
-                CornerRadius = new CornerRadius(8),
-                Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent),
-                BorderBrush = new SolidColorBrush(Microsoft.UI.Colors.Gray),
-                BorderThickness = new Thickness(1)
+                Style = (Style)Application.Current.Resources["WidgetGroupDocumentCardStyle"]
             };
-            var panel = new StackPanel { Spacing = 5 };
+            var panel = new StackPanel
+            {
+                Spacing = (double)Application.Current.Resources["WidgetCompactRowSpacing"]
+            };
             panel.Children.Add(new TextBlock
             {
                 Text = group.Key,
@@ -195,19 +243,64 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
             });
             foreach (DingTalkGroupDocument document in group.OrderByDescending(item => item.LastSeenAt))
             {
+                var row = new Grid { ColumnSpacing = 2 };
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
                 var link = new HyperlinkButton
                 {
-                    Content = document.Title,
+                    Content = new TextBlock { Text = document.Title, TextTrimming = TextTrimming.CharacterEllipsis },
+                    MinHeight = 28,
+                    Padding = (Thickness)Application.Current.Resources["WidgetCompactDocumentPadding"],
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     HorizontalContentAlignment = HorizontalAlignment.Left
                 };
                 ToolTipService.SetToolTip(link, document.Url);
                 link.Click += async (_, _) => await Launcher.LaunchUriAsync(new Uri(document.Url));
-                panel.Children.Add(link);
+                row.Children.Add(link);
+
+                var star = new Button
+                {
+                    Style = (Style)Application.Current.Resources["WidgetTitleActionButtonStyle"],
+                    Content = new FontIcon { Glyph = _favorites.IsFavorite(document.Url) ? "\uE735" : "\uE734", FontSize = 14 },
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                string action = _localization.T(_favorites.IsFavorite(document.Url)
+                    ? "DingTalkGroupDocs.Favorite.Remove" : "DingTalkGroupDocs.Favorite.Add");
+                ToolTipService.SetToolTip(star, action);
+                AutomationProperties.SetName(star, action);
+                star.Click += async (_, _) => await ToggleFavoriteAsync(star, document.Url);
+                Grid.SetColumn(star, 1);
+                row.Children.Add(star);
+                panel.Children.Add(row);
             }
             card.Child = panel;
             _groups.Children.Add(card);
         }
+        if (groups.Length == 0 && _showFavorites)
+            _groups.Children.Add(new TextBlock
+            {
+                Text = _localization.T("DingTalkGroupDocs.Favorite.Empty"),
+                Opacity = 0.7,
+                Margin = new Thickness(4, 8, 4, 0)
+            });
+    }
+
+    private async Task ToggleFavoriteAsync(Button button, string url)
+    {
+        button.IsEnabled = false;
+        try
+        {
+            await _favorites.SetFavoriteAsync(url, !_favorites.IsFavorite(url));
+            SetStatus(string.Empty);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidDataException or InvalidOperationException or
+            System.Text.Json.JsonException or ArgumentException or OperationCanceledException or
+            System.ComponentModel.Win32Exception)
+        {
+            App.Log($"[DingTalkGroupDocs] Favorite save failed: {ex.GetType().Name}");
+            SetStatus(_localization.T("DingTalkGroupDocs.Favorite.Error"));
+        }
+        finally { button.IsEnabled = true; }
     }
 
     public void Dispose()
@@ -217,6 +310,7 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
         _refresh.Click -= Refresh_Click;
         _search.TextChanged -= Search_TextChanged;
         _service.ProgressChanged -= ProgressChanged;
+        _favorites.Changed -= FavoritesChanged;
         Loaded -= LoadedHandler;
         Unloaded -= UnloadedHandler;
     }
@@ -227,8 +321,9 @@ public sealed class DingTalkGroupDocsWidgetContentAdapter : WidgetContentAdapter
     public DingTalkGroupDocsWidgetContentAdapter(
         WidgetConfig config,
         LocalizationService localization,
-        DingTalkGroupDocumentService? service = null)
-        : base(config, () => new DingTalkGroupDocsWidgetContent(localization, service))
+        DingTalkGroupDocumentService? service = null,
+        DingTalkGroupDocumentFavorites? favorites = null)
+        : base(config, () => new DingTalkGroupDocsWidgetContent(localization, service, favorites))
     {
     }
 

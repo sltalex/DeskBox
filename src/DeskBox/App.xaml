@@ -65,7 +65,19 @@
             <CornerRadius x:Key="WidgetCornerRadiusSmall">4</CornerRadius>
             <CornerRadius x:Key="WidgetCornerRadiusMedium">6</CornerRadius>
             <CornerRadius x:Key="WidgetCornerRadiusLarge">8</CornerRadius>
+            <x:Double x:Key="SettingsCardSpacing">4</x:Double>
+            <Thickness x:Key="WidgetCompactCardPadding">8,6</Thickness>
+            <Thickness x:Key="WidgetCompactSectionPadding">8,4,8,8</Thickness>
+            <Thickness x:Key="WidgetCompactDocumentPadding">4,2</Thickness>
+            <x:Double x:Key="WidgetCompactRowSpacing">2</x:Double>
             <x:Double x:Key="WidgetTitleTextSize">14</x:Double>
+
+            <Style x:Key="WidgetGroupDocumentCardStyle" TargetType="Border">
+                <Setter Property="Padding" Value="{StaticResource WidgetCompactCardPadding}" />
+                <Setter Property="Background" Value="{ThemeResource WidgetLayerFillSecondaryBrush}" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="CornerRadius" Value="{StaticResource WidgetCornerRadiusSmall}" />
+            </Style>
 
             <FontFamily x:Key="DeskBoxMenuFontFamily">Microsoft YaHei UI, Segoe UI Variable, Segoe UI</FontFamily>
             <x:Double x:Key="DeskBoxMenuItemMinHeight">36</x:Double>

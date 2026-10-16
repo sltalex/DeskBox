@@ -27,6 +27,8 @@ public static class ServiceRegistry
         services.AddSingleton<DingTalkAccountService>(sp => new DingTalkAccountService(sp.GetRequiredService<IAuthenticatedAccountApi>()));
         services.AddSingleton<DingTalkGroupDocumentService>(sp =>
             new DingTalkGroupDocumentService(sp.GetRequiredService<IDingTalkDwsClient>()));
+        services.AddSingleton<DingTalkGroupDocumentFavorites>(sp =>
+            new DingTalkGroupDocumentFavorites(sp.GetRequiredService<IDingTalkDwsClient>()));
         services.AddSingleton<DingTalkGroupDocumentSyncService>(sp =>
             new DingTalkGroupDocumentSyncService(
                 sp.GetRequiredService<DingTalkGroupDocumentService>(),

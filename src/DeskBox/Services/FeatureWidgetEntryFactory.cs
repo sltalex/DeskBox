@@ -34,9 +34,12 @@ public sealed class FeatureWidgetEntryFactory
         bool isAvailable = descriptor.IsAvailable &&
                            _widgetRegistry.CanCreateWindow(descriptor.WidgetKind);
         bool showToggle = FeatureWidgetSettings.IsFeatureWidget(descriptor.WidgetKind);
-        string titleKey = descriptor.WidgetKind == WidgetKind.QuickCapture
-            ? "QuickCapture.Name"
-            : $"{descriptor.WidgetKind}.Title";
+        string titleKey = descriptor.WidgetKind switch
+        {
+            WidgetKind.QuickCapture => "QuickCapture.Name",
+            WidgetKind.DingTalkGroupDocs => "DingTalkGroupDocs.Settings.Title",
+            _ => $"{descriptor.WidgetKind}.Title"
+        };
         string localizedTitle = _localizationService.T(titleKey);
         string statusLabel = _localizationService.T(descriptor.StatusLabelKey);
         string description = _localizationService.T(descriptor.StatusDescriptionKey);

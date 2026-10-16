@@ -37,5 +37,7 @@ public sealed class FeatureWidgetEntryFactoryTests
         });
         Assert.DoesNotContain(entries, entry =>
             entry.Kind is WidgetKind.Tags);
+        Assert.Equal("DingTalk widget", Assert.Single(entries,
+            entry => entry.Kind == WidgetKind.DingTalkGroupDocs).Title);
     }
 }
