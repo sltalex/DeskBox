@@ -70,6 +70,8 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
     // broadcast refresh and the diagnostics pushes below.
     private readonly DeskBox.Features.Backup.BackupSettingsViewModel _backupSettings;
     private readonly LocalizationService _localizationService;
+    private readonly IDingTalkDwsClient _dingTalkDwsClient;
+    private readonly DingTalkAccountService _dingTalkAccountService;
     private readonly WidgetContentFactory _widgetContentFactory;
     private readonly IAppUpdateService _appUpdateService;
     private readonly CancellationTokenSource _lifetimeCts = new();
@@ -169,6 +171,8 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         DeskBox.Features.Maintenance.MaintenanceSettingsViewModel maintenanceSettings,
         DeskBox.Features.Performance.PerformanceSettingsViewModel performanceSettings,
         IAuthSession authSession,
+        IDingTalkDwsClient dingTalkDwsClient,
+        DingTalkAccountService dingTalkAccountService,
         LocalizationService? localizationService = null,
         IAppUpdateService? appUpdateService = null)
     {
@@ -192,6 +196,8 @@ public partial class SettingsViewModel : ObservableObject, IDisposable
         _maintenanceSettings = maintenanceSettings;
         _performanceSettings = performanceSettings;
         _authSession = authSession;
+        _dingTalkDwsClient = dingTalkDwsClient;
+        _dingTalkAccountService = dingTalkAccountService;
         _themeService = themeService;
         _localizationService = localizationService ?? new LocalizationService(settingsService);
         _widgetContentFactory = new WidgetContentFactory(_localizationService);

@@ -111,6 +111,60 @@ internal sealed class TreeProgressUploadRequest
     public long HarvestedDelta { get; set; }
 }
 
+internal sealed class TreeStateSyncRequest
+{
+    [JsonPropertyName("operation_id")]
+    public string OperationId { get; set; } = string.Empty;
+    [JsonPropertyName("device_id")]
+    public string DeviceId { get; set; } = string.Empty;
+    [JsonPropertyName("base_version")]
+    public long BaseVersion { get; set; }
+    [JsonPropertyName("day")]
+    public string Day { get; set; } = string.Empty;
+    [JsonPropertyName("today_growth")]
+    public long TodayGrowth { get; set; }
+    [JsonPropertyName("total_energy")]
+    public long TotalEnergy { get; set; }
+    [JsonPropertyName("stage")]
+    public int Stage { get; set; }
+    [JsonPropertyName("fruit_energy")]
+    public long FruitEnergy { get; set; }
+    [JsonPropertyName("fruit_total")]
+    public long FruitTotal { get; set; }
+    [JsonPropertyName("harvested_total")]
+    public long HarvestedTotal { get; set; }
+}
+
+internal sealed class TreeStateDto
+{
+    [JsonPropertyName("day")]
+    public string Day { get; set; } = string.Empty;
+    [JsonPropertyName("state_version")]
+    public long StateVersion { get; set; }
+    [JsonPropertyName("fruit_cost")]
+    public int FruitCost { get; set; } = TreeProgress.CloudFruitCost;
+    [JsonPropertyName("today_growth")]
+    public long TodayGrowth { get; set; }
+    [JsonPropertyName("total_energy")]
+    public long TotalEnergy { get; set; }
+    [JsonPropertyName("stage")]
+    public int Stage { get; set; }
+    [JsonPropertyName("fruit_energy")]
+    public long FruitEnergy { get; set; }
+    [JsonPropertyName("fruit_inventory")]
+    public long FruitInventory { get; set; }
+    [JsonPropertyName("fruit_total")]
+    public long FruitTotal { get; set; }
+    [JsonPropertyName("harvested_total")]
+    public long HarvestedTotal { get; set; }
+}
+
+internal sealed class TreeStateResponse
+{
+    [JsonPropertyName("state")]
+    public TreeStateDto State { get; set; } = new();
+}
+
 internal sealed class TreeProfileUpdateRequest
 {
     [JsonPropertyName("participating")]
@@ -164,21 +218,10 @@ internal sealed class TreeLeaderboardCurrentUserDto
 internal sealed class TreeCloudState
 {
     public string UserId { get; set; } = string.Empty;
-    public long EnergyBaseline { get; set; }
-    public long FruitBaseline { get; set; }
-    public long HarvestedBaseline { get; set; }
-    public string Day { get; set; } = string.Empty;
-    public long DayBaseline { get; set; }
-    public TreePendingOperation? Pending { get; set; }
-}
-
-internal sealed class TreePendingOperation
-{
-    public TreeProgressUploadRequest Request { get; set; } = new();
-    public long CapturedEnergy { get; set; }
-    public long CapturedFruit { get; set; }
-    public long CapturedHarvested { get; set; }
-    public long CapturedDayGrowth { get; set; }
+    public long StateVersion { get; set; }
+    public TreeStateSyncRequest? Pending { get; set; }
+    public string? ConflictSnapshot { get; set; }
+    public bool RefreshRequired { get; set; }
 }
 
 [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
@@ -191,6 +234,9 @@ internal sealed class TreePendingOperation
 [JsonSerializable(typeof(AccountBackupDownloadResponse))]
 [JsonSerializable(typeof(AccountRestoreMarker))]
 [JsonSerializable(typeof(TreeProgressUploadRequest))]
+[JsonSerializable(typeof(TreeStateSyncRequest))]
+[JsonSerializable(typeof(TreeStateDto))]
+[JsonSerializable(typeof(TreeStateResponse))]
 [JsonSerializable(typeof(TreeProfileUpdateRequest))]
 [JsonSerializable(typeof(TreeProgressUploadResponse))]
 [JsonSerializable(typeof(TreeLeaderboardResponse))]

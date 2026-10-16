@@ -18,6 +18,8 @@ build_*.txt
 *.cache
 *.pdb
 *.exe
+!src/DeskBox/Dws/win-x64/dws.exe
+!src/DeskBox/Dws/win-arm64/dws.exe
 *.dll
 *.msix
 *.msixbundle

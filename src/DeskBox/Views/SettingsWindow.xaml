@@ -3424,6 +3424,29 @@ svc:Localized.DescriptionKey="Settings.DefaultWidth.Description"
 
                         <toolkit:SettingsCard
                             HorizontalContentAlignment="Right"
+                            svc:Localized.HeaderKey="Settings.DingTalk.Title"
+                            svc:Localized.DescriptionKey="Settings.DingTalk.Description"
+                            ContentAlignment="Vertical">
+                            <Grid ColumnSpacing="8" MinWidth="260">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    VerticalAlignment="Center"
+                                    Text="{Binding DingTalkStatusText}"
+                                    TextWrapping="NoWrap"
+                                    TextTrimming="CharacterEllipsis" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                                    <Button Click="DingTalkLink_Click" IsEnabled="{Binding DingTalkActionsEnabled}" Visibility="{Binding DingTalkLinkVisibility}" svc:Localized.Key="Settings.DingTalk.Link" />
+                                    <Button Click="DingTalkRefresh_Click" IsEnabled="{Binding DingTalkActionsEnabled}" Visibility="{Binding DingTalkLinkedVisibility}" svc:Localized.Key="Settings.DingTalk.Refresh" />
+                                    <Button Click="DingTalkUnlink_Click" IsEnabled="{Binding DingTalkActionsEnabled}" Visibility="{Binding DingTalkLinkedVisibility}" svc:Localized.Key="Settings.DingTalk.Unlink" />
+                                    <ProgressRing Width="16" Height="16" IsActive="{Binding IsDingTalkBusy}" Visibility="{Binding IsDingTalkBusy, Converter={StaticResource SettingsBoolToVisibilityConverter}}" />
+                                </StackPanel>
+                            </Grid>
+                        </toolkit:SettingsCard>
+                        <toolkit:SettingsCard
+                            HorizontalContentAlignment="Right"
                             svc:Localized.DescriptionKey="Settings.Language.Description"
                             svc:Localized.HeaderKey="Settings.Language.Title">
                             <toolkit:SettingsCard.HeaderIcon>

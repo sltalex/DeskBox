@@ -4,6 +4,7 @@ namespace DeskBox.Services;
 public sealed class TreeProgress
 {
     public const long StageEnergyInterval = 36_000;
+    public const int CloudFruitCost = 3_000;
     public int DailyGoal { get; set; } = 12000;
     public bool Paused { get; set; }
     public string LocalDay { get; set; } = string.Empty;
@@ -16,7 +17,7 @@ public sealed class TreeProgress
 
     public long MaturityThreshold => 4 * StageEnergyInterval;
     public double MaturityPercentage => Math.Clamp(100.0 * TotalEnergy / MaturityThreshold, 0, 100);
-    public int FruitCost => (DailyGoal + 3) / 4;
+    public int FruitCost => CloudFruitCost;
     public int Stage => Math.Max(HighestStage, StageFor(TotalEnergy));
     public long NextStageThreshold => Stage >= 5 ? MaturityThreshold : (long)Stage * StageEnergyInterval;
     public long NextStageRemainingEnergy => Math.Max(0, NextStageThreshold - TotalEnergy);

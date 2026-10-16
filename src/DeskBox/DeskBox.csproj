@@ -191,6 +191,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Dws\win-x64\dws.exe" Condition="'$(Platform)' != 'ARM64'">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>Dws\win-x64\dws.exe</TargetPath>
+    </Content>
+    <Content Include="Dws\win-arm64\dws.exe" Condition="'$(Platform)' == 'ARM64'">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <TargetPath>Dws\win-arm64\dws.exe</TargetPath>
+    </Content>
+    <None Include="Dws\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="Dws\NOTICE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <None Remove="ThirdParty\Everything\Everything64.dll" />
     <None Remove="ThirdParty\Everything\EverythingARM64.dll" />
     <Content Include="ThirdParty\Everything\Everything64.dll" Condition="'$(EverythingSdkArchitecture)' == 'x64'">

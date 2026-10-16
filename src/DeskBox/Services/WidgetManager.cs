@@ -613,7 +613,12 @@ public sealed partial class WidgetManager
                 WidgetKind.SystemMonitor,
                 async _ => await CreateSingletonContentFeatureWidgetAsync(WidgetKind.SystemMonitor),
                 (enabled, reveal) => SetContentFeatureWidgetEnabledAsync(WidgetKind.SystemMonitor, enabled, reveal),
-                () => HideAndCloseFeatureWidgetAsync(WidgetKind.SystemMonitor))
+                () => HideAndCloseFeatureWidgetAsync(WidgetKind.SystemMonitor)),
+            new(
+                WidgetKind.DingTalkGroupDocs,
+                async _ => await CreateSingletonContentFeatureWidgetAsync(WidgetKind.DingTalkGroupDocs),
+                (enabled, reveal) => SetContentFeatureWidgetEnabledAsync(WidgetKind.DingTalkGroupDocs, enabled, reveal),
+                () => HideAndCloseFeatureWidgetAsync(WidgetKind.DingTalkGroupDocs))
         ];
 
         return handlers.ToDictionary(handler => handler.WidgetKind);
@@ -689,6 +694,14 @@ public sealed partial class WidgetManager
                     request.CancellationToken)),
             new(
                 WidgetKind.SystemMonitor,
+                async request => await CreateContentWidgetFromConfigAsync(
+                    request.Config,
+                    request.KeepPreparedForAnimation,
+                    request.RevealAfterCreate,
+                    request.ShowRaisedWhileInitializing,
+                    request.CancellationToken)),
+            new(
+                WidgetKind.DingTalkGroupDocs,
                 async request => await CreateContentWidgetFromConfigAsync(
                     request.Config,
                     request.KeepPreparedForAnimation,
@@ -2399,6 +2412,7 @@ public sealed partial class WidgetManager
             WidgetKind.Glance => (360, 260),
             WidgetKind.Tree => (300, 340),
             WidgetKind.SystemMonitor => (380, 320),
+            WidgetKind.DingTalkGroupDocs => (420, 460),
             _ => (
                 _settingsService.Settings.DefaultWidgetWidth,
                 _settingsService.Settings.DefaultWidgetHeight)

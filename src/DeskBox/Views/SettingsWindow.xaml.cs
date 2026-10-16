@@ -201,6 +201,8 @@ public sealed partial class SettingsWindow : Window
         DeskBox.Features.Maintenance.MaintenanceSettingsViewModel maintenanceSettings,
         DeskBox.Features.Performance.PerformanceSettingsViewModel performanceSettings,
         IAuthSession authSession,
+        IDingTalkDwsClient dingTalkDwsClient,
+        DingTalkAccountService dingTalkAccountService,
         AccountCloudBackupService accountCloudBackupService,
         TreeCloudSyncService treeCloudSyncService)
     {
@@ -244,6 +246,7 @@ public sealed partial class SettingsWindow : Window
             capsuleSettings, interactionSettings, fileDisplaySettings, fileStackSettings,
             groupNavigationSettings, featureWidgetsSettings, musicSettings,
             managedStorageSettings, maintenanceSettings, performanceSettings, authSession,
+            dingTalkDwsClient, dingTalkAccountService,
             localizationService, App.Current.AppUpdateService);
         LogConstructionCheckpoint("view-model");
         _settingsRootPointerPressedHandler = SettingsRoot_PointerPressedHandled;

@@ -41,7 +41,7 @@ public sealed class TreeCounterService : IDisposable
     public event Action? Changed;
     public TreeProgress Snapshot
     {
-        get { lock (_gate) { _progress.RollDay(DateTime.Now); return Clone(_progress); } }
+        get { lock (_gate) { _progress.RollDay(DateTime.UtcNow); return Clone(_progress); } }
     }
 
     public void SetEnabled(bool enabled)
@@ -75,6 +75,42 @@ public sealed class TreeCounterService : IDisposable
         lock (_gate) result = _progress.Harvest();
         Save(); Changed?.Invoke();
         return result;
+    }
+
+    internal bool TryApplyCloudState(TreeStateDto state, TreeProgress expected)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        lock (_gate)
+        {
+            if (!CloudFieldsEqual(_progress, expected)) return false;
+            ApplyCloudFields(state);
+        }
+        Save();
+        Changed?.Invoke();
+        return true;
+    }
+
+    internal void ApplyAuthoritativeCloudState(TreeStateDto state, Action<TreeProgress> preserveLocal)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        lock (_gate)
+        {
+            preserveLocal(Clone(_progress));
+            ApplyCloudFields(state);
+        }
+        Save();
+        Changed?.Invoke();
+    }
+
+    private void ApplyCloudFields(TreeStateDto state)
+    {
+        _progress.LocalDay = state.Day;
+        _progress.TodayKeys = Math.Max(0, state.TodayGrowth);
+        _progress.TotalEnergy = Math.Max(0, state.TotalEnergy);
+        _progress.HighestStage = Math.Clamp(state.Stage, 1, 5);
+        _progress.FruitEnergy = Math.Clamp(state.FruitEnergy, 0, TreeProgress.CloudFruitCost - 1);
+        _progress.FruitInventory = Math.Max(0, state.FruitInventory);
+        _progress.HarvestedFruit = Math.Max(0, state.HarvestedTotal);
     }
 
     public void Reset()
@@ -141,7 +177,7 @@ public sealed class TreeCounterService : IDisposable
                 lock (_gate)
                 {
                     if (_enabled && !_progress.Paused && _filter.Process((int)data.vkCode, down, (data.flags & Win32Helper.LLKHF_INJECTED) != 0))
-                    { _progress.AddEnergy(1, DateTime.Now); changed = true; }
+                    { _progress.AddEnergy(1, DateTime.UtcNow); changed = true; }
                 }
                 if (changed)
                     NotifyChangedSafely(Changed, ex => App.Log($"[Tree] Keyboard hook observer failed: {ex}"));
@@ -184,6 +220,12 @@ public sealed class TreeCounterService : IDisposable
         TodayKeys = p.TodayKeys, TotalEnergy = p.TotalEnergy, HighestStage = p.HighestStage,
         FruitEnergy = p.FruitEnergy, FruitInventory = p.FruitInventory, HarvestedFruit = p.HarvestedFruit
     };
+
+    private static bool CloudFieldsEqual(TreeProgress left, TreeProgress right) =>
+        left.LocalDay == right.LocalDay && left.TodayKeys == right.TodayKeys &&
+        left.TotalEnergy == right.TotalEnergy && left.HighestStage == right.HighestStage &&
+        left.FruitEnergy == right.FruitEnergy && left.FruitInventory == right.FruitInventory &&
+        left.HarvestedFruit == right.HarvestedFruit;
 
     public void Dispose()
     {

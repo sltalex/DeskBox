@@ -268,6 +268,7 @@ public partial class SettingsViewModel
         WidgetKind.Weather => _localizationService.T("WidgetTitleIcon.Label.Weather"),
         WidgetKind.Tags => _localizationService.T("WidgetTitleIcon.Label.Tags"),
         WidgetKind.SystemMonitor => _localizationService.T("WidgetTitleIcon.Label.SystemMonitor"),
+        WidgetKind.DingTalkGroupDocs => _localizationService.T("WidgetTitleIcon.Label.DingTalkGroupDocs"),
         _ => _localizationService.T("WidgetTitleIcon.Label.Default")
     };
 

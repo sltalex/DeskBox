@@ -118,6 +118,7 @@ public static class WidgetTitleIconKindNames
             WidgetKind.Search => Search,
             WidgetKind.SystemMonitor => SystemMonitor,
             WidgetKind.Tree => Default,
+            WidgetKind.DingTalkGroupDocs => Default,
             _ => Default
         };
     }

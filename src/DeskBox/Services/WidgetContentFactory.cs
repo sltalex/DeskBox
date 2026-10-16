@@ -150,6 +150,17 @@ public sealed class WidgetContentFactory
             HasSettingsPage: true,
             IsFeatureWidget: true,
             SettingsSectionTag: "TreeSettings")
+        ,new(
+            WidgetKind.DingTalkGroupDocs,
+            "DingTalk group documents",
+            "\uE8A5",
+            WidgetContentStage.Implemented,
+            CanShowInCreateEntry: false,
+            WidgetContentAvailability.Available,
+            "WidgetContent.DingTalkGroupDocs.StatusLabel",
+            "WidgetContent.DingTalkGroupDocs.StatusDescription",
+            HasSettingsPage: false,
+            IsFeatureWidget: true)
     ];
 
     private static readonly IReadOnlyDictionary<WidgetKind, WidgetContentDescriptor> Descriptors =
@@ -293,6 +304,7 @@ public sealed class WidgetContentFactory
             new GlanceWidgetContentProvider(),
             new SearchWidgetContentProvider(),
             new TreeWidgetContentProvider(),
+            new DingTalkGroupDocsWidgetContentProvider(),
             new PlaceholderWidgetContentProvider(WidgetKind.Tags),
             new SystemMonitorWidgetContentProvider()
         ];

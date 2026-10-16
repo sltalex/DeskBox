@@ -3008,6 +3008,8 @@ public partial class App : Application
                 LocalizationService.T,
                 () => LocalizationService.IsChinese),
             Services.GetRequiredService<IAuthSession>(),
+            Services.GetRequiredService<IDingTalkDwsClient>(),
+            Services.GetRequiredService<DingTalkAccountService>(),
             AccountCloudBackupService,
             TreeCloudSyncService);
         _settingsWindow.Closed += SettingsWindow_ClosedForApp;

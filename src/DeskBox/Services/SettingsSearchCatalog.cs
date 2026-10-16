@@ -10,6 +10,7 @@ internal static class SettingsSearchCatalog
     internal static IReadOnlyList<SettingsSearchCatalogEntry> Entries { get; } =
     [
         new("General", "Settings.Account.Title", "Settings.Account.SyncBenefit"),
+        new("General", "Settings.DingTalk.Title", "Settings.DingTalk.Description"),
         new("General", "Settings.Language.Title", "Settings.Language.Description"),
         new("General", "Settings.AttachmentStorageMode.Title", "Settings.AttachmentStorageMode.Description"),
         new("General", "Settings.AutoStart.Title", "Settings.AutoStart.Description"),

@@ -510,6 +510,6 @@ public sealed class QuickCaptureSettingsEditorTests : IDisposable
         Assert.Contains("nameof(ImageClipboardEnabled)", bridge, StringComparison.Ordinal);
         Assert.Equal(35, Regex.Matches(bridge, @"nameof\(").Count);
         Assert.DoesNotContain("nameof(ShowRecordsTab)", bridge, StringComparison.Ordinal);
-        Assert.Equal(38, Regex.Matches(bindableShell, @"nameof\(").Count);
+        Assert.Equal(43, Regex.Matches(bindableShell, @"nameof\(").Count);
     }
 }

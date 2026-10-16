@@ -1,0 +1,77 @@
+using System.Text.Json.Serialization;
+
+namespace DeskBox.Services;
+
+internal sealed class DwsAuthStatusDto
+{
+    [JsonPropertyName("authenticated")] public bool Authenticated { get; set; }
+    [JsonPropertyName("token_valid")] public bool TokenValid { get; set; }
+    [JsonPropertyName("refresh_token_valid")] public bool RefreshTokenValid { get; set; }
+    [JsonPropertyName("corp_id")] public string CorpId { get; set; } = string.Empty;
+    [JsonPropertyName("corp_name")] public string CorpName { get; set; } = string.Empty;
+    [JsonPropertyName("user_id")] public string UserId { get; set; } = string.Empty;
+    [JsonPropertyName("user_name")] public string UserName { get; set; } = string.Empty;
+}
+
+internal sealed class DwsEmployeeResponseDto
+{
+    [JsonPropertyName("result")] public DwsEmployeeResultDto[] Result { get; set; } = [];
+    [JsonPropertyName("success")] public bool Success { get; set; }
+}
+
+internal sealed class DwsEmployeeResultDto
+{
+    [JsonPropertyName("orgEmployeeModel")] public DwsEmployeeDto? Employee { get; set; }
+}
+
+internal sealed class DwsEmployeeDto
+{
+    [JsonPropertyName("corpId")] public string CorpId { get; set; } = string.Empty;
+    [JsonPropertyName("userId")] public string UserId { get; set; } = string.Empty;
+    [JsonPropertyName("orgUserName")] public string DisplayName { get; set; } = string.Empty;
+    [JsonPropertyName("orgName")] public string OrganizationName { get; set; } = string.Empty;
+    [JsonPropertyName("avatar")] public string AvatarUrl { get; set; } = string.Empty;
+    [JsonPropertyName("depts")] public DwsDepartmentDto[] Departments { get; set; } = [];
+}
+
+internal sealed class DwsDepartmentDto
+{
+    [JsonPropertyName("deptName")] public string Name { get; set; } = string.Empty;
+    [JsonPropertyName("deptPathName")] public string PathName { get; set; } = string.Empty;
+}
+
+internal sealed class DwsGroupMessagesResponseDto
+{
+    [JsonPropertyName("success")] public bool Success { get; set; }
+    [JsonPropertyName("result")] public DwsGroupMessagesResultDto Result { get; set; } = new();
+}
+
+internal sealed class DwsGroupMessagesResultDto
+{
+    [JsonPropertyName("conversationMessagesList")] public DwsConversationMessagesDto[] Conversations { get; set; } = [];
+    [JsonPropertyName("hasMore")] public bool HasMore { get; set; }
+    [JsonPropertyName("nextCursor")] public string? NextCursor { get; set; }
+}
+
+internal sealed class DwsConversationMessagesDto
+{
+    [JsonPropertyName("openConversationId")] public string ConversationId { get; set; } = string.Empty;
+    [JsonPropertyName("singleChat")] public bool IsSingleChat { get; set; }
+    [JsonPropertyName("title")] public string Title { get; set; } = string.Empty;
+    [JsonPropertyName("messages")] public DwsGroupMessageDto[] Messages { get; set; } = [];
+}
+
+internal sealed class DwsGroupMessageDto
+{
+    [JsonPropertyName("content")] public string Content { get; set; } = string.Empty;
+    [JsonPropertyName("createTime")] public string CreateTime { get; set; } = string.Empty;
+    [JsonPropertyName("openConversationId")] public string ConversationId { get; set; } = string.Empty;
+}
+
+[JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)]
+[JsonSerializable(typeof(DwsAuthStatusDto))]
+[JsonSerializable(typeof(DwsEmployeeResponseDto))]
+[JsonSerializable(typeof(DwsGroupMessagesResponseDto))]
+internal sealed partial class DingTalkDwsJsonContext : JsonSerializerContext
+{
+}

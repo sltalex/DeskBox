@@ -22,9 +22,11 @@ public sealed partial class TreeSettingsSection : UserControl
     private readonly TextBlock _participationLabel = new() { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
     private readonly TextBlock _status = new() { FontSize = 17, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold };
     private readonly TextBlock _growthSummary = new() { FontSize = 13, Opacity = 0.75, TextWrapping = TextWrapping.Wrap };
-    private readonly TextBlock _nextStageProgress = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };
+    // The progress bars remain visible, but the numeric percentage labels are
+    // intentionally hidden to keep the tree card compact and uncluttered.
+    private readonly TextBlock _nextStageProgress = new() { Visibility = Visibility.Collapsed };
     private readonly ProgressBar _nextStageBar = new() { Minimum = 0, Maximum = 100, Height = 8 };
-    private readonly TextBlock _totalGrowthProgress = new() { FontSize = 13, TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _totalGrowthProgress = new() { Visibility = Visibility.Collapsed };
     private readonly ProgressBar _totalGrowthBar = new() { Minimum = 0, Maximum = 100, Height = 8 };
     private readonly TextBlock _leaderboardHint = new() { FontSize = 12, Opacity = 0.72, TextWrapping = TextWrapping.Wrap };
     private readonly TextBlock _currentRankHint = new() { FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap };

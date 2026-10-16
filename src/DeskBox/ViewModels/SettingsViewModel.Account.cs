@@ -107,6 +107,7 @@ public partial class SettingsViewModel
         try
         {
             await _authSession.RestoreAsync(_lifetimeCts.Token);
+            await RestoreDingTalkIdentityAsync();
         }
         catch (OperationCanceledException) when (_lifetimeCts.IsCancellationRequested)
         {
@@ -184,6 +185,10 @@ public partial class SettingsViewModel
     private void OnAccountSessionChanged()
     {
         RefreshAccountPresentation();
+        if (_authSession.IsAuthenticated)
+            _ = RestoreDingTalkIdentityAsync();
+        else
+            ResetDingTalkPresentation();
     }
 
     private void RefreshAccountPresentation()

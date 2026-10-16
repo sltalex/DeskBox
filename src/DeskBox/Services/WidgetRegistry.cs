@@ -67,7 +67,8 @@ public sealed class WidgetRegistry
             new(WidgetKind.Search, CanCreateWindow: true, IsImplemented: true),
             new(WidgetKind.Glance, CanCreateWindow: true, IsImplemented: true),
             new(WidgetKind.SystemMonitor, CanCreateWindow: true, IsImplemented: true),
-            new(WidgetKind.Tree, CanCreateWindow: true, IsImplemented: true)
+            new(WidgetKind.Tree, CanCreateWindow: true, IsImplemented: true),
+            new(WidgetKind.DingTalkGroupDocs, CanCreateWindow: true, IsImplemented: true)
         ]);
     }
 }

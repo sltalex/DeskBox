@@ -11,6 +11,8 @@ internal sealed class TreeCloudSyncService : IAsyncDisposable
     private readonly IAuthenticatedAccountApi _api;
     private readonly IAuthSession _auth;
     private readonly Func<TreeProgress> _readProgress;
+    private readonly Func<TreeStateDto, TreeProgress, bool> _applyCloudState;
+    private readonly Action<TreeStateDto, Action<TreeProgress>> _applyAuthoritativeCloudState;
     private readonly string _stateDirectory;
     private readonly Func<DateTimeOffset> _clock;
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -24,11 +26,19 @@ internal sealed class TreeCloudSyncService : IAsyncDisposable
         IAuthSession auth,
         Func<TreeProgress>? readProgress = null,
         string? stateDirectory = null,
-        Func<DateTimeOffset>? clock = null)
+        Func<DateTimeOffset>? clock = null,
+        Func<TreeStateDto, TreeProgress, bool>? applyCloudState = null,
+        Action<TreeStateDto, Action<TreeProgress>>? applyAuthoritativeCloudState = null)
     {
         _api = api;
         _auth = auth;
+        bool usesProcessCounter = readProgress is null;
         _readProgress = readProgress ?? (() => TreeCounterService.Instance.Snapshot);
+        _applyCloudState = applyCloudState ?? ((state, expected) => TreeCounterService.Instance.TryApplyCloudState(state, expected));
+        _applyAuthoritativeCloudState = applyAuthoritativeCloudState
+            ?? (usesProcessCounter && applyCloudState is null
+                ? (state, preserve) => TreeCounterService.Instance.ApplyAuthoritativeCloudState(state, preserve)
+                : (state, preserve) => { TreeProgress latest = _readProgress(); preserve(latest); _applyCloudState(state, latest); });
         _stateDirectory = stateDirectory ?? Path.Combine(DeskBoxDataPathService.Current.DataDirectory, "sync", "tree");
         _clock = clock ?? (() => DateTimeOffset.Now);
         _auth.SessionChanged += OnSessionChanged;
@@ -39,6 +49,7 @@ internal sealed class TreeCloudSyncService : IAsyncDisposable
     internal TreeLeaderboardCurrentUserDto CurrentUserRank { get; private set; } = new();
     internal DateTimeOffset? LastLeaderboardSuccess { get; private set; }
     internal bool IsOffline { get; private set; }
+    internal bool HasConflict { get; private set; }
 
     internal void Start()
     {
@@ -57,79 +68,55 @@ internal sealed class TreeCloudSyncService : IAsyncDisposable
             Directory.CreateDirectory(_stateDirectory);
             string statePath = StatePath(user.Id);
             TreeCloudState state = await LoadStateAsync(statePath, user.Id, cancellationToken);
+            HasConflict = state.ConflictSnapshot is not null;
+            if (state.RefreshRequired)
+            {
+                await AdoptCloudAfterConflictAsync(statePath, state, await ReadStateAsync(cancellationToken), cancellationToken);
+                return true;
+            }
             TreeProgress local = _readProgress();
-            string localDay = string.IsNullOrWhiteSpace(local.LocalDay)
-                ? _clock().ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)
-                : local.LocalDay;
-            long fruitTotal = checked(local.FruitInventory + local.HarvestedFruit);
-
-            string rebaselinePath = RebaselinePath(user.Id);
-            if (File.Exists(rebaselinePath))
-            {
-                state.EnergyBaseline = local.TotalEnergy;
-                state.FruitBaseline = fruitTotal;
-                state.HarvestedBaseline = local.HarvestedFruit;
-                state.Day = localDay;
-                state.DayBaseline = local.TodayKeys;
-                state.Pending = null;
-                await SaveStateAsync(statePath, state, cancellationToken);
-                AccountBackupFileCatalog.DeleteFileIfExists(rebaselinePath);
-                return false;
-            }
-
-            if (state.Pending is null)
-            {
-                bool rebaselined = false;
-                if (local.TotalEnergy < state.EnergyBaseline) { state.EnergyBaseline = local.TotalEnergy; rebaselined = true; }
-                if (fruitTotal < state.FruitBaseline) { state.FruitBaseline = fruitTotal; rebaselined = true; }
-                if (local.HarvestedFruit < state.HarvestedBaseline) { state.HarvestedBaseline = local.HarvestedFruit; rebaselined = true; }
-                if (!string.Equals(state.Day, localDay, StringComparison.Ordinal))
-                {
-                    state.Day = localDay;
-                    state.DayBaseline = 0;
-                    rebaselined = true;
-                }
-                else if (local.TodayKeys < state.DayBaseline) { state.DayBaseline = local.TodayKeys; rebaselined = true; }
-
-                long energyDelta = local.TotalEnergy - state.EnergyBaseline;
-                long fruitDelta = fruitTotal - state.FruitBaseline;
-                long harvestedDelta = local.HarvestedFruit - state.HarvestedBaseline;
-                long dayDelta = local.TodayKeys - state.DayBaseline;
-                if (energyDelta == 0 && fruitDelta == 0 && harvestedDelta == 0 && dayDelta == 0)
-                {
-                    if (rebaselined) await SaveStateAsync(statePath, state, cancellationToken);
-                    return false;
-                }
-
-                state.Pending = new TreePendingOperation
-                {
-                    Request = new TreeProgressUploadRequest
-                    {
-                        OperationId = Guid.NewGuid().ToString("N"), DeviceId = DeviceIdentity.Id, Day = localDay,
-                        EnergyDelta = energyDelta, DayGrowthDelta = dayDelta,
-                        FruitDelta = fruitDelta, HarvestedDelta = harvestedDelta
-                    },
-                    CapturedEnergy = local.TotalEnergy,
-                    CapturedFruit = fruitTotal,
-                    CapturedHarvested = local.HarvestedFruit,
-                    CapturedDayGrowth = local.TodayKeys
-                };
-                await SaveStateAsync(statePath, state, cancellationToken);
-            }
+            state.Pending ??= CreateRequest(state, local);
+            RefreshPendingSnapshot(state.Pending, local);
+            TreeStateSyncRequest submitted = state.Pending;
+            await SaveStateAsync(statePath, state, cancellationToken);
 
             byte[] json = JsonSerializer.SerializeToUtf8Bytes(
-                state.Pending.Request, AccountCloudJsonContext.Default.TreeProgressUploadRequest);
+                state.Pending, AccountCloudJsonContext.Default.TreeStateSyncRequest);
             using HttpResponseMessage response = await _api.SendAsync(
-                HttpMethod.Post, "../tree/progress.php", json, null, cancellationToken);
+                HttpMethod.Put, "../tree/state.php", json, null, cancellationToken);
+            if (response.StatusCode == HttpStatusCode.Conflict)
+            {
+                // Keep the most recent local snapshot, not only the originally
+                // queued request. While an offline request was waiting, the
+                // keyboard hook may have continued to add energy locally.
+                state.RefreshRequired = true;
+                await SaveStateAsync(statePath, state, cancellationToken);
+                TreeStateDto cloud = await ReadStateAsync(cancellationToken);
+                await AdoptCloudAfterConflictAsync(statePath, state, cloud, cancellationToken);
+                return true;
+            }
+
             await EnsureSuccessAsync(response, cancellationToken);
-            state.EnergyBaseline = state.Pending.CapturedEnergy;
-            state.FruitBaseline = state.Pending.CapturedFruit;
-            state.HarvestedBaseline = state.Pending.CapturedHarvested;
-            state.Day = state.Pending.Request.Day;
-            state.DayBaseline = state.Pending.CapturedDayGrowth;
+            TreeStateResponse body = await JsonSerializer.DeserializeAsync(
+                await response.Content.ReadAsStreamAsync(cancellationToken),
+                AccountCloudJsonContext.Default.TreeStateResponse,
+                cancellationToken) ?? throw new InvalidDataException("The tree state response is empty.");
+            // Compare to the submitted snapshot, not today's local snapshot:
+            // an offline retry can be older than the current local counter.
+            bool applied = _applyCloudState(body.State, ProgressFromRequest(submitted));
+            if (!applied && !MatchesSubmittedState(body.State, submitted))
+            {
+                state.RefreshRequired = true;
+                await SaveStateAsync(statePath, state, cancellationToken);
+                await AdoptCloudAfterConflictAsync(statePath, state, body.State, cancellationToken);
+                return true;
+            }
+            state.StateVersion = body.State.StateVersion;
             state.Pending = null;
+            state.ConflictSnapshot = null;
             await SaveStateAsync(statePath, state, cancellationToken);
             IsOffline = false;
+            HasConflict = false;
             _ = RefreshLeaderboardAfterUploadAsync();
             return true;
         }
@@ -142,14 +129,104 @@ internal sealed class TreeCloudSyncService : IAsyncDisposable
         finally { _gate.Release(); }
     }
 
+    private TreeStateSyncRequest CreateRequest(TreeCloudState state, TreeProgress local) => new()
+    {
+        OperationId = Guid.NewGuid().ToString("N"),
+        DeviceId = DeviceIdentity.Id,
+        BaseVersion = state.StateVersion,
+        // The server's UTC date is the only authoritative day. LocalDay is a
+        // display/cache field and must never make a request target yesterday.
+        Day = _clock().ToUniversalTime().ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+        TodayGrowth = local.TodayKeys,
+        TotalEnergy = local.TotalEnergy,
+        Stage = local.Stage,
+        FruitEnergy = local.FruitEnergy,
+        FruitTotal = checked(local.FruitInventory + local.HarvestedFruit),
+        HarvestedTotal = local.HarvestedFruit
+    };
+
+    private void RefreshPendingSnapshot(TreeStateSyncRequest pending, TreeProgress local)
+    {
+        // Keep the operation id and base version stable for idempotent retry,
+        // but submit all local growth accumulated while the request was offline.
+        TreeStateSyncRequest latest = CreateRequest(new TreeCloudState { StateVersion = pending.BaseVersion }, local);
+        pending.DeviceId = latest.DeviceId;
+        pending.Day = latest.Day;
+        pending.TodayGrowth = latest.TodayGrowth;
+        pending.TotalEnergy = latest.TotalEnergy;
+        pending.Stage = latest.Stage;
+        pending.FruitEnergy = latest.FruitEnergy;
+        pending.FruitTotal = latest.FruitTotal;
+        pending.HarvestedTotal = latest.HarvestedTotal;
+    }
+
+    private TreeStateSyncRequest CreateConflictSnapshot(TreeCloudState state, TreeProgress local)
+    {
+        TreeStateSyncRequest snapshot = CreateRequest(state, local);
+        if (state.Pending is { } pending)
+        {
+            // Retain the queued operation identity/version so the snapshot
+            // documents exactly which optimistic write conflicted.
+            snapshot.OperationId = pending.OperationId;
+            snapshot.BaseVersion = pending.BaseVersion;
+        }
+        return snapshot;
+    }
+
+    private async Task AdoptCloudAfterConflictAsync(string path, TreeCloudState state, TreeStateDto cloud, CancellationToken cancellationToken)
+    {
+        _applyAuthoritativeCloudState(cloud, latest =>
+        {
+            state.ConflictSnapshot = JsonSerializer.Serialize(
+                CreateConflictSnapshot(state, latest), AccountCloudJsonContext.Default.TreeStateSyncRequest);
+            // Run inside the counter's lock: every overwritten field is durably
+            // preserved before the atomic replacement, including in-flight keys.
+            string conflictPath = Path.Combine(_stateDirectory,
+                $"conflict-{AccountBackupFileCatalog.SafeAccountId(state.UserId)}-{Guid.NewGuid():N}.json");
+            File.WriteAllText(conflictPath, state.ConflictSnapshot);
+        });
+        state.Pending = null;
+        state.StateVersion = cloud.StateVersion;
+        state.RefreshRequired = false;
+        await SaveStateAsync(path, state, cancellationToken);
+        IsOffline = false;
+        HasConflict = true;
+        App.Log("[TreeCloud] Cloud conflict: local snapshot preserved; adopted MySQL state.");
+        RaiseLeaderboardChanged();
+    }
+
+    private static TreeProgress ProgressFromRequest(TreeStateSyncRequest request) => new()
+    {
+        LocalDay = request.Day, TodayKeys = request.TodayGrowth, TotalEnergy = request.TotalEnergy,
+        HighestStage = request.Stage, FruitEnergy = request.FruitEnergy,
+        FruitInventory = request.FruitTotal - request.HarvestedTotal, HarvestedFruit = request.HarvestedTotal
+    };
+
+    private static bool MatchesSubmittedState(TreeStateDto cloud, TreeStateSyncRequest request) =>
+        cloud.StateVersion == request.BaseVersion + 1 && cloud.Day == request.Day &&
+        cloud.TotalEnergy == request.TotalEnergy && cloud.TodayGrowth == request.TodayGrowth &&
+        cloud.Stage == request.Stage && cloud.FruitEnergy == request.FruitEnergy &&
+        cloud.FruitTotal == request.FruitTotal && cloud.HarvestedTotal == request.HarvestedTotal;
+
+    private async Task<TreeStateDto> ReadStateAsync(CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await _api.SendAsync(
+            HttpMethod.Get, "../tree/state.php", null, null, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+        TreeStateResponse body = await JsonSerializer.DeserializeAsync(
+            await response.Content.ReadAsStreamAsync(cancellationToken),
+            AccountCloudJsonContext.Default.TreeStateResponse,
+            cancellationToken) ?? throw new InvalidDataException("The tree state response is empty.");
+        return body.State;
+    }
+
     internal async Task<TreeLeaderboardEntryDto[]> RefreshLeaderboardAsync(CancellationToken cancellationToken = default)
     {
         if (!_auth.IsAuthenticated) return Leaderboard;
-        string day = _clock().ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         try
         {
             using HttpResponseMessage response = await _api.SendAsync(
-                HttpMethod.Get, $"../tree/leaderboard.php?day={day}", null, null, cancellationToken);
+                HttpMethod.Get, "../tree/leaderboard.php", null, null, cancellationToken);
             await EnsureSuccessAsync(response, cancellationToken);
             await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             TreeLeaderboardResponse body = await JsonSerializer.DeserializeAsync(
@@ -215,10 +292,44 @@ internal sealed class TreeCloudSyncService : IAsyncDisposable
         if (!File.Exists(path)) return new TreeCloudState { UserId = userId };
         try
         {
-            TreeCloudState? state = JsonSerializer.Deserialize(
-                await File.ReadAllTextAsync(path, cancellationToken), AccountCloudJsonContext.Default.TreeCloudState);
-            return state is not null && string.Equals(state.UserId, userId, StringComparison.Ordinal)
-                ? state : new TreeCloudState { UserId = userId };
+            string json = await File.ReadAllTextAsync(path, cancellationToken);
+            TreeCloudState? state = JsonSerializer.Deserialize(json, AccountCloudJsonContext.Default.TreeCloudState);
+            if (state is not null && string.Equals(state.UserId, userId, StringComparison.Ordinal)
+                && (state.Pending is not null || state.StateVersion != 0 || state.ConflictSnapshot is not null || state.RefreshRequired))
+                return state;
+
+            // Migrate the former delta queue without silently dropping its
+            // operation. The next sync refreshes the snapshot from the current
+            // local counter while retaining a stable operation identity.
+            using JsonDocument document = JsonDocument.Parse(json);
+            if (document.RootElement.TryGetProperty("pending", out JsonElement legacyPending)
+                && legacyPending.TryGetProperty("request", out JsonElement request))
+            {
+                TreeStateSyncRequest? oldRequest = request.Deserialize(AccountCloudJsonContext.Default.TreeProgressUploadRequest) is { } delta
+                    ? new TreeStateSyncRequest
+                    {
+                        OperationId = delta.OperationId,
+                        DeviceId = delta.DeviceId,
+                        BaseVersion = 0,
+                        Day = delta.Day,
+                        TodayGrowth = 0,
+                        TotalEnergy = 0,
+                        Stage = 1,
+                        FruitEnergy = 0,
+                        FruitTotal = 0,
+                        HarvestedTotal = 0
+                    } : null;
+                if (oldRequest is not null)
+                {
+                    if (legacyPending.TryGetProperty("capturedEnergy", out JsonElement energy)) oldRequest.TotalEnergy = energy.GetInt64();
+                    if (legacyPending.TryGetProperty("capturedDayGrowth", out JsonElement growth)) oldRequest.TodayGrowth = growth.GetInt64();
+                    if (legacyPending.TryGetProperty("capturedFruit", out JsonElement fruit)) oldRequest.FruitTotal = fruit.GetInt64();
+                    if (legacyPending.TryGetProperty("capturedHarvested", out JsonElement harvested)) oldRequest.HarvestedTotal = harvested.GetInt64();
+                    oldRequest.Stage = TreeProgress.StageFor(oldRequest.TotalEnergy);
+                    return new TreeCloudState { UserId = userId, Pending = oldRequest };
+                }
+            }
+            return new TreeCloudState { UserId = userId };
         }
         catch (JsonException) { return new TreeCloudState { UserId = userId }; }
     }
@@ -232,8 +343,6 @@ internal sealed class TreeCloudSyncService : IAsyncDisposable
     }
 
     private string StatePath(string userId) => Path.Combine(_stateDirectory, $"state-{AccountBackupFileCatalog.SafeAccountId(userId)}.json");
-    private string RebaselinePath(string userId) => Path.Combine(_stateDirectory, $"rebaseline-{AccountBackupFileCatalog.SafeAccountId(userId)}.json");
-
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         if (response.IsSuccessStatusCode) return;

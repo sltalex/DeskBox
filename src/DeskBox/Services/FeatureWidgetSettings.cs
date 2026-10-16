@@ -146,6 +146,7 @@ public static class FeatureWidgetSettings
             // Tree counting is opt-in for a new installation because it
             // observes keyboard presses while the application is running.
             WidgetKind.Tree => false,
+            WidgetKind.DingTalkGroupDocs => false,
             _ => false
         };
     }

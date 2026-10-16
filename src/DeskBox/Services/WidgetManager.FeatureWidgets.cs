@@ -376,6 +376,7 @@ public sealed partial class WidgetManager
             WidgetKind.Tree => "Tree.Title",
             WidgetKind.Tags => "Tags.Title",
             WidgetKind.SystemMonitor => "SystemMonitor.Title",
+            WidgetKind.DingTalkGroupDocs => "DingTalkGroupDocs.Title",
             _ => string.Empty
         };
 
@@ -425,6 +426,7 @@ public sealed partial class WidgetManager
                 WidgetKind.Glance => 360,
                 WidgetKind.Tree => 300,
                 WidgetKind.SystemMonitor => 380,
+                WidgetKind.DingTalkGroupDocs => 420,
                 _ => Math.Max(_settingsService.Settings.DefaultWidgetWidth, 320)
             },
             Height = kind switch
@@ -435,6 +437,7 @@ public sealed partial class WidgetManager
                 WidgetKind.Glance => 260,
                 WidgetKind.Tree => 340,
                 WidgetKind.SystemMonitor => 320,
+                WidgetKind.DingTalkGroupDocs => 460,
                 _ => Math.Max(_settingsService.Settings.DefaultWidgetHeight, 360)
             }
         };

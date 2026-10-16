@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+const TREE_FRUIT_COST = 3000;
+
 if (!defined('DESKBOX_API_ENTRY')) { http_response_code(404); exit; }
 
 const ACCOUNT_BACKUP_MAX_FILES = 128;
@@ -335,6 +337,89 @@ function tree_apply_progress(PDO $pdo, string $userId, array $body, callable $cl
     }
 }
 
+function tree_read_state(PDO $pdo, string $userId, string $day): array
+{
+    if (!tree_valid_day($day)) { throw new ApiError('invalid_day', 'State day is invalid.', 400); }
+    tree_ensure_profile($pdo, $userId, new DateTimeImmutable($day . 'T00:00:00Z'), (string)$pdo->getAttribute(PDO::ATTR_DRIVER_NAME));
+    $profile = $pdo->prepare('SELECT state_version, total_energy, fruit_total, harvested_total, stage, fruit_energy FROM tree_profiles WHERE user_id = :user_id');
+    $profile->execute([':user_id' => $userId]);
+    $row = $profile->fetch(PDO::FETCH_ASSOC);
+    if (!is_array($row)) { throw new RuntimeException('Tree profile is missing.'); }
+    $daily = $pdo->prepare('SELECT growth FROM tree_daily_progress WHERE user_id = :user_id AND progress_day = :day');
+    $daily->execute([':user_id' => $userId, ':day' => $day]);
+    $fruitTotal = (int)$row['fruit_total'];
+    $harvested = (int)$row['harvested_total'];
+    return [
+        'day' => $day,
+        'state_version' => (int)$row['state_version'],
+        'fruit_cost' => TREE_FRUIT_COST,
+        'today_growth' => (int)($daily->fetchColumn() ?: 0),
+        'total_energy' => (int)$row['total_energy'],
+        'stage' => (int)$row['stage'],
+        'fruit_energy' => (int)$row['fruit_energy'],
+        'fruit_inventory' => max(0, $fruitTotal - $harvested),
+        'fruit_total' => $fruitTotal,
+        'harvested_total' => $harvested,
+    ];
+}
+
+function tree_apply_state(PDO $pdo, string $userId, array $body, callable $clock): array
+{
+    $operationId = data_string($body, 'operation_id');
+    $deviceId = data_string($body, 'device_id');
+    $day = data_string($body, 'day');
+    $baseVersion = data_nonnegative_int($body, 'base_version');
+    $todayGrowth = data_nonnegative_int($body, 'today_growth');
+    $totalEnergy = data_nonnegative_int($body, 'total_energy');
+    $stage = data_nonnegative_int($body, 'stage');
+    $fruitEnergy = data_nonnegative_int($body, 'fruit_energy');
+    $fruitTotal = data_nonnegative_int($body, 'fruit_total');
+    $harvested = data_nonnegative_int($body, 'harvested_total');
+    if (!preg_match('/\A[A-Za-z0-9_-]{16,64}\z/D', $operationId)) { throw new ApiError('invalid_operation', 'Operation identifier is invalid.', 400); }
+    if ($deviceId === '' || strlen($deviceId) > 128) { throw new ApiError('invalid_device', 'Device identifier is invalid.', 400); }
+    $now = $clock();
+    $serverDay = $now->format('Y-m-d');
+    if ($day !== $serverDay) { throw new ApiError('state_conflict', 'The state day is stale.', 409); }
+    if ($stage < 1 || $stage > 5 || $stage !== tree_stage($totalEnergy)) { throw new ApiError('invalid_state', 'Tree stage does not match total energy.', 400); }
+    if ($todayGrowth > $totalEnergy || $fruitEnergy >= TREE_FRUIT_COST || $harvested > $fruitTotal) { throw new ApiError('invalid_state', 'Tree fruit or growth state is invalid.', 400); }
+    $driver = (string)$pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+    try {
+        $pdo->beginTransaction();
+        tree_ensure_profile($pdo, $userId, $now, $driver);
+        $lock = $pdo->prepare('SELECT state_version FROM tree_profiles WHERE user_id = :user_id' . ($driver === 'sqlite' ? '' : ' FOR UPDATE'));
+        $lock->execute([':user_id' => $userId]);
+        $currentVersion = (int)$lock->fetchColumn();
+        $existing = $pdo->prepare('SELECT 1 FROM tree_progress_operations WHERE user_id = :user_id AND operation_id = :operation_id');
+        $existing->execute([':user_id' => $userId, ':operation_id' => $operationId]);
+        if ($existing->fetchColumn() !== false) {
+            $state = tree_read_state($pdo, $userId, $serverDay);
+            $pdo->commit();
+            return ['duplicate' => true, 'state' => $state];
+        }
+        if ($baseVersion !== $currentVersion) { throw new ApiError('state_conflict', 'The tree state has changed on another device.', 409); }
+        $insert = $pdo->prepare($driver === 'sqlite'
+            ? 'INSERT INTO tree_progress_operations (user_id, operation_id, device_id, progress_day, energy_delta, day_growth_delta, fruit_delta, harvested_delta, created_at) VALUES (:user_id, :operation_id, :device_id, :day, 0, 0, 0, 0, :created_at)'
+            : 'INSERT INTO tree_progress_operations (user_id, operation_id, device_id, progress_day, energy_delta, day_growth_delta, fruit_delta, harvested_delta, created_at) VALUES (:user_id, :operation_id, :device_id, :day, 0, 0, 0, 0, :created_at)');
+        $insert->execute([':user_id' => $userId, ':operation_id' => $operationId, ':device_id' => $deviceId, ':day' => $serverDay, ':created_at' => auth_sql_time($now)]);
+        $update = $pdo->prepare('UPDATE tree_profiles SET total_energy = :energy, fruit_total = :fruit, harvested_total = :harvested, stage = :stage, fruit_energy = :fruit_energy, state_version = state_version + 1, updated_at = :updated_at WHERE user_id = :user_id');
+        $update->execute([
+            ':energy' => $totalEnergy, ':fruit' => $fruitTotal, ':harvested' => $harvested,
+            ':stage' => $stage, ':fruit_energy' => $fruitEnergy, ':updated_at' => auth_sql_time($now), ':user_id' => $userId,
+        ]);
+        $daily = $driver === 'sqlite'
+            ? 'INSERT INTO tree_daily_progress (user_id, progress_day, growth) VALUES (:user_id, :day, :growth) ON CONFLICT(user_id, progress_day) DO UPDATE SET growth = excluded.growth'
+            : 'INSERT INTO tree_daily_progress (user_id, progress_day, growth) VALUES (:user_id, :day, :growth) ON DUPLICATE KEY UPDATE growth = VALUES(growth)';
+        $dailyStatement = $pdo->prepare($daily);
+        $dailyStatement->execute([':user_id' => $userId, ':day' => $serverDay, ':growth' => $todayGrowth]);
+        $state = tree_read_state($pdo, $userId, $serverDay);
+        $pdo->commit();
+        return ['duplicate' => false, 'state' => $state];
+    } catch (Throwable $error) {
+        if ($pdo->inTransaction()) { $pdo->rollBack(); }
+        throw $error;
+    }
+}
+
 function tree_update_profile(PDO $pdo, string $userId, bool $participates, callable $clock): array
 {
     $driver = (string)$pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
@@ -428,5 +513,12 @@ function data_delta(array $body, string $key): int
     if (!is_int($value) || $value < 0 || $value > 1000000000) {
         throw new ApiError('invalid_progress', 'Progress delta is invalid.', 400);
     }
+    return $value;
+}
+
+function data_nonnegative_int(array $body, string $key): int
+{
+    $value = $body[$key] ?? null;
+    if (!is_int($value) || $value < 0) { throw new ApiError('invalid_state', 'Tree state value is invalid.', 400); }
     return $value;
 }

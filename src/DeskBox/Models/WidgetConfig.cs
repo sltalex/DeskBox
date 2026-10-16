@@ -242,7 +242,10 @@ public enum WidgetKind
     Glance,
 
     /// <summary>Keyboard-energy tree widget.</summary>
-    Tree
+    Tree,
+
+    /// <summary>Read-only DingTalk group document link catalog.</summary>
+    DingTalkGroupDocs
 }
 
 public sealed class WidgetKindJsonConverter : JsonConverter<WidgetKind>

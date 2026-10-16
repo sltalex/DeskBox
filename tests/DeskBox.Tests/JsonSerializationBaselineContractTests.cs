@@ -40,6 +40,9 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             ["src/DeskBox/Services/DesktopAutoOrganizationSuppressionRegistry.cs"] = 2,
             ["src/DeskBox/Services/DesktopOrganizationHistoryStore.cs"] = 2,
             ["src/DeskBox/Services/DesktopOrganizationRecoveryStore.cs"] = 2,
+            ["src/DeskBox/Services/DingTalkAccountService.cs"] = 4,
+            ["src/DeskBox/Services/DingTalkDwsClient.cs"] = 1,
+            ["src/DeskBox/Services/DingTalkGroupDocumentService.cs"] = 2,
             ["src/DeskBox/Services/GlanceImageService.cs"] = 2,
             ["src/DeskBox/Services/GlanceWidgetStore.cs"] = 7,
             ["src/DeskBox/Services/LocalizationService.cs"] = 1,
@@ -54,7 +57,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             ["src/DeskBox/Services/SyncStateStore.cs"] = 2,
             ["src/DeskBox/Services/TodoWidgetStore.cs"] = 3,
             ["src/DeskBox/Services/TreeProgressFileStore.cs"] = 2,
-            ["src/DeskBox/Services/TreeCloudSyncService.cs"] = 6,
+            ["src/DeskBox/Services/TreeCloudSyncService.cs"] = 9,
             ["src/DeskBox/Services/WeatherService.cs"] = 5,
             ["src/DeskBox/Services/WidgetFileStackSettings.cs"] = 7,
             ["src/DeskBox/Services/WidgetLayoutStore.cs"] = 2,
@@ -80,8 +83,8 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             Assert.Equal(expectedCount, actual[path]);
         }
 
-        Assert.Equal(42, actual.Count);
-        Assert.Equal(110, actual.Values.Sum());
+        Assert.Equal(45, actual.Count);
+        Assert.Equal(120, actual.Values.Sum());
 
         string[] expectedContextOwners =
         [
@@ -104,6 +107,9 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             "src/DeskBox/Services/DeskBoxDiagnosticsBundleService.cs",
             "src/DeskBox/Services/DesktopOrganizationHistoryStore.cs",
             "src/DeskBox/Services/DesktopOrganizationRecoveryStore.cs",
+            "src/DeskBox/Services/DingTalkAccountJsonModels.cs",
+            "src/DeskBox/Services/DingTalkDwsJsonModels.cs",
+            "src/DeskBox/Services/DingTalkGroupDocumentService.cs",
             "src/DeskBox/Services/GlanceImageService.cs",
             "src/DeskBox/Services/GlanceWidgetStore.cs",
             "src/DeskBox/Services/LocalizationService.cs",
@@ -130,7 +136,7 @@ public sealed class JsonSerializationBaselineContractTests : IDisposable
             .Order()
             .ToArray();
 
-        Assert.Equal(36, actualContextOwners.Length);
+        Assert.Equal(39, actualContextOwners.Length);
         Assert.Equal(expectedContextOwners, actualContextOwners);
     }
 

@@ -704,6 +704,7 @@ public sealed partial class WidgetManager
             WidgetKind.Tags => "Tags.Title",
             WidgetKind.SystemMonitor => "SystemMonitor.Title",
             WidgetKind.Tree => "Tree.Title",
+            WidgetKind.DingTalkGroupDocs => "DingTalkGroupDocs.Title",
             _ => null
         };
         if (!string.IsNullOrWhiteSpace(localizationKey))

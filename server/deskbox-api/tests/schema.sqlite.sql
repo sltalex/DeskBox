@@ -29,6 +29,17 @@ CREATE TABLE auth_rate_limits (
     UNIQUE(bucket_key, action)
 );
 
+CREATE TABLE account_identities (
+ id TEXT PRIMARY KEY, user_id TEXT NOT NULL, provider TEXT NOT NULL,
+ corp_id TEXT NOT NULL, dingtalk_user_id TEXT NOT NULL,
+ display_name TEXT NOT NULL, organization_name TEXT NOT NULL,
+ department_name TEXT NOT NULL, avatar_url TEXT NOT NULL DEFAULT '',
+ raw_scope_summary TEXT NOT NULL DEFAULT 'client_reported_basic_profile',
+ created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+ UNIQUE(user_id, provider), UNIQUE(provider, corp_id, dingtalk_user_id),
+ FOREIGN KEY(user_id) REFERENCES auth_users(id) ON DELETE CASCADE
+);
+
 CREATE TABLE account_backup_snapshots (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -58,6 +69,8 @@ CREATE TABLE tree_profiles (
     fruit_total INTEGER NOT NULL DEFAULT 0,
     harvested_total INTEGER NOT NULL DEFAULT 0,
     stage INTEGER NOT NULL DEFAULT 1,
+    state_version INTEGER NOT NULL DEFAULT 0,
+    fruit_energy INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES auth_users(id) ON DELETE CASCADE
 );

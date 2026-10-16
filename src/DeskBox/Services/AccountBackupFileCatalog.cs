@@ -164,15 +164,6 @@ internal sealed class AccountBackupFileCatalog
                 File.Move(temporary, destination, overwrite: true);
             }
 
-            if (staged.Contains("tree/progress.json") && !string.IsNullOrWhiteSpace(marker.OwnerUserId))
-            {
-                string syncDirectory = Path.Combine(_dataDirectory, "sync", "tree");
-                Directory.CreateDirectory(syncDirectory);
-                await File.WriteAllTextAsync(
-                    Path.Combine(syncDirectory, $"rebaseline-{SafeAccountId(marker.OwnerUserId)}.json"),
-                    "{}", cancellationToken);
-            }
-
             // Deleting the marker is the transaction commit point. Until it
             // succeeds, the rollback set remains available for this catch or
             // the next startup after an abrupt process termination.

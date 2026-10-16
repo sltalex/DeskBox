@@ -76,6 +76,25 @@ tree_apply_progress($pdo, $bobId, [
     'energy_delta' => 1000, 'day_growth_delta' => 1000, 'fruit_delta' => 0, 'harvested_delta' => 0,
 ], $clock);
 
+$authoritative = tree_apply_state($pdo, $aliceId, [
+    'operation_id' => 'state-alice-000001', 'device_id' => 'device-a', 'base_version' => 0,
+    'day' => '2026-10-14', 'today_growth' => 45000, 'total_energy' => 45000,
+    'stage' => 2, 'fruit_energy' => 500, 'fruit_total' => 5, 'harvested_total' => 1,
+], $clock);
+data_expect($authoritative['state']['state_version'] === 1, 'Authoritative state increments its version.');
+data_expect($authoritative['state']['fruit_inventory'] === 4, 'Fruit inventory is derived from total and harvested fruit.');
+$duplicateState = tree_apply_state($pdo, $aliceId, [
+    'operation_id' => 'state-alice-000001', 'device_id' => 'device-a', 'base_version' => 0,
+    'day' => '2026-10-14', 'today_growth' => 45000, 'total_energy' => 45000,
+    'stage' => 2, 'fruit_energy' => 500, 'fruit_total' => 5, 'harvested_total' => 1,
+], $clock);
+data_expect($duplicateState['duplicate'] === true, 'Authoritative state retry is idempotent.');
+data_expect_error('state_conflict', static fn() => tree_apply_state($pdo, $aliceId, [
+    'operation_id' => 'state-alice-000002', 'device_id' => 'device-b', 'base_version' => 0,
+    'day' => '2026-10-14', 'today_growth' => 45001, 'total_energy' => 45001,
+    'stage' => 2, 'fruit_energy' => 501, 'fruit_total' => 5, 'harvested_total' => 1,
+], $clock));
+
 $leaderboard = tree_leaderboard($pdo, $aliceId, '2026-10-14');
 data_expect(count($leaderboard['entries']) === 2, 'Leaderboard includes participating users.');
 data_expect($leaderboard['entries'][0]['username'] === 'Alice_Cloud', 'Leaderboard sorts by energy descending.');

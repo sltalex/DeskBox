@@ -16,6 +16,7 @@ public sealed class WidgetContentFactoryTests
     [InlineData(WidgetKind.Search, "Search", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]
     [InlineData(WidgetKind.Glance, "Glance", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]
     [InlineData(WidgetKind.Tree, "Tree", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]
+    [InlineData(WidgetKind.DingTalkGroupDocs, "DingTalk group documents", WidgetContentStage.Implemented, false, WidgetContentAvailability.Available)]
     public void GetDescriptor_ReturnsContentMetadata(
         WidgetKind widgetKind,
         string title,
@@ -55,7 +56,8 @@ public sealed class WidgetContentFactoryTests
             WidgetKind.SystemMonitor,
             WidgetKind.Search,
             WidgetKind.Glance,
-            WidgetKind.Tree
+            WidgetKind.Tree,
+            WidgetKind.DingTalkGroupDocs
         ], descriptors.Select(descriptor => descriptor.WidgetKind));
     }
 
@@ -70,6 +72,7 @@ public sealed class WidgetContentFactoryTests
     [InlineData(WidgetKind.Search, WidgetChromeCategory.Interactive, WidgetChromeMode.Standard)]
     [InlineData(WidgetKind.Glance, WidgetChromeCategory.Display, WidgetChromeMode.Overlay)]
     [InlineData(WidgetKind.Tree, WidgetChromeCategory.Interactive, WidgetChromeMode.Standard)]
+    [InlineData(WidgetKind.DingTalkGroupDocs, WidgetChromeCategory.Interactive, WidgetChromeMode.Standard)]
     public void GetDescriptor_ReturnsChromeDefaults(
         WidgetKind widgetKind,
         WidgetChromeCategory expectedCategory,
@@ -127,7 +130,8 @@ public sealed class WidgetContentFactoryTests
             WidgetKind.SystemMonitor,
             WidgetKind.Search,
             WidgetKind.Glance,
-            WidgetKind.Tree
+            WidgetKind.Tree,
+            WidgetKind.DingTalkGroupDocs
         ], descriptors.Select(descriptor => descriptor.WidgetKind));
         Assert.DoesNotContain(descriptors, descriptor => descriptor.WidgetKind == WidgetKind.File);
         Assert.DoesNotContain(descriptors, descriptor => descriptor.IsPlanned);
@@ -147,6 +151,7 @@ public sealed class WidgetContentFactoryTests
     [InlineData(WidgetKind.Search, true, false, false, true, false)]
     [InlineData(WidgetKind.Glance, true, false, false, true, false)]
     [InlineData(WidgetKind.Tree, true, false, false, true, false)]
+    [InlineData(WidgetKind.DingTalkGroupDocs, true, false, false, true, false)]
     [InlineData(WidgetKind.Productivity, false, false, false, false, false)]
     public void ContentCapabilityQueries_ReturnExpectedReadOnlyState(
         WidgetKind widgetKind,

@@ -78,7 +78,7 @@ public sealed class TreeProgressTests
         tree.AddEnergy(4500, Day.AddDays(1));
         Assert.Equal(4500, tree.TodayKeys);
         Assert.Equal(2, tree.FruitInventory);
-        Assert.Equal(0, tree.FruitEnergy);
+        Assert.Equal(2000, tree.FruitEnergy);
     }
 
     [Fact]
@@ -87,10 +87,10 @@ public sealed class TreeProgressTests
         var tree = new TreeProgress();
         tree.SetGoal(12001);
         Assert.Equal(144000L, tree.MaturityThreshold);
-        Assert.Equal(3001, tree.FruitCost);
+        Assert.Equal(3000, tree.FruitCost);
         tree.AddEnergy((int)tree.MaturityThreshold, Day);
         tree.AddEnergy(3000, Day);
-        Assert.Equal(0, tree.FruitInventory);
+        Assert.Equal(1, tree.FruitInventory);
         tree.AddEnergy(1, Day);
         Assert.Equal(1, tree.FruitInventory);
     }

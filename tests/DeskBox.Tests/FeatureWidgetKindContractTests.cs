@@ -25,7 +25,8 @@ public sealed class FeatureWidgetKindContractTests
                 WidgetKind.SystemMonitor,
                 WidgetKind.Search,
                 WidgetKind.Glance,
-                WidgetKind.Tree
+                WidgetKind.Tree,
+                WidgetKind.DingTalkGroupDocs
             },
             FeatureWidgetSettings.FeatureKinds);
     }
