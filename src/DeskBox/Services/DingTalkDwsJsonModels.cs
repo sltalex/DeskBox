@@ -68,10 +68,23 @@ internal sealed class DwsGroupMessageDto
     [JsonPropertyName("openConversationId")] public string ConversationId { get; set; } = string.Empty;
 }
 
+internal sealed class DwsDriveInfoResponseDto
+{
+    [JsonPropertyName("success")] public bool Success { get; set; }
+    [JsonPropertyName("result")] public DwsDriveInfoResultDto? Result { get; set; }
+}
+
+internal sealed class DwsDriveInfoResultDto
+{
+    [JsonPropertyName("success")] public bool Success { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
+}
+
 [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)]
 [JsonSerializable(typeof(DwsAuthStatusDto))]
 [JsonSerializable(typeof(DwsEmployeeResponseDto))]
 [JsonSerializable(typeof(DwsGroupMessagesResponseDto))]
+[JsonSerializable(typeof(DwsDriveInfoResponseDto))]
 internal sealed partial class DingTalkDwsJsonContext : JsonSerializerContext
 {
 }

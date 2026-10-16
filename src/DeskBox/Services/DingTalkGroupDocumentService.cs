@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Security.Cryptography;
+using System.Diagnostics;
 using DeskBox.Core.Persistence;
 
 namespace DeskBox.Services;
@@ -61,6 +62,7 @@ public sealed class DingTalkGroupDocumentService
     private string? _pendingCursor;
     private int _pendingPages;
     private DingTalkGroupDocument[] _pendingDocuments = [];
+    private Dictionary<string, DateTimeOffset> _titleRetryAfter = new(StringComparer.OrdinalIgnoreCase);
 
     public DingTalkGroupDocumentService(IDingTalkDwsClient dws, string? stateDirectory = null)
     {
@@ -120,6 +122,9 @@ public sealed class DingTalkGroupDocumentService
             _pendingCursor = store?.PendingCursor;
             _pendingPages = store?.PendingPages ?? 0;
             _pendingDocuments = store?.PendingDocuments ?? [];
+            _titleRetryAfter = store?.TitleRetryAfter is { } retryAfter
+                ? new Dictionary<string, DateTimeOffset>(retryAfter, StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, DateTimeOffset>(StringComparer.OrdinalIgnoreCase);
             SyncIntervalHours = NormalizeInterval(store?.SyncIntervalHours ?? 6);
             await LoadIntervalSettingsAsync(cancellationToken);
             _stateLoaded = true;
@@ -134,14 +139,14 @@ public sealed class DingTalkGroupDocumentService
 
     public async Task<IReadOnlyList<DingTalkGroupDocument>> RefreshAsync(
         CancellationToken cancellationToken = default)
-        => await SyncAsync(cancellationToken);
+        => await SyncAsync(canCommit: null, retryUnavailableTitles: true, cancellationToken);
 
     public async Task<IReadOnlyList<DingTalkGroupDocument>> SyncAsync(
         CancellationToken cancellationToken = default)
-        => await SyncAsync(canCommit: null, cancellationToken);
+        => await SyncAsync(canCommit: null, retryUnavailableTitles: false, cancellationToken);
 
     internal async Task<IReadOnlyList<DingTalkGroupDocument>> SyncAsync(
-        Func<bool>? canCommit, CancellationToken cancellationToken)
+        Func<bool>? canCommit, bool retryUnavailableTitles, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken);
         try
@@ -194,6 +199,8 @@ public sealed class DingTalkGroupDocumentService
                 document => MakeKey(document.GroupName, document.Url),
                 document => document,
                 StringComparer.OrdinalIgnoreCase);
+            var titleLookups = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+            var titleLookupBudget = new Stopwatch();
             IsSyncing = true;
             LastSyncStartedAt = now;
             int pagesFetched = 0;
@@ -232,6 +239,7 @@ public sealed class DingTalkGroupDocumentService
                     PendingCursor = nextCursor,
                     PendingPages = windowPages,
                     PendingDocuments = pendingDocuments,
+                    TitleRetryAfter = _titleRetryAfter,
                     SyncIntervalHours = SyncIntervalHours,
                     Documents = _documents
                 }, cancellationToken);
@@ -316,14 +324,22 @@ public sealed class DingTalkGroupDocumentService
                 }
 
                 foreach ((string key, DingTalkGroupDocument document) in windowDocuments)
-                {
-                    if (!byGroupAndUrl.TryGetValue(key, out DingTalkGroupDocument? existing) ||
-                        existing.LastSeenAt < document.LastSeenAt)
-                        byGroupAndUrl[key] = document;
-                }
+                    byGroupAndUrl[key] = MergeDocument(
+                        byGroupAndUrl.GetValueOrDefault(key), document);
                 if (byGroupAndUrl.Count >= 50000)
                     throw new InvalidDataException("The group-document index exceeded the safety limit.");
 
+                await VerifyIdentityAsync();
+                titleLookupBudget.Start();
+                try
+                {
+                    await ResolveGenericTitlesAsync(byGroupAndUrl, titleLookups, titleLookupBudget,
+                        retryUnavailableTitles, cancellationToken);
+                }
+                finally
+                {
+                    titleLookupBudget.Stop();
+                }
                 await VerifyIdentityAsync();
 
                 DingTalkGroupDocument[] checkpointDocuments = SortDocuments(byGroupAndUrl);
@@ -340,6 +356,7 @@ public sealed class DingTalkGroupDocumentService
                     InitialScanEnd = initialSync && !finished ? scanEnd : null,
                     InitialScanNextEnd = initialSync && !finished ? segmentStart : null,
                     InitialScanCompletedSegments = initialSync && !finished ? completed + 1 : 0,
+                    TitleRetryAfter = _titleRetryAfter,
                     SyncIntervalHours = SyncIntervalHours,
                     Documents = checkpointDocuments
                 }, cancellationToken);
@@ -412,14 +429,93 @@ public sealed class DingTalkGroupDocumentService
             url,
             message.CreatedAt);
         string key = MakeKey(groupName, url);
-        if (!byGroupAndUrl.TryGetValue(key, out DingTalkGroupDocument? existing) ||
-            existing.LastSeenAt < document.LastSeenAt)
-        {
-            byGroupAndUrl[key] = document;
-        }
+        byGroupAndUrl[key] = MergeDocument(byGroupAndUrl.GetValueOrDefault(key), document);
     }
 
     private static string MakeKey(string groupName, string url) => $"{groupName}\u001f{url}";
+
+    private static bool IsGenericTitle(string title) =>
+        string.Equals(title, "群文档", StringComparison.Ordinal);
+
+    private static DingTalkGroupDocument MergeDocument(
+        DingTalkGroupDocument? existing, DingTalkGroupDocument incoming)
+    {
+        if (existing is null) return incoming;
+        bool incomingIsNewer = existing.LastSeenAt < incoming.LastSeenAt;
+        DingTalkGroupDocument latest = incomingIsNewer ? incoming : existing;
+        DingTalkGroupDocument other = incomingIsNewer ? existing : incoming;
+        return IsGenericTitle(latest.Title) && !IsGenericTitle(other.Title)
+            ? latest with { Title = other.Title }
+            : latest;
+    }
+
+    private async Task ResolveGenericTitlesAsync(
+        Dictionary<string, DingTalkGroupDocument> documents,
+        Dictionary<string, string?> titleLookups,
+        Stopwatch lookupBudget,
+        bool retryUnavailableTitles,
+        CancellationToken cancellationToken)
+    {
+        var urlsByDocument = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (DingTalkGroupDocument document in documents.Values)
+        {
+            if (!IsGenericTitle(document.Title) ||
+                !Uri.TryCreate(document.Url, UriKind.Absolute, out Uri? uri) ||
+                uri.Scheme != Uri.UriSchemeHttps ||
+                !string.Equals(uri.Host, "alidocs.dingtalk.com", StringComparison.OrdinalIgnoreCase))
+                continue;
+            string key = uri.GetLeftPart(UriPartial.Path);
+            if (!titleLookups.ContainsKey(key) &&
+                (retryUnavailableTitles ||
+                 !_titleRetryAfter.TryGetValue(key, out DateTimeOffset retryAfter) ||
+                 retryAfter <= DateTimeOffset.UtcNow))
+                urlsByDocument.TryAdd(key, document.Url);
+        }
+        if (urlsByDocument.Count > 0)
+        {
+            async Task<(string Key, string? Title)> LookupAsync(string key, string url)
+            {
+                try
+                {
+                    return (key, await _dws.GetDocumentTitleAsync(url, cancellationToken));
+                }
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested &&
+                    (ex is IOException or InvalidDataException or InvalidOperationException or
+                        OperationCanceledException or System.ComponentModel.Win32Exception))
+                {
+                    return (key, null);
+                }
+            }
+
+            KeyValuePair<string, string>[] candidates = urlsByDocument
+                .Take(Math.Max(0, 120 - titleLookups.Count)).ToArray();
+            for (int offset = 0; offset < candidates.Length &&
+                 lookupBudget.Elapsed < TimeSpan.FromSeconds(60); offset += 3)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                (string Key, string? Title)[] results = await Task.WhenAll(
+                    candidates.Skip(offset).Take(3).Select(item => LookupAsync(item.Key, item.Value)));
+                foreach ((string key, string? title) in results)
+                {
+                    titleLookups[key] = title;
+                    if (string.IsNullOrWhiteSpace(title) || IsGenericTitle(title))
+                        _titleRetryAfter[key] = DateTimeOffset.UtcNow.AddHours(24);
+                    else
+                        _titleRetryAfter.Remove(key);
+                }
+            }
+        }
+
+        foreach ((string key, DingTalkGroupDocument document) in documents.ToArray())
+        {
+            if (!IsGenericTitle(document.Title) ||
+                !Uri.TryCreate(document.Url, UriKind.Absolute, out Uri? uri))
+                continue;
+            if (titleLookups.TryGetValue(uri.GetLeftPart(UriPartial.Path), out string? title) &&
+                !string.IsNullOrWhiteSpace(title) && !IsGenericTitle(title))
+                documents[key] = document with { Title = title };
+        }
+    }
 
     private static DateTimeOffset Max(DateTimeOffset left, DateTimeOffset right)
         => left >= right ? left : right;
@@ -507,6 +603,7 @@ public sealed class DingTalkGroupDocumentService
         _initialScanStart = _initialScanEnd = _initialScanNextEnd = null;
         _initialScanCompletedSegments = 0;
         ClearPendingWindow();
+        _titleRetryAfter = new Dictionary<string, DateTimeOffset>(StringComparer.OrdinalIgnoreCase);
         SyncIntervalHours = 6;
         _stateLoaded = false;
     }
@@ -527,6 +624,7 @@ internal sealed class DingTalkGroupDocumentStore
     public string? PendingCursor { get; set; }
     public int PendingPages { get; set; }
     public DingTalkGroupDocument[] PendingDocuments { get; set; } = [];
+    public Dictionary<string, DateTimeOffset> TitleRetryAfter { get; set; } = new();
     public int SyncIntervalHours { get; set; } = 6;
     public DingTalkGroupDocument[] Documents { get; set; } = [];
 }

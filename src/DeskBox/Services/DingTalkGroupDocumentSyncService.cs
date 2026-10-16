@@ -60,7 +60,7 @@ internal sealed class DingTalkGroupDocumentSyncService : IAsyncDisposable
             Task<bool> worker = Task.Run(async () =>
             {
                 using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
-                return await RunIfDueAsync(force: true, linked.Token);
+                return await RunIfDueAsync(force: true, linked.Token, retryUnavailableTitles: true);
             });
             TrackWorker(worker);
             return worker;
@@ -96,7 +96,8 @@ internal sealed class DingTalkGroupDocumentSyncService : IAsyncDisposable
     }
 
     private async Task<bool> RunIfDueAsync(
-        bool force, CancellationToken cancellationToken, bool waitIfBusy = false)
+        bool force, CancellationToken cancellationToken, bool waitIfBusy = false,
+        bool retryUnavailableTitles = false)
     {
         if (!_auth.IsAuthenticated || _auth.CurrentUser is null) return false;
         string accountId = _auth.CurrentUser.Id;
@@ -141,7 +142,7 @@ internal sealed class DingTalkGroupDocumentSyncService : IAsyncDisposable
             _documents.ProgressChanged += ForwardProgress;
             try
             {
-                await _documents.SyncAsync(IsStillLinked, operationToken);
+                await _documents.SyncAsync(IsStillLinked, retryUnavailableTitles, operationToken);
             }
             finally
             {

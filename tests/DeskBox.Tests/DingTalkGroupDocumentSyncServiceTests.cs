@@ -105,6 +105,9 @@ public sealed class DingTalkGroupDocumentSyncServiceTests : IDisposable
         public Task<DingTalkDwsAuthStatus> LoginAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
 
+        public Task<string?> GetDocumentTitleAsync(string url, CancellationToken cancellationToken = default)
+            => Task.FromResult<string?>(null);
+
         public async Task<DingTalkGroupMessagePage> ListGroupMessagesAsync(
             DateTimeOffset start, DateTimeOffset end, string? cursor = null, int limit = 50,
             CancellationToken cancellationToken = default)

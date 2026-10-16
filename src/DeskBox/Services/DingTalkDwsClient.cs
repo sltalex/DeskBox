@@ -111,10 +111,24 @@ internal sealed class DingTalkDwsClient : IDingTalkDwsClient
         return new DingTalkGroupMessagePage(messages, response.Result.HasMore, response.Result.NextCursor);
     }
 
+    public async Task<string?> GetDocumentTitleAsync(string url, CancellationToken cancellationToken = default)
+    {
+        DwsDriveInfoResponseDto response = await RunJsonAsync(
+            ["drive", "info", "--node", url, "--format", "json"],
+            DingTalkDwsJsonContext.Default.DwsDriveInfoResponseDto,
+            cancellationToken,
+            TimeSpan.FromSeconds(8));
+        if (!response.Success || response.Result?.Success != true)
+            return null;
+        string? name = response.Result.Name?.Trim();
+        return name?.Length is > 0 and <= 255 ? name : null;
+    }
+
     private async Task<T> RunJsonAsync<T>(
         IReadOnlyList<string> arguments,
         JsonTypeInfo<T> jsonTypeInfo,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        TimeSpan? operationTimeout = null)
     {
         if (!File.Exists(_executablePath))
             throw new FileNotFoundException("The bundled DWS runtime is not available.", _executablePath);
@@ -136,7 +150,7 @@ internal sealed class DingTalkDwsClient : IDingTalkDwsClient
             throw new InvalidOperationException("DWS could not be started.");
 
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeoutCts.CancelAfter(arguments.Contains("login") ? TimeSpan.FromMinutes(5) : _timeout);
+        timeoutCts.CancelAfter(arguments.Contains("login") ? TimeSpan.FromMinutes(5) : operationTimeout ?? _timeout);
         Task<string> stdoutTask = ReadLimitedAsync(process.StandardOutput, timeoutCts.Token);
         Task<string> stderrTask = ReadLimitedAsync(process.StandardError, timeoutCts.Token);
         try

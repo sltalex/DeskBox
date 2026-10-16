@@ -56,4 +56,5 @@ public interface IDingTalkDwsClient
         string? cursor = null,
         int limit = 50,
         CancellationToken cancellationToken = default);
+    Task<string?> GetDocumentTitleAsync(string url, CancellationToken cancellationToken = default);
 }

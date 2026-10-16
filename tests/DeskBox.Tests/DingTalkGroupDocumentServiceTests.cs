@@ -1,9 +1,169 @@
 using DeskBox.Services;
+using System.Collections.Concurrent;
 
 namespace DeskBox.Tests;
 
 public sealed class DingTalkGroupDocumentServiceTests
 {
+    [Fact]
+    public async Task RefreshAsync_ResolvesDocumentNameForBareSharedLink()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            var dws = new FakeDwsClient();
+            const string url = "https://alidocs.dingtalk.com/i/nodes/sample?doc_type=wiki_doc&utm_source=im";
+            dws.Titles[url] = "产品需求说明书";
+            dws.Pages.Enqueue(new DingTalkGroupMessagePage(
+                [new("a", "研发群", url, DateTimeOffset.Now, false)],
+                false, null));
+
+            var service = new DingTalkGroupDocumentService(dws, root);
+            DingTalkGroupDocument document = Assert.Single(await service.RefreshAsync());
+
+            Assert.Equal("产品需求说明书", document.Title);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
+    [Fact]
+    public async Task RefreshAsync_DoesNotReplaceKnownTitleWithGenericTitle()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            const string url = "https://alidocs.dingtalk.com/i/nodes/sample";
+            var dws = new FakeDwsClient();
+            dws.Pages.Enqueue(new DingTalkGroupMessagePage(
+            [
+                new("a", "研发群", $"[产品需求说明书]({url})", DateTimeOffset.Now.AddMinutes(-1), false),
+                new("a", "研发群", url, DateTimeOffset.Now, false)
+            ], false, null));
+
+            var service = new DingTalkGroupDocumentService(dws, root);
+            DingTalkGroupDocument document = Assert.Single(await service.RefreshAsync());
+
+            Assert.Equal("产品需求说明书", document.Title);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
+    [Fact]
+    public async Task SyncAsync_UpgradesPreviouslyCachedGenericTitle()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            const string url = "https://alidocs.dingtalk.com/i/nodes/cached";
+            var dws = new FakeDwsClient();
+            dws.Pages.Enqueue(new DingTalkGroupMessagePage(
+                [new("a", "研发群", url, DateTimeOffset.Now, false)], false, null));
+            var firstService = new DingTalkGroupDocumentService(dws, root);
+            Assert.Equal("群文档", Assert.Single(await firstService.SyncAsync()).Title);
+
+            dws.Titles[url] = "已缓存文档的真实名称";
+            var reloaded = new DingTalkGroupDocumentService(dws, root);
+            Assert.Equal("群文档", Assert.Single(await reloaded.LoadAsync()).Title);
+
+            Assert.Equal("已缓存文档的真实名称", Assert.Single(await reloaded.RefreshAsync()).Title);
+            var persisted = new DingTalkGroupDocumentService(dws, root);
+            Assert.Equal("已缓存文档的真实名称", Assert.Single(await persisted.LoadAsync()).Title);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
+    [Fact]
+    public async Task SyncAsync_LooksUpOneTitleForTheSameDocumentSharedInTwoGroups()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            const string firstUrl = "https://alidocs.dingtalk.com/i/nodes/shared?utm_source=im";
+            const string secondUrl = "https://alidocs.dingtalk.com/i/nodes/shared?utm_source=portal";
+            var dws = new FakeDwsClient();
+            dws.Titles[firstUrl] = "共享方案";
+            dws.Pages.Enqueue(new DingTalkGroupMessagePage(
+            [
+                new("a", "研发群", firstUrl, DateTimeOffset.Now, false),
+                new("b", "运营群", secondUrl, DateTimeOffset.Now, false)
+            ], false, null));
+
+            var service = new DingTalkGroupDocumentService(dws, root);
+            IReadOnlyList<DingTalkGroupDocument> documents = await service.SyncAsync();
+
+            Assert.Equal(2, documents.Count);
+            Assert.All(documents, document => Assert.Equal("共享方案", document.Title));
+            Assert.Single(dws.TitleRequests);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
+    [Fact]
+    public async Task SyncAsync_KeepsLinkWhenTitleLookupTimesOut()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            const string url = "https://alidocs.dingtalk.com/i/nodes/unavailable";
+            var dws = new FakeDwsClient { SimulateTitleTimeout = true };
+            dws.Pages.Enqueue(new DingTalkGroupMessagePage(
+                [new("a", "研发群", url, DateTimeOffset.Now, false)], false, null));
+
+            var service = new DingTalkGroupDocumentService(dws, root);
+            DingTalkGroupDocument document = Assert.Single(await service.SyncAsync());
+
+            Assert.Equal(url, document.Url);
+            Assert.Equal("群文档", document.Title);
+            var reloaded = new DingTalkGroupDocumentService(dws, root);
+            await reloaded.SyncAsync();
+            Assert.Single(dws.TitleRequests);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
+    [Fact]
+    public async Task SyncAsync_BoundsTitleLookupsAndContinuesOnNextRun()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            var dws = new FakeDwsClient();
+            dws.Pages.Enqueue(new DingTalkGroupMessagePage(
+                Enumerable.Range(0, 130).Select(index => new DingTalkGroupMessage(
+                    "a", "研发群", $"https://alidocs.dingtalk.com/i/nodes/doc-{index:000}",
+                    DateTimeOffset.Now, false)).ToArray(),
+                false, null));
+            var service = new DingTalkGroupDocumentService(dws, root);
+
+            Assert.Equal(130, (await service.SyncAsync()).Count);
+            Assert.InRange(dws.TitleRequests.Count, 1, 120);
+
+            await service.SyncAsync();
+            Assert.Equal(130, dws.TitleRequests.Count);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
+    [Fact]
+    public async Task SyncAsync_KeepsLinkWhenDwsTitleResponseIsInvalid()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            const string url = "https://alidocs.dingtalk.com/i/nodes/malformed";
+            var dws = new FakeDwsClient { SimulateMalformedTitleResponse = true };
+            dws.Pages.Enqueue(new DingTalkGroupMessagePage(
+                [new("a", "研发群", url, DateTimeOffset.Now, false)], false, null));
+
+            var service = new DingTalkGroupDocumentService(dws, root);
+            DingTalkGroupDocument document = Assert.Single(await service.SyncAsync());
+
+            Assert.Equal(url, document.Url);
+            Assert.Equal("群文档", document.Title);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
     [Fact]
     public async Task RefreshAsync_KeepsSameUrlUnderEachGroupAndUsesLatestOccurrence()
     {
@@ -356,6 +516,10 @@ public sealed class DingTalkGroupDocumentServiceTests
         public bool SwitchAccountOnNextMessagePage { get; set; }
         public int? FailOnRequestNumber { get; set; }
         public string? FailCursorOnce { get; set; }
+        public bool SimulateTitleTimeout { get; set; }
+        public bool SimulateMalformedTitleResponse { get; set; }
+        public Dictionary<string, string> Titles { get; } = new(StringComparer.Ordinal);
+        public ConcurrentBag<string> TitleRequests { get; } = [];
         public Queue<DingTalkGroupMessagePage> Pages { get; } = new();
         public List<(DateTimeOffset Start, DateTimeOffset End, string? Cursor)> Requests { get; } = [];
 
@@ -368,6 +532,14 @@ public sealed class DingTalkGroupDocumentServiceTests
 
         public Task<DingTalkDwsAuthStatus> LoginAsync(CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+
+        public Task<string?> GetDocumentTitleAsync(string url, CancellationToken cancellationToken = default)
+        {
+            TitleRequests.Add(url);
+            if (SimulateTitleTimeout) throw new OperationCanceledException("Simulated metadata timeout.");
+            if (SimulateMalformedTitleResponse) throw new InvalidDataException("Simulated invalid DWS JSON.");
+            return Task.FromResult(Titles.TryGetValue(url, out string? title) ? title : null);
+        }
 
         public Task<DingTalkGroupMessagePage> ListGroupMessagesAsync(
             DateTimeOffset start,
