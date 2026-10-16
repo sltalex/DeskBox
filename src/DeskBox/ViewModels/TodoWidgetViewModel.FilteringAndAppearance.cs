@@ -307,6 +307,7 @@ public sealed partial class TodoWidgetViewModel
         OnPropertyChanged(nameof(ThisWeekFilterText));
         OnPropertyChanged(nameof(ThisMonthFilterText));
         OnPropertyChanged(nameof(ImportantFilterText));
+        OnPropertyChanged(nameof(MeetingsFilterText));
         OnPropertyChanged(nameof(CompletedFilterText));
         OnPropertyChanged(nameof(ColorFilterVisibility));
         RefreshColorFilterVisibilityProperties();
@@ -338,6 +339,7 @@ public sealed partial class TodoWidgetViewModel
         OnPropertyChanged(nameof(ThisWeekFilterText));
         OnPropertyChanged(nameof(ThisMonthFilterText));
         OnPropertyChanged(nameof(ImportantFilterText));
+        OnPropertyChanged(nameof(MeetingsFilterText));
         OnPropertyChanged(nameof(CompletedFilterText));
         OnPropertyChanged(nameof(EmptyStateTitle));
         OnPropertyChanged(nameof(EmptyStateText));

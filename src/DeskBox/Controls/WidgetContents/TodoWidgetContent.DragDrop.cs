@@ -342,7 +342,9 @@ public sealed partial class TodoWidgetContent
             return;
         }
 
-        int selectedIndex = GetFilterSegmentIndex(ViewModel.SelectedFilter);
+        int selectedIndex = _meetingsSelected
+            ? 6
+            : GetFilterSegmentIndex(ViewModel.SelectedFilter);
         if (TodoFilterSegmented.SelectedIndex != selectedIndex)
         {
             TodoFilterSegmented.SelectedIndex = selectedIndex;
@@ -367,7 +369,7 @@ public sealed partial class TodoWidgetContent
             3 => TodoFilter.ThisWeek,
             4 => TodoFilter.ThisMonth,
             5 => TodoFilter.Important,
-            6 => TodoFilter.Completed,
+            7 => TodoFilter.Completed,
             _ => TodoFilter.All
         };
     }
@@ -381,7 +383,7 @@ public sealed partial class TodoWidgetContent
             TodoFilter.ThisWeek => 3,
             TodoFilter.ThisMonth => 4,
             TodoFilter.Important => 5,
-            TodoFilter.Completed => 6,
+            TodoFilter.Completed => 7,
             _ => 0
         };
     }

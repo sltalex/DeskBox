@@ -29,6 +29,9 @@ public sealed class TreeCounterService : IDisposable
     private long _callbackTicks;
     private long _probeTicks;
     private TreeProgress _progress;
+    private const uint RecentInputWindowMs = 20_000;
+    private const uint CallbackSilentThresholdMs = 60_000;
+    private static readonly IntPtr TreeProbeTag = new(0x44425452);
 
     private TreeCounterService()
     {
@@ -181,6 +184,15 @@ public sealed class TreeCounterService : IDisposable
                 }
                 if (changed)
                     NotifyChangedSafely(Changed, ex => App.Log($"[Tree] Keyboard hook observer failed: {ex}"));
+
+                // The health probe is an internal key event. It must never
+                // reach the foreground application (where it can be seen as
+                // Tab-like focus navigation or activate an accelerator).
+                if ((data.flags & Win32Helper.LLKHF_INJECTED) != 0 &&
+                    data.dwExtraInfo == TreeProbeTag)
+                {
+                    return (IntPtr)1;
+                }
             }
         }
         catch (Exception ex) { App.Log($"[Tree] Keyboard hook callback failed: {ex}"); }
@@ -197,9 +209,27 @@ public sealed class TreeCounterService : IDisposable
     {
         if (!_enabled || Snapshot.Paused || _disposed) return;
         if (_thread?.IsAlive != true || _hook == IntPtr.Zero) { StartHook(); return; }
+
+        // Do not inject input while the machine is idle. A keyboard probe is
+        // only useful when real input has recently been observed but this
+        // hook has not received a callback for a long time. This keeps the
+        // foreground application completely untouched during idle/mouse-only
+        // sessions and avoids the old unconditional ten-second keystroke.
+        if (!Win32Helper.TryGetLastInputTickCount(out uint lastInputTick) ||
+            !HookHealthWatchdog.IsDivergent(
+                lastInputTick,
+                Volatile.Read(ref _callbackTicks),
+                Environment.TickCount64,
+                RecentInputWindowMs,
+                CallbackSilentThresholdMs))
+        {
+            return;
+        }
+
         long previous = Volatile.Read(ref _callbackTicks);
-        if (!Win32Helper.TrySendTaggedKeyPress(ReservedHotkeyHookService.InternalMaskVirtualKey, new IntPtr(0x44425452), out _)) return;
-        // Probe on the next timer tick; injected probe keys cannot add energy.
+        if (!Win32Helper.TrySendTaggedKeyPress(ReservedHotkeyHookService.InternalMaskVirtualKey, TreeProbeTag, out _)) return;
+        // Probe on the next timer tick; the callback consumes tagged probe
+        // events, so they cannot add energy or reach another application.
         long lastProbe = Interlocked.Exchange(ref _probeTicks, previous);
         if (lastProbe != 0 && previous == lastProbe) { StopHook(); StartHook(); }
     }

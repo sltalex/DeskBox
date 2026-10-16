@@ -54,9 +54,14 @@ public sealed partial class TreeSettingsSection : UserControl
         current.Children.Add(_growthSummary);
         _currentCard.Content = current;
 
-        var switches = new StackPanel { Spacing = 10 };
-        switches.Children.Add(CreateToggleRow(_enableLabel, _enable));
-        switches.Children.Add(CreateToggleRow(_statisticsLabel, _statistics));
+        var switches = new Grid { ColumnSpacing = 18 };
+        switches.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        switches.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        Grid enableColumn = CreateToggleRow(_enableLabel, _enable);
+        Grid statisticsColumn = CreateToggleRow(_statisticsLabel, _statistics);
+        Grid.SetColumn(statisticsColumn, 1);
+        switches.Children.Add(enableColumn);
+        switches.Children.Add(statisticsColumn);
         _switchesCard.Content = switches;
 
         var progress = new StackPanel { Spacing = 8 };

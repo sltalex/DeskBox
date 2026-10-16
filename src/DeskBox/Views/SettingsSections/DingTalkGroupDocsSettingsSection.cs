@@ -1,8 +1,10 @@
 using DeskBox.Services;
+using DeskBox.Models;
 using CommunityToolkit.WinUI.Controls;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using System.Globalization;
 
 namespace DeskBox.Views.SettingsSections;
 
@@ -16,8 +18,16 @@ public sealed partial class DingTalkGroupDocsSettingsSection : UserControl
     private readonly TextBlock _hint = new() { TextWrapping = TextWrapping.Wrap, Opacity = 0.72, Visibility = Visibility.Collapsed };
     private readonly TextBlock _intervalLabel = new() { VerticalAlignment = VerticalAlignment.Center };
     private readonly NumberBox _interval = new() { Minimum = 1, Maximum = 168, SmallChange = 1, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact };
+    private readonly TextBlock _fontSizeLabel = new() { VerticalAlignment = VerticalAlignment.Center };
+    private readonly NumberBox _fontSize = new() { Minimum = 10, Maximum = 24, SmallChange = 0.5, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact };
+    private readonly TextBlock _paddingLabel = new() { VerticalAlignment = VerticalAlignment.Center };
+    private readonly NumberBox _padding = new() { Minimum = 0, Maximum = 24, SmallChange = 1, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact };
+    private readonly TextBlock _rowSpacingLabel = new() { VerticalAlignment = VerticalAlignment.Center };
+    private readonly NumberBox _rowSpacing = new() { Minimum = 0, Maximum = 24, SmallChange = 1, SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact };
     private DingTalkGroupDocumentSyncService? _sync;
     private LocalizationService? _localization;
+    private SettingsService? _settings;
+    private WidgetConfig? _widget;
     private bool _updating;
 
     public DingTalkGroupDocsSettingsSection()
@@ -25,6 +35,9 @@ public sealed partial class DingTalkGroupDocsSettingsSection : UserControl
         _card.Padding = (Thickness)Application.Current.Resources["WidgetCompactCardPadding"];
         _syncButton.Click += SyncButton_Click;
         _interval.ValueChanged += Interval_ValueChanged;
+        _fontSize.ValueChanged += LinkStyle_ValueChanged;
+        _padding.ValueChanged += LinkStyle_ValueChanged;
+        _rowSpacing.ValueChanged += LinkStyle_ValueChanged;
 
         var intervalRow = new Grid { ColumnSpacing = 8 };
         intervalRow.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -38,6 +51,9 @@ public sealed partial class DingTalkGroupDocsSettingsSection : UserControl
 
         var panel = new StackPanel { Spacing = (double)Application.Current.Resources["SettingsCardSpacing"] };
         panel.Children.Add(intervalRow);
+        panel.Children.Add(CreateStyleRow(_fontSizeLabel, _fontSize));
+        panel.Children.Add(CreateStyleRow(_paddingLabel, _padding));
+        panel.Children.Add(CreateStyleRow(_rowSpacingLabel, _rowSpacing));
         panel.Children.Add(_status);
         panel.Children.Add(_hint);
         panel.Children.Add(_progress);
@@ -52,10 +68,12 @@ public sealed partial class DingTalkGroupDocsSettingsSection : UserControl
         Unloaded += OnUnloaded;
     }
 
-    internal void Configure(LocalizationService localization, DingTalkGroupDocumentSyncService sync)
+    internal void Configure(LocalizationService localization, DingTalkGroupDocumentSyncService sync, SettingsService settings)
     {
         _localization = localization;
         _sync = sync;
+        _settings = settings;
+        _widget = settings.Settings.WidgetLayout.Widgets.FirstOrDefault(item => item.WidgetKind == WidgetKind.DingTalkGroupDocs);
         RenderLabels();
         RefreshState();
     }
@@ -114,6 +132,19 @@ public sealed partial class DingTalkGroupDocsSettingsSection : UserControl
         }
     }
 
+    private void LinkStyle_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (_updating || _settings is null || _widget is null || double.IsNaN(args.NewValue)) return;
+        _widget.Metadata["DingTalkGroupDocs.LinkFontSize"] =
+            Math.Clamp(_fontSize.Value, 10, 24).ToString(CultureInfo.InvariantCulture);
+        double padding = Math.Clamp(_padding.Value, 0, 24);
+        _widget.Metadata["DingTalkGroupDocs.LinkPadding"] =
+            string.Join(",", Enumerable.Repeat(padding.ToString(CultureInfo.InvariantCulture), 4));
+        _widget.Metadata["DingTalkGroupDocs.RowSpacing"] =
+            Math.Clamp(_rowSpacing.Value, 0, 24).ToString(CultureInfo.InvariantCulture);
+        _settings.SaveDebounced();
+    }
+
     private void OnProgressChanged(DingTalkGroupDocumentSyncProgress progress)
     {
         DispatcherQueue.TryEnqueue(() =>
@@ -151,6 +182,9 @@ public sealed partial class DingTalkGroupDocsSettingsSection : UserControl
         _card.Description = _localization.T("DingTalkGroupDocs.Settings.Description");
         _syncButton.Content = _localization.T("DingTalkGroupDocs.Sync.Button");
         _intervalLabel.Text = _localization.T("DingTalkGroupDocs.Sync.Interval");
+        _fontSizeLabel.Text = _localization.T("DingTalkGroupDocs.LinkFontSize");
+        _paddingLabel.Text = _localization.T("DingTalkGroupDocs.LinkPadding");
+        _rowSpacingLabel.Text = _localization.T("DingTalkGroupDocs.RowSpacing");
     }
 
     private void RefreshState()
@@ -160,6 +194,9 @@ public sealed partial class DingTalkGroupDocsSettingsSection : UserControl
         try
         {
             _interval.Value = _sync.Documents.SyncIntervalHours;
+            _fontSize.Value = ReadFontSize();
+            _padding.Value = ReadPadding();
+            _rowSpacing.Value = ReadRowSpacing();
             _syncButton.IsEnabled = !_sync.Documents.IsSyncing;
             _progress.Visibility = _sync.Documents.IsSyncing ? Visibility.Visible : Visibility.Collapsed;
             if (_sync.Documents.LastSyncCompletedAt is null && _localization is not null)
@@ -175,5 +212,46 @@ public sealed partial class DingTalkGroupDocsSettingsSection : UserControl
             }
         }
         finally { _updating = false; }
+    }
+
+    private double ReadFontSize()
+    {
+        return _widget?.Metadata.TryGetValue("DingTalkGroupDocs.LinkFontSize", out string? value) == true &&
+            double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double size)
+            ? Math.Clamp(size, 10, 24)
+            : 13;
+    }
+
+    private double ReadPadding()
+    {
+        if (_widget?.Metadata.TryGetValue("DingTalkGroupDocs.LinkPadding", out string? value) == true)
+        {
+            string first = value.Split(',', StringSplitOptions.TrimEntries).FirstOrDefault() ?? string.Empty;
+            if (double.TryParse(first, NumberStyles.Float, CultureInfo.InvariantCulture, out double padding))
+            {
+                return Math.Clamp(padding, 0, 24);
+            }
+        }
+
+        return 2;
+    }
+
+    private double ReadRowSpacing()
+    {
+        return _widget?.Metadata.TryGetValue("DingTalkGroupDocs.RowSpacing", out string? value) == true &&
+            double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double spacing)
+            ? Math.Clamp(spacing, 0, 24)
+            : (double)Application.Current.Resources["WidgetCompactRowSpacing"];
+    }
+
+    private static Grid CreateStyleRow(TextBlock label, NumberBox value)
+    {
+        var row = new Grid { ColumnSpacing = 8 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        row.Children.Add(label);
+        Grid.SetColumn(value, 1);
+        row.Children.Add(value);
+        return row;
     }
 }

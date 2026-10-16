@@ -97,5 +97,8 @@ public sealed class DingTalkGroupDocumentFavoritesTests
 
         public Task<string?> GetDocumentTitleAsync(string url, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<DingTalkCalendarEvent>> ListCurrentWeekCalendarAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<DingTalkCalendarEvent>>([]);
     }
 }

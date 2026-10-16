@@ -46,7 +46,7 @@ public sealed class TodoWidgetViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task AddItemAsync_TrimsTextAddsNewestFirstAndPersists()
+    public async Task AddItemAsync_TrimsTextAddsNewestAtBottomAndPersists()
     {
         var viewModel = CreateViewModel("todo-widget");
         await viewModel.InitializeAsync();
@@ -60,14 +60,14 @@ public sealed class TodoWidgetViewModelTests : IDisposable
             viewModel.Items,
             item =>
             {
-                Assert.Equal(second.Id, item.Id);
-                Assert.Equal("second", item.Text);
+                Assert.Equal(first.Id, item.Id);
+                Assert.Equal("first", item.Text);
                 Assert.Equal(0, item.SortOrder);
             },
             item =>
             {
-                Assert.Equal(first.Id, item.Id);
-                Assert.Equal("first", item.Text);
+                Assert.Equal(second.Id, item.Id);
+                Assert.Equal("second", item.Text);
                 Assert.Equal(1, item.SortOrder);
             });
 
@@ -75,8 +75,8 @@ public sealed class TodoWidgetViewModelTests : IDisposable
         await reloaded.InitializeAsync();
         Assert.Collection(
             reloaded.Items,
-            item => Assert.Equal(second.Id, item.Id),
-            item => Assert.Equal(first.Id, item.Id));
+            item => Assert.Equal(first.Id, item.Id),
+            item => Assert.Equal(second.Id, item.Id));
     }
 
     [Fact]
@@ -451,7 +451,7 @@ public sealed class TodoWidgetViewModelTests : IDisposable
         Assert.True(deleted);
         Assert.Single(viewModel.Items);
         Assert.Equal(second.Id, viewModel.Items[0].Id);
-        Assert.Equal(0, viewModel.Items[0].SortOrder);
+        Assert.Equal(1, viewModel.Items[0].SortOrder);
         Assert.False(await viewModel.DeleteItemAsync("missing"));
 
         var reloaded = CreateViewModel("todo-widget");
@@ -776,9 +776,9 @@ public sealed class TodoWidgetViewModelTests : IDisposable
 
         Assert.Collection(
             viewModel.VisibleItems,
-            item => Assert.Equal(sooner.Id, item.Id),
-            item => Assert.Equal(later.Id, item.Id),
             item => Assert.Equal(noDue.Id, item.Id),
+            item => Assert.Equal(later.Id, item.Id),
+            item => Assert.Equal(sooner.Id, item.Id),
             item => Assert.Equal(completed.Id, item.Id));
     }
 
@@ -856,16 +856,16 @@ public sealed class TodoWidgetViewModelTests : IDisposable
 
         Assert.Collection(
             viewModel.Items,
-            item => Assert.Equal(second.Id, item.Id),
             item => Assert.Equal(first.Id, item.Id),
+            item => Assert.Equal(second.Id, item.Id),
             item => Assert.Equal(third.Id, item.Id));
 
         var reloaded = CreateViewModel("todo-widget");
         await reloaded.InitializeAsync();
         Assert.Collection(
             reloaded.Items,
-            item => Assert.Equal(second.Id, item.Id),
             item => Assert.Equal(first.Id, item.Id),
+            item => Assert.Equal(second.Id, item.Id),
             item => Assert.Equal(third.Id, item.Id));
     }
 
@@ -973,8 +973,8 @@ public sealed class TodoWidgetViewModelTests : IDisposable
 
         Assert.True(await viewModel.SetImportantAsync(important.Id, true));
 
-        Assert.Equal(important.Id, viewModel.VisibleItems[0].Id);
-        Assert.Equal(regular.Id, viewModel.VisibleItems[1].Id);
+        Assert.Equal(regular.Id, viewModel.VisibleItems[0].Id);
+        Assert.Equal(important.Id, viewModel.VisibleItems[1].Id);
     }
 
     [Fact]

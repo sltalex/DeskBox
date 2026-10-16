@@ -178,6 +178,9 @@
                 <toolkit:SegmentedItem AllowDrop="True" DragOver="TodoTab_DragOver" Drop="TodoTab_Drop" Tag="Important" ToolTipService.ToolTip="{Binding ImportantFilterText}" Visibility="{Binding ImportantTabVisibility}">
                     <TextBlock FontSize="{Binding SegmentTextSize}" MaxLines="1" Text="{Binding ImportantFilterText}" TextAlignment="Center" TextTrimming="CharacterEllipsis" />
                 </toolkit:SegmentedItem>
+                <toolkit:SegmentedItem Tag="Meetings" ToolTipService.ToolTip="{Binding MeetingsFilterText}">
+                    <TextBlock FontSize="{Binding SegmentTextSize}" MaxLines="1" Text="{Binding MeetingsFilterText}" TextAlignment="Center" TextTrimming="CharacterEllipsis" />
+                </toolkit:SegmentedItem>
                 <toolkit:SegmentedItem AllowDrop="True" DragOver="TodoTab_DragOver" Drop="TodoTab_Drop" Tag="Completed" ToolTipService.ToolTip="{Binding CompletedFilterText}" Visibility="{Binding CompletedTabVisibility}">
                     <TextBlock FontSize="{Binding SegmentTextSize}" MaxLines="1" Text="{Binding CompletedFilterText}" TextAlignment="Center" TextTrimming="CharacterEllipsis" />
                 </toolkit:SegmentedItem>
@@ -447,6 +450,16 @@
                     Style="{StaticResource WidgetEmptyStateDescriptionTextStyle}"
                     Text="{Binding EmptyStateText}" />
             </StackPanel>
+        </Grid>
+
+        <Grid
+            x:Name="MeetingsArea"
+            Grid.Row="1"
+            Grid.Column="0"
+            Visibility="Collapsed">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="MeetingItemsPanel" Spacing="6" />
+            </ScrollViewer>
         </Grid>
 
         <Grid x:Name="ListFooterArea" Grid.Row="2" Grid.Column="0" ColumnSpacing="8">

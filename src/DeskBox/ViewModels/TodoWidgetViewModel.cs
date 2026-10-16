@@ -360,6 +360,8 @@ public sealed partial class TodoWidgetViewModel : ObservableObject, IDisposable
 
     public string ImportantFilterText => FormatFilterText("Todo.Filter.Important", ImportantFilterCount);
 
+    public string MeetingsFilterText => _localizationService.T("Todo.Filter.Meetings");
+
     public string CompletedFilterText => FormatFilterText("Todo.Filter.Completed", CompletedCount);
 
     public string ListHeaderText => _localizationService.Format("Todo.List.Header", VisibleItems.Count);

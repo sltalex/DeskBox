@@ -96,7 +96,8 @@ public sealed partial class SettingsWindow
             case DingTalkGroupDocsSettingsSection groupDocsSettings:
                 groupDocsSettings.Configure(
                     _localizationService,
-                    _dingTalkGroupDocumentSyncService);
+                    _dingTalkGroupDocumentSyncService,
+                    _settingsService);
                 break;
             case FileWidgetSettingsSection fileSettings:
                 fileSettings.FileStack = _fileStackSettingsViewModel;

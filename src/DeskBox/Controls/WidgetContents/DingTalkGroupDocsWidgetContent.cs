@@ -4,6 +4,9 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Text;
+using System.Globalization;
 using Windows.System;
 
 namespace DeskBox.Controls.WidgetContents;
@@ -13,6 +16,8 @@ public sealed partial class DingTalkGroupDocsWidgetContent : UserControl, IDispo
     private readonly LocalizationService _localization;
     private readonly DingTalkGroupDocumentService _service;
     private readonly DingTalkGroupDocumentFavorites _favorites;
+    private readonly WidgetConfig _config;
+    private readonly SettingsService? _settings;
     private readonly DingTalkGroupDocumentSyncService? _sync;
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap, Visibility = Visibility.Collapsed };
     private readonly TextBox _search;
@@ -29,10 +34,13 @@ public sealed partial class DingTalkGroupDocsWidgetContent : UserControl, IDispo
 
     public DingTalkGroupDocsWidgetContent(
         LocalizationService localization,
+        WidgetConfig? config = null,
         DingTalkGroupDocumentService? service = null,
         DingTalkGroupDocumentFavorites? favorites = null)
     {
         _localization = localization;
+        _config = config ?? new WidgetConfig { WidgetKind = WidgetKind.DingTalkGroupDocs };
+        _settings = App.Current?.SettingsService;
         _service = service ?? App.Current?.Services.GetService<DingTalkGroupDocumentService>()
             ?? new DingTalkGroupDocumentService(new DingTalkDwsClient());
         _favorites = favorites ?? App.Current?.Services.GetService<DingTalkGroupDocumentFavorites>()
@@ -47,6 +55,7 @@ public sealed partial class DingTalkGroupDocsWidgetContent : UserControl, IDispo
         _refresh.Click += Refresh_Click;
         _service.ProgressChanged += ProgressChanged;
         _favorites.Changed += FavoritesChanged;
+        if (_settings is not null) _settings.SettingsChanged += SettingsChanged;
         _search.TextChanged += Search_TextChanged;
         _allTab.Click += (_, _) => { _showFavorites = false; UpdateTabs(); Render(_service.Documents); };
         _favoritesTab.Click += (_, _) => { _showFavorites = true; UpdateTabs(); Render(_service.Documents); };
@@ -97,6 +106,18 @@ public sealed partial class DingTalkGroupDocsWidgetContent : UserControl, IDispo
     private async void Refresh_Click(object sender, RoutedEventArgs e) => await RefreshAsync(loadOnly: false);
 
     private void Search_TextChanged(object sender, TextChangedEventArgs e) => Render(_service.Documents);
+
+    private void SettingsChanged()
+    {
+        if (_disposed) return;
+        if (!DispatcherQueue.HasThreadAccess)
+        {
+            DispatcherQueue.TryEnqueue(SettingsChanged);
+            return;
+        }
+
+        Render(_service.Documents);
+    }
 
     private async Task RefreshAsync(bool loadOnly)
     {
@@ -236,11 +257,13 @@ public sealed partial class DingTalkGroupDocsWidgetContent : UserControl, IDispo
             {
                 Spacing = (double)Application.Current.Resources["WidgetCompactRowSpacing"]
             };
+            var documentRows = new StackPanel { Spacing = ReadRowSpacing() };
             panel.Children.Add(new TextBlock
             {
                 Text = group.Key,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold
             });
+            panel.Children.Add(documentRows);
             foreach (DingTalkGroupDocument document in group.OrderByDescending(item => item.LastSeenAt))
             {
                 var row = new Grid { ColumnSpacing = 2 };
@@ -250,10 +273,16 @@ public sealed partial class DingTalkGroupDocsWidgetContent : UserControl, IDispo
                 {
                     Content = new TextBlock { Text = document.Title, TextTrimming = TextTrimming.CharacterEllipsis },
                     MinHeight = 28,
-                    Padding = (Thickness)Application.Current.Resources["WidgetCompactDocumentPadding"],
+                    Padding = ReadLinkPadding(),
                     HorizontalAlignment = HorizontalAlignment.Stretch,
                     HorizontalContentAlignment = HorizontalAlignment.Left
                 };
+                if (link.Content is TextBlock linkText)
+                {
+                    linkText.FontSize = ReadLinkFontSize();
+                    linkText.FontWeight = FontWeights.Normal;
+                    linkText.Foreground = (Brush)Application.Current.Resources["TextFillColorPrimaryBrush"];
+                }
                 ToolTipService.SetToolTip(link, document.Url);
                 link.Click += async (_, _) => await Launcher.LaunchUriAsync(new Uri(document.Url));
                 row.Children.Add(link);
@@ -271,7 +300,7 @@ public sealed partial class DingTalkGroupDocsWidgetContent : UserControl, IDispo
                 star.Click += async (_, _) => await ToggleFavoriteAsync(star, document.Url);
                 Grid.SetColumn(star, 1);
                 row.Children.Add(star);
-                panel.Children.Add(row);
+                documentRows.Children.Add(row);
             }
             card.Child = panel;
             _groups.Children.Add(card);
@@ -283,6 +312,40 @@ public sealed partial class DingTalkGroupDocsWidgetContent : UserControl, IDispo
                 Opacity = 0.7,
                 Margin = new Thickness(4, 8, 4, 0)
             });
+    }
+
+    private double ReadLinkFontSize()
+    {
+        return _config.Metadata.TryGetValue("DingTalkGroupDocs.LinkFontSize", out string? value) &&
+            double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double size)
+            ? Math.Clamp(size, 10, 24)
+            : 13;
+    }
+
+    private Thickness ReadLinkPadding()
+    {
+        if (_config.Metadata.TryGetValue("DingTalkGroupDocs.LinkPadding", out string? value))
+        {
+            string[] parts = value.Split(',', StringSplitOptions.TrimEntries);
+            if (parts.Length == 4 && parts.All(part => double.TryParse(part, NumberStyles.Float, CultureInfo.InvariantCulture, out _)))
+            {
+                return new Thickness(
+                    double.Parse(parts[0], CultureInfo.InvariantCulture),
+                    double.Parse(parts[1], CultureInfo.InvariantCulture),
+                    double.Parse(parts[2], CultureInfo.InvariantCulture),
+                    double.Parse(parts[3], CultureInfo.InvariantCulture));
+            }
+        }
+
+        return (Thickness)Application.Current.Resources["WidgetCompactDocumentPadding"];
+    }
+
+    private double ReadRowSpacing()
+    {
+        return _config.Metadata.TryGetValue("DingTalkGroupDocs.RowSpacing", out string? value) &&
+            double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double spacing)
+            ? Math.Clamp(spacing, 0, 24)
+            : (double)Application.Current.Resources["WidgetCompactRowSpacing"];
     }
 
     private async Task ToggleFavoriteAsync(Button button, string url)
@@ -311,6 +374,7 @@ public sealed partial class DingTalkGroupDocsWidgetContent : UserControl, IDispo
         _search.TextChanged -= Search_TextChanged;
         _service.ProgressChanged -= ProgressChanged;
         _favorites.Changed -= FavoritesChanged;
+        if (_settings is not null) _settings.SettingsChanged -= SettingsChanged;
         Loaded -= LoadedHandler;
         Unloaded -= UnloadedHandler;
     }
@@ -323,7 +387,7 @@ public sealed class DingTalkGroupDocsWidgetContentAdapter : WidgetContentAdapter
         LocalizationService localization,
         DingTalkGroupDocumentService? service = null,
         DingTalkGroupDocumentFavorites? favorites = null)
-        : base(config, () => new DingTalkGroupDocsWidgetContent(localization, service, favorites))
+        : base(config, () => new DingTalkGroupDocsWidgetContent(localization, config, service, favorites))
     {
     }
 

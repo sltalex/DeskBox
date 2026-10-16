@@ -148,7 +148,6 @@ internal static class SettingsSearchCatalog
         new("TodoSettings", "Settings.Feature.ListTextSize.Title", "Settings.Feature.ListTextSize.Description"),
         new("TodoSettings", "Settings.Feature.ContentTextSize.Title", "Settings.Feature.ContentTextSize.Description"),
         new("TodoSettings", "Settings.ContentEditor.PreviewLines.Title", "Settings.ContentEditor.PreviewLines.Description"),
-        new("TodoSettings", "Settings.Todo.NewTaskPosition.Title", "Settings.Todo.NewTaskPosition.Description"),
         new("TodoSettings", "Settings.ContentEditor.EnterBehavior.Title", "Settings.ContentEditor.EnterBehavior.Description"),
         new("TodoSettings", "Settings.Todo.ShowCompleted.Title", "Settings.Todo.ShowCompleted.Description"),
         new("TodoSettings", "Settings.Todo.ReminderEnabled.Title", null),

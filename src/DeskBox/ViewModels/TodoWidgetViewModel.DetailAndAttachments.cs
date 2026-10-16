@@ -72,9 +72,7 @@ public sealed partial class TodoWidgetViewModel
             Text = string.Empty,
             CreatedAt = now,
             UpdatedAt = now,
-            SortOrder = NewTaskPosition == SettingsService.TodoNewTaskPositionBottom
-                ? Items.Count
-                : 0
+            SortOrder = Items.Count
         };
         var viewModel = new TodoItemViewModel(item, _localizationService);
         viewModel.BeginEdit();
@@ -123,14 +121,7 @@ public sealed partial class TodoWidgetViewModel
         item.Text = normalizedTitle;
         item.UpdatedAt = DateTimeOffset.UtcNow;
         item.CancelEdit();
-        if (NewTaskPosition == SettingsService.TodoNewTaskPositionBottom)
-        {
-            Items.Add(item);
-        }
-        else
-        {
-            Items.Insert(0, item);
-        }
+        Items.Add(item);
 
         IsCreatingDetailItem = false;
         if (closeDetail)

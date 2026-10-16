@@ -541,6 +541,9 @@ public sealed class DingTalkGroupDocumentServiceTests
             return Task.FromResult(Titles.TryGetValue(url, out string? title) ? title : null);
         }
 
+        public Task<IReadOnlyList<DingTalkCalendarEvent>> ListCurrentWeekCalendarAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<DingTalkCalendarEvent>>([]);
+
         public Task<DingTalkGroupMessagePage> ListGroupMessagesAsync(
             DateTimeOffset start,
             DateTimeOffset end,

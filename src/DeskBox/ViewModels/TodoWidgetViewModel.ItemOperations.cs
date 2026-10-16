@@ -68,14 +68,7 @@ public sealed partial class TodoWidgetViewModel
         };
         var viewModel = new TodoItemViewModel(item, _localizationService);
 
-        if (NewTaskPosition == SettingsService.TodoNewTaskPositionBottom)
-        {
-            Items.Add(viewModel);
-        }
-        else
-        {
-            Items.Insert(0, viewModel);
-        }
+        Items.Add(viewModel);
 
         NormalizeSortOrders();
         RefreshVisibleItems();

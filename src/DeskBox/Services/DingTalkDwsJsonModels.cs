@@ -80,11 +80,26 @@ internal sealed class DwsDriveInfoResultDto
     [JsonPropertyName("name")] public string? Name { get; set; }
 }
 
+internal sealed class DwsCalendarResponseDto
+{
+    [JsonPropertyName("events")] public DwsCalendarEventDto[] Events { get; set; } = [];
+}
+
+internal sealed class DwsCalendarEventDto
+{
+    [JsonPropertyName("eventId")] public string EventId { get; set; } = string.Empty;
+    [JsonPropertyName("title")] public string Title { get; set; } = string.Empty;
+    [JsonPropertyName("start")] public string Start { get; set; } = string.Empty;
+    [JsonPropertyName("end")] public string End { get; set; } = string.Empty;
+    [JsonPropertyName("location")] public string? Location { get; set; }
+}
+
 [JsonSourceGenerationOptions(GenerationMode = JsonSourceGenerationMode.Metadata)]
 [JsonSerializable(typeof(DwsAuthStatusDto))]
 [JsonSerializable(typeof(DwsEmployeeResponseDto))]
 [JsonSerializable(typeof(DwsGroupMessagesResponseDto))]
 [JsonSerializable(typeof(DwsDriveInfoResponseDto))]
+[JsonSerializable(typeof(DwsCalendarResponseDto))]
 internal sealed partial class DingTalkDwsJsonContext : JsonSerializerContext
 {
 }

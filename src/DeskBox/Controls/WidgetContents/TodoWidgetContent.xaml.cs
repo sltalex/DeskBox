@@ -15,6 +15,9 @@ using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using Microsoft.UI.Text;
+using Microsoft.UI.Dispatching;
+using Microsoft.Extensions.DependencyInjection;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.System;
 
@@ -62,6 +65,9 @@ public sealed partial class TodoWidgetContent : UserControl
     private List<TodoItemViewModel> _selectionSnapshot = [];
     private HashSet<TodoItemViewModel> _selectionPreviewItems = [];
     private List<TodoSelectionHitTestItem> _selectionHitTestItems = [];
+    private DingTalkCalendarService? _calendarService;
+    private Microsoft.UI.Dispatching.DispatcherQueueTimer? _meetingRefreshTimer;
+    private bool _meetingsSelected;
 
     private TextBox TodoEditTextBox => TodoInlineEditor.EditorTextBox;
 
@@ -169,6 +175,7 @@ public sealed partial class TodoWidgetContent : UserControl
         ApplyMasterDetailLayout(ActualWidth);
         QueueDetailTitleHeightUpdate();
         QueueTodoSegmentedRestore();
+        StartMeetingRefresh();
     }
 
     private void TodoWidgetContent_Unloaded(object sender, RoutedEventArgs e)
@@ -192,6 +199,7 @@ public sealed partial class TodoWidgetContent : UserControl
         DetailPageTransitionHelper.Reset(DetailPage);
         CloseTodoEdit();
         CloseCustomDueDateOverlay();
+        StopMeetingRefresh();
     }
 
     private void TodoFilterSegmented_Loaded(object sender, RoutedEventArgs e)
@@ -548,7 +556,141 @@ public sealed partial class TodoWidgetContent : UserControl
     private void OnLanguageChanged()
     {
         ApplyLocalizedText();
+        if (_meetingsSelected)
+        {
+            _ = RefreshMeetingsAsync();
+        }
     }
+
+    private void StartMeetingRefresh()
+    {
+        _calendarService ??= App.Current?.Services.GetService<DingTalkCalendarService>();
+        _meetingRefreshTimer ??= DispatcherQueue.CreateTimer();
+        _meetingRefreshTimer.Interval = TimeSpan.FromMinutes(1);
+        _meetingRefreshTimer.Tick -= MeetingRefreshTimer_Tick;
+        _meetingRefreshTimer.Tick += MeetingRefreshTimer_Tick;
+        _meetingRefreshTimer.Start();
+    }
+
+    private void StopMeetingRefresh()
+    {
+        if (_meetingRefreshTimer is null)
+        {
+            return;
+        }
+
+        _meetingRefreshTimer.Stop();
+        _meetingRefreshTimer.Tick -= MeetingRefreshTimer_Tick;
+    }
+
+    private void MeetingRefreshTimer_Tick(Microsoft.UI.Dispatching.DispatcherQueueTimer sender, object args)
+    {
+        if (_meetingsSelected)
+        {
+            _ = RefreshMeetingsAsync();
+        }
+    }
+
+    private void ShowMeetings()
+    {
+        _meetingsSelected = true;
+        ListArea.Visibility = Visibility.Collapsed;
+        MeetingsArea.Visibility = Visibility.Visible;
+        ListFooterArea.Visibility = Visibility.Collapsed;
+        _ = RefreshMeetingsAsync();
+    }
+
+    private void ShowTodoList()
+    {
+        _meetingsSelected = false;
+        MeetingsArea.Visibility = Visibility.Collapsed;
+        ListArea.Visibility = Visibility.Visible;
+        ListFooterArea.Visibility = Visibility.Visible;
+    }
+
+    private async Task RefreshMeetingsAsync()
+    {
+        if (!_meetingsSelected || !IsLoaded)
+        {
+            return;
+        }
+
+        _calendarService ??= App.Current?.Services.GetService<DingTalkCalendarService>();
+        MeetingItemsPanel.Children.Clear();
+        if (_calendarService is null)
+        {
+            MeetingItemsPanel.Children.Add(CreateMeetingStatus("Todo.Meetings.NotBound"));
+            return;
+        }
+
+        try
+        {
+            DingTalkCalendarSnapshot snapshot = await _calendarService.GetUpcomingCurrentWeekAsync();
+            if (!snapshot.IsBound)
+            {
+                MeetingItemsPanel.Children.Add(CreateMeetingStatus("Todo.Meetings.NotBound"));
+                return;
+            }
+
+            if (snapshot.UpcomingEvents.Count == 0)
+            {
+                MeetingItemsPanel.Children.Add(CreateMeetingStatus("Todo.Meetings.Empty"));
+                return;
+            }
+
+            foreach (DingTalkCalendarEvent meeting in snapshot.UpcomingEvents)
+            {
+                var card = new Border
+                {
+                    Style = (Style)Resources["TodoCardBorderStyle"],
+                    Padding = new Thickness(10, 7, 10, 7)
+                };
+                var content = new StackPanel { Spacing = 2 };
+                content.Children.Add(new TextBlock
+                {
+                    Text = meeting.Title,
+                    FontWeight = FontWeights.Normal,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxLines = 2
+                });
+                content.Children.Add(new TextBlock
+                {
+                    Text = $"{meeting.Start.ToLocalTime():M月d日 HH:mm} - {meeting.End.ToLocalTime():HH:mm}",
+                    Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
+                    FontSize = 11
+                });
+                if (!string.IsNullOrWhiteSpace(meeting.Location))
+                {
+                    content.Children.Add(new TextBlock
+                    {
+                        Text = meeting.Location,
+                        Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
+                        FontSize = 11,
+                        TextTrimming = TextTrimming.CharacterEllipsis
+                    });
+                }
+
+                card.Child = content;
+                MeetingItemsPanel.Children.Add(card);
+            }
+        }
+        catch (Exception ex) when (ex is DingTalkDwsAuthorizationRequiredException or
+            DingTalkDwsMessageReadException or AuthApiException or HttpRequestException or
+            IOException or InvalidDataException or TimeoutException or FileNotFoundException or
+            System.ComponentModel.Win32Exception or OperationCanceledException)
+        {
+            App.Log($"[TodoMeetings] Refresh failed: {ex.GetType().Name}");
+            MeetingItemsPanel.Children.Add(CreateMeetingStatus("Todo.Meetings.Error"));
+        }
+    }
+
+    private TextBlock CreateMeetingStatus(string key) => new()
+    {
+        Text = App.Current.LocalizationService.T(key),
+        TextWrapping = TextWrapping.Wrap,
+        Foreground = (Brush)Application.Current.Resources["TextFillColorTertiaryBrush"],
+        Margin = new Thickness(4, 8, 4, 0)
+    };
 
     private void ApplyLocalizedText()
     {
@@ -611,6 +753,13 @@ public sealed partial class TodoWidgetContent : UserControl
             return;
         }
 
+        if (TodoFilterSegmented.SelectedIndex == 6)
+        {
+            ShowMeetings();
+            return;
+        }
+
+        ShowTodoList();
         TodoFilter filter = GetSelectedSegmentFilter();
         if (ViewModel.SelectedFilter == filter)
         {

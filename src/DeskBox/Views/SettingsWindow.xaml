@@ -2101,9 +2101,6 @@ svc:Localized.DescriptionKey="Settings.DefaultWidth.Description"
                                     <toolkit:SettingsCard HorizontalContentAlignment="Right" svc:Localized.DescriptionKey="Settings.ContentEditor.PreviewLines.Description" svc:Localized.HeaderKey="Settings.ContentEditor.PreviewLines.Title">
                                         <ComboBox MinWidth="220" ItemsSource="{Binding AvailablePreviewLineOptions}" controls:SettingsComboBox.Value="{Binding ItemPreviewLineCount, Mode=TwoWay}" />
                                     </toolkit:SettingsCard>
-                                    <toolkit:SettingsCard HorizontalContentAlignment="Right" svc:Localized.DescriptionKey="Settings.Todo.NewTaskPosition.Description" svc:Localized.HeaderKey="Settings.Todo.NewTaskPosition.Title">
-                                        <ComboBox MinWidth="190" ItemsSource="{Binding AvailableNewTaskPositionOptions}" controls:SettingsComboBox.Value="{Binding NewTaskPosition, Mode=TwoWay}" />
-                                    </toolkit:SettingsCard>
                                     <toolkit:SettingsCard HorizontalContentAlignment="Right" svc:Localized.DescriptionKey="Settings.ContentEditor.EnterBehavior.Description" svc:Localized.HeaderKey="Settings.ContentEditor.EnterBehavior.Title">
                                         <ComboBox MinWidth="220" ItemsSource="{Binding AvailableEnterBehaviorOptions}" controls:SettingsComboBox.Value="{Binding EditorEnterBehavior, Mode=TwoWay}" />
                                     </toolkit:SettingsCard>

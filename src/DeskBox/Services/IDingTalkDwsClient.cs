@@ -45,6 +45,13 @@ public sealed record DingTalkGroupMessage(
     DateTimeOffset CreatedAt,
     bool IsSingleChat);
 
+public sealed record DingTalkCalendarEvent(
+    string EventId,
+    string Title,
+    DateTimeOffset Start,
+    DateTimeOffset End,
+    string Location);
+
 public interface IDingTalkDwsClient
 {
     Task<DingTalkDwsAuthStatus> GetAuthStatusAsync(CancellationToken cancellationToken = default);
@@ -57,4 +64,6 @@ public interface IDingTalkDwsClient
         int limit = 50,
         CancellationToken cancellationToken = default);
     Task<string?> GetDocumentTitleAsync(string url, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<DingTalkCalendarEvent>> ListCurrentWeekCalendarAsync(
+        CancellationToken cancellationToken = default);
 }

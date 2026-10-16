@@ -124,6 +124,44 @@ internal sealed class DingTalkDwsClient : IDingTalkDwsClient
         return name?.Length is > 0 and <= 255 ? name : null;
     }
 
+    public async Task<IReadOnlyList<DingTalkCalendarEvent>> ListCurrentWeekCalendarAsync(
+        CancellationToken cancellationToken = default)
+    {
+        DwsCalendarResponseDto response = await RunJsonAsync(
+            ["calendar", "+week", "--format", "json"],
+            DingTalkDwsJsonContext.Default.DwsCalendarResponseDto,
+            cancellationToken,
+            TimeSpan.FromSeconds(20));
+
+        var events = new List<DingTalkCalendarEvent>(response.Events.Length);
+        foreach (DwsCalendarEventDto item in response.Events)
+        {
+            if (!DateTimeOffset.TryParse(
+                    item.Start,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeLocal,
+                    out DateTimeOffset start) ||
+                !DateTimeOffset.TryParse(
+                    item.End,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeLocal,
+                    out DateTimeOffset end) ||
+                end <= start)
+            {
+                continue;
+            }
+
+            events.Add(new DingTalkCalendarEvent(
+                item.EventId.Trim(),
+                string.IsNullOrWhiteSpace(item.Title) ? "(无标题会议)" : item.Title.Trim(),
+                start,
+                end,
+                item.Location?.Trim() ?? string.Empty));
+        }
+
+        return events;
+    }
+
     private async Task<T> RunJsonAsync<T>(
         IReadOnlyList<string> arguments,
         JsonTypeInfo<T> jsonTypeInfo,
