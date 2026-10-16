@@ -346,7 +346,7 @@
     </PropertyGroup>
     <MSBuild Projects="..\DeskBox.TemperatureProbe\DeskBox.TemperatureProbe.csproj"
              Targets="Restore;Publish"
-             Properties="Configuration=Release;Platform=AnyCPU;RuntimeIdentifier=$(DeskBoxTemperatureProbeRid);SelfContained=true;PublishDir=$(MSBuildProjectDirectory)\$(DeskBoxTemperatureProbePublishDir)" />
+             Properties="Configuration=Release;Platform=AnyCPU;RuntimeIdentifier=$(DeskBoxTemperatureProbeRid);SelfContained=true;UseAppHost=true;PublishAot=false;PublishDir=$(MSBuildProjectDirectory)\$(DeskBoxTemperatureProbePublishDir)" />
     <ItemGroup>
       <DeskBoxTemperatureProbePublishedFile Include="$(DeskBoxTemperatureProbePublishDir)**\*" />
       <AppxPackagePayload Include="@(DeskBoxTemperatureProbePublishedFile)" Condition="'$(DeskBoxDistribution)' == 'Store'">

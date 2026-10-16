@@ -208,6 +208,12 @@ $requiredFiles = @(
     "deskbox_native.dll",
     "EverythingSdk.dll",
     "ThirdParty/Everything/LICENSE.txt",
+    "TemperatureProbe/DeskBox.TemperatureProbe.exe",
+    "TemperatureProbe/LibreHardwareMonitorLib.dll",
+    "TemperatureProbe/coreclr.dll",
+    "TemperatureProbe/clrjit.dll",
+    "TemperatureProbe/hostfxr.dll",
+    "TemperatureProbe/hostpolicy.dll",
     "resources.pri",
     "Assets/Store/StoreLogo.png",
     "Assets/Store/Square44x44Logo.png",
@@ -227,7 +233,7 @@ $forbiddenPatterns = @(
     '(^|/)DeskBox\.Updater(?:\.|/|$)',
     '(^|/)deskbox_search_core(?:\.|$)',
     '\.pdb$',
-    '(^|/)(?:coreclr|clrjit|hostfxr|hostpolicy)\.dll$',
+    '^(?!TemperatureProbe/)(?:[^/]+/)*(?:coreclr|clrjit|hostfxr|hostpolicy)\.dll$',
     'store-assets-html'
 )
 $forbiddenFiles = @(

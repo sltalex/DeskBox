@@ -156,6 +156,35 @@ public sealed class AotRetailIsolationContractTests
             StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void StoreAudit_RequiresSelfContainedProbeButRejectsRuntimeFilesElsewhere()
+    {
+        string audit = Read("scripts/audit-store-native-aot-package.ps1");
+        string project = Read("src/DeskBox/DeskBox.csproj");
+
+        foreach (string required in new[]
+                 {
+                     "TemperatureProbe/DeskBox.TemperatureProbe.exe",
+                     "TemperatureProbe/LibreHardwareMonitorLib.dll",
+                     "TemperatureProbe/coreclr.dll",
+                     "TemperatureProbe/clrjit.dll",
+                     "TemperatureProbe/hostfxr.dll",
+                     "TemperatureProbe/hostpolicy.dll"
+                 })
+        {
+            Assert.Contains($"\"{required}\"", audit, StringComparison.Ordinal);
+        }
+
+        Assert.Contains(
+            "'^(?!TemperatureProbe/)(?:[^/]+/)*(?:coreclr|clrjit|hostfxr|hostpolicy)\\.dll$'",
+            audit,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "SelfContained=true;UseAppHost=true;PublishAot=false;PublishDir=",
+            project,
+            StringComparison.Ordinal);
+    }
+
     private static bool IsSmokeHarnessSource(string path)
     {
         string fileName = Path.GetFileName(path);
