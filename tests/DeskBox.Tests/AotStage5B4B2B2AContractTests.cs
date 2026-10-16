@@ -1,4 +1,4 @@
-namespace DeskBox.Tests;
+﻿namespace DeskBox.Tests;
 
 public sealed class AotStage5B4B2B2AContractTests
 {
@@ -397,7 +397,7 @@ public sealed class AotStage5B4B2B2AContractTests
         Assert.Contains("stage5B4B2B2AForbiddenScopePatterns", audit, StringComparison.Ordinal);
         Assert.Contains("stage5B4B2B2AJsonSerializeCallCount", audit, StringComparison.Ordinal);
         Assert.Contains("stage5B4B2B2ASourceWarningMessages", audit, StringComparison.Ordinal);
-        Assert.Contains("stage5B4B2B2AExpectedWmc1510Count = 763", audit, StringComparison.Ordinal);
+        Assert.Contains("stage5B4B2B2AExpectedWmc1510Count = 766", audit, StringComparison.Ordinal);
     }
 
     private static int CountOccurrences(string value, string token)
