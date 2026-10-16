@@ -171,6 +171,7 @@ public partial class App : Application
     internal CloudBackupService CloudBackupService { get; private set; } = null!;
     internal AccountCloudBackupService AccountCloudBackupService { get; private set; } = null!;
     internal TreeCloudSyncService TreeCloudSyncService { get; private set; } = null!;
+    internal DingTalkGroupDocumentSyncService DingTalkGroupDocumentSyncService { get; private set; } = null!;
     public DeskBoxAttachmentHealthService AttachmentHealthService { get; private set; } = null!;
     public FileService FileService { get; private set; } = null!;
     public OrganizerService OrganizerService { get; private set; } = null!;
@@ -315,6 +316,7 @@ public partial class App : Application
         CloudBackupService.BackupRunCompleted += OnCloudBackupRunCompleted;
         AccountCloudBackupService = Services.GetRequiredService<AccountCloudBackupService>();
         TreeCloudSyncService = Services.GetRequiredService<TreeCloudSyncService>();
+        DingTalkGroupDocumentSyncService = Services.GetRequiredService<DingTalkGroupDocumentSyncService>();
         _ = LegacySearchIndexCleanupService.TryCleanup();
         AttachmentHealthService = Services.GetRequiredService<DeskBoxAttachmentHealthService>();
         DiagnosticsBundleService = Services.GetRequiredService<DeskBoxDiagnosticsBundleService>();
@@ -1081,6 +1083,7 @@ public partial class App : Application
             await authSessionRestoreTask;
             RunOptionalStartupStep("account-cloud-backup", AccountCloudBackupService.Start);
             RunOptionalStartupStep("tree-cloud-sync", TreeCloudSyncService.Start);
+            RunOptionalStartupStep("dingtalk-group-documents", DingTalkGroupDocumentSyncService.Start);
 
             if (FeatureWidgetSettings.IsEnabled(SettingsService.Settings, WidgetKind.Search))
             {
@@ -3011,7 +3014,8 @@ public partial class App : Application
             Services.GetRequiredService<IDingTalkDwsClient>(),
             Services.GetRequiredService<DingTalkAccountService>(),
             AccountCloudBackupService,
-            TreeCloudSyncService);
+            TreeCloudSyncService,
+            DingTalkGroupDocumentSyncService);
         _settingsWindow.Closed += SettingsWindow_ClosedForApp;
         return _settingsWindow;
     }
@@ -4632,6 +4636,7 @@ public partial class App : Application
                 shutdownGrace),
             ShutdownStep.Bounded("account-cloud-services", async () =>
             {
+                await DingTalkGroupDocumentSyncService.DisposeAsync();
                 await TreeCloudSyncService.DisposeAsync();
                 await AccountCloudBackupService.DisposeAsync();
             }, shutdownGrace),

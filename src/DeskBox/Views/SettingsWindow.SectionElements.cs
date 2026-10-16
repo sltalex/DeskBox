@@ -154,6 +154,8 @@ public sealed partial class SettingsWindow
         FindCreatedSectionElement<global::DeskBox.Views.SettingsSections.GlanceWidgetSettingsSection>("GlanceSettings", "GlanceSettingsSection")!;
     private global::DeskBox.Views.SettingsSections.SearchSettingsSection SearchSettingsSection =>
         FindCreatedSectionElement<global::DeskBox.Views.SettingsSections.SearchSettingsSection>("SearchSettings", "SearchSettingsSection")!;
+    private global::DeskBox.Views.SettingsSections.DingTalkGroupDocsSettingsSection DingTalkGroupDocsSettingsSection =>
+        FindCreatedSectionElement<global::DeskBox.Views.SettingsSections.DingTalkGroupDocsSettingsSection>("DingTalkGroupDocsSettings", "DingTalkGroupDocsSettingsSection")!;
     private global::Microsoft.UI.Xaml.Controls.StackPanel PerformanceSettingsSection =>
         FindCreatedSectionElement<global::Microsoft.UI.Xaml.Controls.StackPanel>("PerformanceSettings", "PerformanceSettingsSection")!;
     private global::Microsoft.UI.Xaml.Controls.StackPanel MaintenanceSection =>

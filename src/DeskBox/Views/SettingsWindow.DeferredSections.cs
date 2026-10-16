@@ -93,6 +93,11 @@ public sealed partial class SettingsWindow
                     _authSession,
                     _treeCloudSyncService);
                 break;
+            case DingTalkGroupDocsSettingsSection groupDocsSettings:
+                groupDocsSettings.Configure(
+                    _localizationService,
+                    _dingTalkGroupDocumentSyncService);
+                break;
             case FileWidgetSettingsSection fileSettings:
                 fileSettings.FileStack = _fileStackSettingsViewModel;
                 fileSettings.FeatureWidgets = _featureWidgetsSettingsViewModel;

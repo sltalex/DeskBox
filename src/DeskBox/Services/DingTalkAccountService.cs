@@ -7,6 +7,17 @@ public sealed class DingTalkAccountService
 {
     private readonly IAuthenticatedAccountApi _api;
 
+    /// <summary>
+    /// The last identity loaded for the currently authenticated SltBox account.
+    /// Feature services use this cache between explicit account/session changes;
+    /// they must not poll the account endpoint on every background tick.
+    /// </summary>
+    internal DingTalkIdentityDto? CurrentIdentity { get; private set; }
+
+    internal void ClearCachedIdentity() => SetCurrentIdentity(null, notify: false);
+
+    internal event Action? IdentityChanged;
+
     internal DingTalkAccountService(IAuthenticatedAccountApi api) => _api = api;
 
     internal async Task<DingTalkIdentityDto?> GetAsync(CancellationToken cancellationToken = default)
@@ -17,7 +28,9 @@ public sealed class DingTalkAccountService
         await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         DingTalkIdentityResponse? body = await JsonSerializer.DeserializeAsync(
             stream, DingTalkAccountJsonContext.Default.DingTalkIdentityResponse, cancellationToken);
-        return body?.Identity;
+        DingTalkIdentityDto? identity = body?.Identity;
+        SetCurrentIdentity(identity, notify: false);
+        return identity;
     }
 
     internal async Task<DingTalkIdentityDto> LinkAsync(
@@ -40,7 +53,9 @@ public sealed class DingTalkAccountService
         await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         DingTalkIdentityResponse? body = await JsonSerializer.DeserializeAsync(
             stream, DingTalkAccountJsonContext.Default.DingTalkIdentityResponse, cancellationToken);
-        return body?.Identity ?? throw new InvalidDataException("The account service returned no DingTalk identity.");
+        DingTalkIdentityDto identity = body?.Identity ?? throw new InvalidDataException("The account service returned no DingTalk identity.");
+        SetCurrentIdentity(identity, notify: true);
+        return identity;
     }
 
     internal async Task UnlinkAsync(CancellationToken cancellationToken = default)
@@ -48,6 +63,26 @@ public sealed class DingTalkAccountService
         using HttpResponseMessage response = await _api.SendAsync(
             HttpMethod.Post, "dingtalk/unlink.php", "{}"u8.ToArray(), null, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
+        SetCurrentIdentity(null, notify: true);
+    }
+
+    private void SetCurrentIdentity(DingTalkIdentityDto? identity, bool notify)
+    {
+        bool changed = !AreEquivalent(CurrentIdentity, identity);
+        CurrentIdentity = identity;
+        if (notify && changed) IdentityChanged?.Invoke();
+    }
+
+    private static bool AreEquivalent(DingTalkIdentityDto? left, DingTalkIdentityDto? right)
+    {
+        if (ReferenceEquals(left, right)) return true;
+        if (left is null || right is null) return false;
+        return string.Equals(left.CorpId, right.CorpId, StringComparison.Ordinal)
+            && string.Equals(left.DingtalkUserId, right.DingtalkUserId, StringComparison.Ordinal)
+            && string.Equals(left.DisplayName, right.DisplayName, StringComparison.Ordinal)
+            && string.Equals(left.OrganizationName, right.OrganizationName, StringComparison.Ordinal)
+            && string.Equals(left.DepartmentName, right.DepartmentName, StringComparison.Ordinal)
+            && string.Equals(left.AvatarUrl, right.AvatarUrl, StringComparison.Ordinal);
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)

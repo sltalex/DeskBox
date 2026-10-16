@@ -29,6 +29,7 @@ internal static class WidgetSettingsMenuHelper
         WidgetKind.Search => "SearchSettings",
         WidgetKind.Tree => "TreeSettings",
         WidgetKind.SystemMonitor => "FeatureWidgets",
+        WidgetKind.DingTalkGroupDocs => "DingTalkGroupDocsSettings",
         _ => null
     };
 
@@ -47,6 +48,7 @@ internal static class WidgetSettingsMenuHelper
         WidgetKind.Search => "Widget.Settings.Search",
         WidgetKind.Tree => "Tree.Title",
         WidgetKind.SystemMonitor => "SystemMonitor.Title",
+        WidgetKind.DingTalkGroupDocs => "DingTalkGroupDocs.Title",
         _ => "Common.Configure"
     };
 

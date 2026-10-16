@@ -159,8 +159,9 @@ public sealed class WidgetContentFactory
             WidgetContentAvailability.Available,
             "WidgetContent.DingTalkGroupDocs.StatusLabel",
             "WidgetContent.DingTalkGroupDocs.StatusDescription",
-            HasSettingsPage: false,
-            IsFeatureWidget: true)
+            HasSettingsPage: true,
+            IsFeatureWidget: true,
+            SettingsSectionTag: "DingTalkGroupDocsSettings")
     ];
 
     private static readonly IReadOnlyDictionary<WidgetKind, WidgetContentDescriptor> Descriptors =

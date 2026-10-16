@@ -118,6 +118,7 @@ public sealed partial class SettingsWindow : Window
             ["GlanceSettings"] = new("GlanceSettings", "Glance.Settings.Title", "FeatureWidgets", "FeatureWidgets"),
             ["SearchSettings"] = new("SearchSettings", "Settings.Search.Title", "FeatureWidgets", "FeatureWidgets"),
             ["TreeSettings"] = new("TreeSettings", "Tree.Title", "FeatureWidgets", "FeatureWidgets"),
+            ["DingTalkGroupDocsSettings"] = new("DingTalkGroupDocsSettings", "DingTalkGroupDocs.Title", "FeatureWidgets", "FeatureWidgets"),
             ["SystemMonitorSettings"] = new("SystemMonitorSettings", "SystemMonitor.Title", "FeatureWidgets", "FeatureWidgets"),
             ["AppearanceMaterialSettings"] = new("AppearanceMaterialSettings", "Settings.Material.Title", "Appearance", "Appearance"),
             ["AppearanceDensitySettings"] = new("AppearanceDensitySettings", "Settings.Density.Title", "Appearance", "Appearance"),
@@ -140,6 +141,7 @@ public sealed partial class SettingsWindow : Window
     private readonly IBackupCommands _backupCommands;
     private readonly AccountCloudBackupService _accountCloudBackupService;
     private readonly TreeCloudSyncService _treeCloudSyncService;
+    private readonly DingTalkGroupDocumentSyncService _dingTalkGroupDocumentSyncService;
     private readonly IAuthSession _authSession;
     private readonly DeskBox.Features.Music.MusicSettingsViewModel _musicSettingsViewModel;
     private readonly DeskBox.Features.QuickCapture.QuickCaptureSettingsViewModel _quickCaptureSettingsViewModel;
@@ -204,7 +206,8 @@ public sealed partial class SettingsWindow : Window
         IDingTalkDwsClient dingTalkDwsClient,
         DingTalkAccountService dingTalkAccountService,
         AccountCloudBackupService accountCloudBackupService,
-        TreeCloudSyncService treeCloudSyncService)
+        TreeCloudSyncService treeCloudSyncService,
+        DingTalkGroupDocumentSyncService dingTalkGroupDocumentSyncService)
     {
         var constructionStopwatch = Stopwatch.StartNew();
         long previousCheckpointMilliseconds = 0;
@@ -225,6 +228,7 @@ public sealed partial class SettingsWindow : Window
         _backupRestoreActions = backupRestoreActions;
         _accountCloudBackupService = accountCloudBackupService;
         _treeCloudSyncService = treeCloudSyncService;
+        _dingTalkGroupDocumentSyncService = dingTalkGroupDocumentSyncService;
         _authSession = authSession;
         _musicSettingsViewModel = musicSettings;
         _quickCaptureSettingsViewModel = quickCaptureSettingsEditor;

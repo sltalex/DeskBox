@@ -25,6 +25,14 @@ public static class ServiceRegistry
         services.AddSingleton<IAuthenticatedAccountApi>(sp => sp.GetRequiredService<DeskBoxAuthSession>());
         services.AddSingleton<IDingTalkDwsClient>(_ => new DingTalkDwsClient());
         services.AddSingleton<DingTalkAccountService>(sp => new DingTalkAccountService(sp.GetRequiredService<IAuthenticatedAccountApi>()));
+        services.AddSingleton<DingTalkGroupDocumentService>(sp =>
+            new DingTalkGroupDocumentService(sp.GetRequiredService<IDingTalkDwsClient>()));
+        services.AddSingleton<DingTalkGroupDocumentSyncService>(sp =>
+            new DingTalkGroupDocumentSyncService(
+                sp.GetRequiredService<DingTalkGroupDocumentService>(),
+                sp.GetRequiredService<IDingTalkDwsClient>(),
+                sp.GetRequiredService<DingTalkAccountService>(),
+                sp.GetRequiredService<IAuthSession>()));
         services.AddSingleton<AccountCloudBackupService>(sp =>
             new AccountCloudBackupService(
                 sp.GetRequiredService<IAuthenticatedAccountApi>(),

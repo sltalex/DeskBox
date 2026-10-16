@@ -3,6 +3,7 @@ using DeskBox.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.Extensions.DependencyInjection;
 using Windows.System;
 
 namespace DeskBox.Controls.WidgetContents;
@@ -11,11 +12,13 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
 {
     private readonly LocalizationService _localization;
     private readonly DingTalkGroupDocumentService _service;
+    private readonly DingTalkGroupDocumentSyncService? _sync;
     private readonly TextBlock _status = new() { TextWrapping = TextWrapping.Wrap };
     private readonly TextBox _search;
     private readonly StackPanel _groups = new() { Spacing = 10 };
     private readonly Button _refresh = new();
-    private readonly ProgressRing _progress = new() { Width = 18, Height = 18 };
+    private readonly ProgressBar _progress = new() { Minimum = 0, Maximum = 1, Height = 8 };
+    private readonly TextBlock _progressText = new() { TextWrapping = TextWrapping.Wrap, Opacity = 0.75 };
     private bool _loaded;
     private bool _disposed;
 
@@ -24,11 +27,14 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
         DingTalkGroupDocumentService? service = null)
     {
         _localization = localization;
-        _service = service ?? new DingTalkGroupDocumentService(new DingTalkDwsClient());
+        _service = service ?? App.Current?.Services.GetService<DingTalkGroupDocumentService>()
+            ?? new DingTalkGroupDocumentService(new DingTalkDwsClient());
+        _sync = App.Current?.Services.GetService<DingTalkGroupDocumentSyncService>();
         _search = new TextBox { PlaceholderText = _localization.T("DingTalkGroupDocs.Search") };
 
-        _refresh.Content = _localization.T("DingTalkGroupDocs.Refresh");
+        _refresh.Content = _localization.T("DingTalkGroupDocs.Sync.Button");
         _refresh.Click += Refresh_Click;
+        _service.ProgressChanged += ProgressChanged;
         _search.TextChanged += Search_TextChanged;
         var header = new Grid { ColumnSpacing = 8 };
         header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -41,6 +47,7 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
         root.Children.Add(header);
         root.Children.Add(_search);
         root.Children.Add(_progress);
+        root.Children.Add(_progressText);
         root.Children.Add(new ScrollViewer
         {
             Content = _groups,
@@ -70,15 +77,26 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
     {
         if (_disposed) return;
         _refresh.IsEnabled = false;
-        _progress.IsActive = true;
+        _progress.IsIndeterminate = true;
+        _progress.Value = 0;
         _status.Text = _localization.T("DingTalkGroupDocs.Loading");
         try
         {
-            IReadOnlyList<DingTalkGroupDocument> documents = await _service.LoadAsync();
-            if (!loadOnly || documents.Count == 0)
-                documents = await _service.RefreshAsync();
+            // A full historical scan may take a long time. Keep the already
+            // loaded local index visible instead of waiting for its state lock.
+            IReadOnlyList<DingTalkGroupDocument> documents = _service.IsSyncing
+                ? _service.Documents
+                : await _service.LoadAsync();
+            bool syncUnavailable = false;
+            if (!loadOnly)
+            {
+                syncUnavailable = _sync is null || !await _sync.SyncNowAsync();
+                documents = _service.Documents;
+            }
             Render(documents);
-            _status.Text = _service.Documents.Count == 0
+            _status.Text = syncUnavailable
+                ? _localization.T("DingTalkGroupDocs.Sync.NotReady")
+                : _service.Documents.Count == 0
                 ? _localization.T("DingTalkGroupDocs.Empty")
                 : _localization.Format("DingTalkGroupDocs.Count", _service.Documents.Count);
         }
@@ -98,7 +116,8 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
             _status.Text = _localization.T("DingTalkGroupDocs.Error");
             Render(_service.Documents);
         }
-        catch (Exception ex) when (ex is IOException or InvalidDataException or TimeoutException or HttpRequestException)
+        catch (Exception ex) when (ex is IOException or InvalidDataException or TimeoutException or HttpRequestException or
+            AuthApiException or FileNotFoundException or System.ComponentModel.Win32Exception or OperationCanceledException)
         {
             App.Log($"[DingTalkGroupDocs] Refresh failed: {ex.GetType().Name}");
             _status.Text = _localization.T("DingTalkGroupDocs.Error");
@@ -106,9 +125,31 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
         }
         finally
         {
-            _progress.IsActive = false;
-            _refresh.IsEnabled = true;
+            if (!_service.IsSyncing)
+            {
+                _progress.IsIndeterminate = false;
+                _progress.Value = 1;
+            }
+            _refresh.IsEnabled = !_service.IsSyncing;
         }
+    }
+
+    private void ProgressChanged(DingTalkGroupDocumentSyncProgress progress)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (_disposed) return;
+            _refresh.IsEnabled = !progress.IsRunning;
+            _progress.IsIndeterminate = progress.IsRunning && progress.TotalSegments <= 0;
+            _progress.Value = progress.IsRunning && progress.TotalSegments > 0
+                ? (double)progress.CompletedSegments / progress.TotalSegments
+                : progress.IsRunning ? 0 : 1;
+            _progressText.Text = !progress.IsRunning
+                ? string.Empty
+                : progress.IsInitialSync
+                    ? _localization.T("DingTalkGroupDocs.Sync.InitialProgress")
+                    : _localization.T("DingTalkGroupDocs.Sync.Progress");
+        });
     }
 
     private void Render(IReadOnlyList<DingTalkGroupDocument> documents)
@@ -163,6 +204,7 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
         _disposed = true;
         _refresh.Click -= Refresh_Click;
         _search.TextChanged -= Search_TextChanged;
+        _service.ProgressChanged -= ProgressChanged;
         Loaded -= LoadedHandler;
         Unloaded -= UnloadedHandler;
     }
@@ -172,8 +214,9 @@ public sealed class DingTalkGroupDocsWidgetContentAdapter : WidgetContentAdapter
 {
     public DingTalkGroupDocsWidgetContentAdapter(
         WidgetConfig config,
-        LocalizationService localization)
-        : base(config, () => new DingTalkGroupDocsWidgetContent(localization))
+        LocalizationService localization,
+        DingTalkGroupDocumentService? service = null)
+        : base(config, () => new DingTalkGroupDocsWidgetContent(localization, service))
     {
     }
 
