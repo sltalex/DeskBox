@@ -132,6 +132,30 @@ public sealed class AotRetailIsolationContractTests
         Assert.Contains("smokeHarnessEnabled = $false", distribution, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void DirectDistribution_RequiresSelfContainedProbeButRejectsRuntimeFilesElsewhere()
+    {
+        string distribution = Read("scripts/build-stage-7c1-distribution.ps1");
+
+        foreach (string required in new[]
+                 {
+                     "TemperatureProbe/DeskBox.TemperatureProbe.exe",
+                     "TemperatureProbe/LibreHardwareMonitorLib.dll",
+                     "TemperatureProbe/coreclr.dll",
+                     "TemperatureProbe/clrjit.dll",
+                     "TemperatureProbe/hostfxr.dll",
+                     "TemperatureProbe/hostpolicy.dll"
+                 })
+        {
+            Assert.Contains($"\"{required}\"", distribution, StringComparison.Ordinal);
+        }
+
+        Assert.Contains(
+            "'^(?!TemperatureProbe/)(?:[^/]+/)*(?:coreclr|clrjit|hostfxr|hostpolicy)\\.dll$'",
+            distribution,
+            StringComparison.Ordinal);
+    }
+
     private static bool IsSmokeHarnessSource(string path)
     {
         string fileName = Path.GetFileName(path);

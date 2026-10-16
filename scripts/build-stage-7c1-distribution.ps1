@@ -176,7 +176,13 @@ $directRequiredFiles = @(
     "Microsoft.WindowsAppRuntime.Insights.Resource.dll",
     "ThirdParty/Everything/LICENSE.txt",
     "DeskBox.pri",
-    "DeskBox.InstallManifest.txt"
+    "DeskBox.InstallManifest.txt",
+    "TemperatureProbe/DeskBox.TemperatureProbe.exe",
+    "TemperatureProbe/LibreHardwareMonitorLib.dll",
+    "TemperatureProbe/coreclr.dll",
+    "TemperatureProbe/clrjit.dll",
+    "TemperatureProbe/hostfxr.dll",
+    "TemperatureProbe/hostpolicy.dll"
 )
 $missingDirectFiles = @($directRequiredFiles | Where-Object { $directFiles -notcontains $_ })
 $directForbiddenPatterns = @(
@@ -184,7 +190,7 @@ $directForbiddenPatterns = @(
     '(^|/)DeskBox\.dll$',
     '(^|/)DeskBox\.deps\.json$',
     '(^|/)DeskBox\.runtimeconfig\.json$',
-    '(^|/)(?:coreclr|clrjit|hostfxr|hostpolicy)\.dll$',
+    '^(?!TemperatureProbe/)(?:[^/]+/)*(?:coreclr|clrjit|hostfxr|hostpolicy)\.dll$',
     '(^|/)Assets/Store/',
     'store-assets-html'
 )
