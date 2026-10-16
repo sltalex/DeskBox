@@ -21,6 +21,7 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
     private readonly TextBlock _progressText = new() { TextWrapping = TextWrapping.Wrap, Opacity = 0.75 };
     private bool _loaded;
     private bool _disposed;
+    private int _lastRenderedSegment;
 
     public DingTalkGroupDocsWidgetContent(
         LocalizationService localization,
@@ -82,7 +83,7 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
         _status.Text = _localization.T("DingTalkGroupDocs.Loading");
         try
         {
-            // A full historical scan may take a long time. Keep the already
+            // The first six-month scan may take a long time. Keep the already
             // loaded local index visible instead of waiting for its state lock.
             IReadOnlyList<DingTalkGroupDocument> documents = _service.IsSyncing
                 ? _service.Documents
@@ -142,13 +143,24 @@ public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
             _refresh.IsEnabled = !progress.IsRunning;
             _progress.IsIndeterminate = progress.IsRunning && progress.TotalSegments <= 0;
             _progress.Value = progress.IsRunning && progress.TotalSegments > 0
-                ? (double)progress.CompletedSegments / progress.TotalSegments
+                ? progress.EstimatedCompletion
                 : progress.IsRunning ? 0 : 1;
+            if (progress.IsRunning && progress.CompletedSegments == 0 && progress.PagesFetched == 0)
+                _lastRenderedSegment = 0;
+            if (progress.IsRunning && progress.CompletedSegments > _lastRenderedSegment)
+            {
+                _lastRenderedSegment = progress.CompletedSegments;
+                Render(_service.Documents);
+                _status.Text = _service.Documents.Count == 0
+                    ? _localization.T("DingTalkGroupDocs.Empty")
+                    : _localization.Format("DingTalkGroupDocs.Count", _service.Documents.Count);
+            }
             _progressText.Text = !progress.IsRunning
                 ? string.Empty
-                : progress.IsInitialSync
+                : (progress.IsInitialSync
                     ? _localization.T("DingTalkGroupDocs.Sync.InitialProgress")
-                    : _localization.T("DingTalkGroupDocs.Sync.Progress");
+                    : _localization.T("DingTalkGroupDocs.Sync.Progress")) + "\n" +
+                  progress.FormatDetails(_localization);
         });
     }
 

@@ -60,7 +60,7 @@ public sealed class DingTalkGroupDocumentServiceTests
     }
 
     [Fact]
-    public async Task SyncAsync_UsesHistoryFirstThenOverlappingIncrementalWindowAndMergesCache()
+    public async Task SyncAsync_UsesRecentSixMonthsFirstThenOverlappingIncrementalWindowAndMergesCache()
     {
         string root = CreateTempRoot();
         try
@@ -76,7 +76,14 @@ public sealed class DingTalkGroupDocumentServiceTests
             await service.SyncAsync();
             Assert.True(service.HasCompletedInitialSync);
             Assert.Equal(6, service.SyncIntervalHours);
-            Assert.True(dws.Requests[0].Start < DateTimeOffset.Now.AddYears(-9));
+            Assert.InRange(dws.Requests[0].Start,
+                DateTimeOffset.Now.AddMonths(-6), DateTimeOffset.Now);
+            Assert.True(dws.Requests[0].End > dws.Requests[0].Start);
+            Assert.True(dws.Requests[0].End - dws.Requests[0].Start <= TimeSpan.FromDays(14));
+            Assert.All(dws.Requests, request =>
+                Assert.True(request.Start >= DateTimeOffset.Now.AddMonths(-6).AddMinutes(-1)));
+            Assert.All(dws.Requests.Skip(1).Zip(dws.Requests), pair =>
+                Assert.Equal(pair.Second.Start, pair.First.End));
             Assert.Contains(progress, item => item.IsInitialSync && item.IsRunning && item.TotalSegments > 1);
             DateTimeOffset firstCompleted = Assert.IsType<DateTimeOffset>(service.LastSyncCompletedAt);
 
@@ -91,6 +98,164 @@ public sealed class DingTalkGroupDocumentServiceTests
             Assert.Contains(service.Documents, item => item.Url.EndsWith("/old", StringComparison.Ordinal));
             Assert.Contains(service.Documents, item => item.Url.EndsWith("/new", StringComparison.Ordinal));
             Assert.Contains(progress, item => !item.IsInitialSync && item.IsRunning);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
+    [Fact]
+    public async Task SyncAsync_ResumesAfterCompletedTimeWindowWhenNextWindowFails()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            var dws = new FakeDwsClient { FailOnRequestNumber = 2 };
+            dws.Pages.Enqueue(new DingTalkGroupMessagePage(
+                [new("a", "研发群", "https://alidocs.dingtalk.com/i/checkpoint", DateTimeOffset.Now, false)],
+                false, null));
+            var first = new DingTalkGroupDocumentService(dws, root);
+
+            await Assert.ThrowsAsync<IOException>(() => first.SyncAsync());
+
+            Assert.False(first.HasCompletedInitialSync);
+            Assert.Null(first.LastSyncCompletedAt);
+            Assert.Single(first.Documents);
+            DateTimeOffset nextEnd = dws.Requests[1].End;
+
+            dws.FailOnRequestNumber = null;
+            var resumed = new DingTalkGroupDocumentService(dws, root);
+            Assert.Single(await resumed.LoadAsync());
+            await resumed.SyncAsync();
+
+            Assert.Equal(nextEnd, dws.Requests[2].End);
+            Assert.True(resumed.HasCompletedInitialSync);
+            Assert.Single(resumed.Documents);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
+    [Fact]
+    public async Task SyncAsync_ReportsPageProgressWithinAWindow()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            var dws = new FakeDwsClient();
+            dws.Pages.Enqueue(new DingTalkGroupMessagePage([], true, "next"));
+            dws.Pages.Enqueue(new DingTalkGroupMessagePage([], false, null));
+            var service = new DingTalkGroupDocumentService(dws, root);
+            var progress = new List<DingTalkGroupDocumentSyncProgress>();
+            service.ProgressChanged += progress.Add;
+
+            await service.SyncAsync();
+
+            DingTalkGroupDocumentSyncProgress firstPage = Assert.Single(progress.Where(
+                item => item.IsRunning && item.PagesFetched == 1 && item.CompletedSegments == 0));
+            DingTalkGroupDocumentSyncProgress secondPage = Assert.Single(progress.Where(
+                item => item.IsRunning && item.PagesFetched == 2 && item.CompletedSegments == 0));
+            Assert.True(secondPage.EstimatedCompletion > firstPage.EstimatedCompletion);
+            Assert.True(firstPage.WindowStart < firstPage.WindowEnd);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
+    [Fact]
+    public async Task SyncAsync_DenseWindowIsSplitWithoutDroppingDocuments()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            var dws = new FakeDwsClient();
+            for (int page = 0; page < 200; page++)
+                dws.Pages.Enqueue(new DingTalkGroupMessagePage([], true, $"page-{page}"));
+            dws.Pages.Enqueue(new DingTalkGroupMessagePage(
+                [new("a", "研发群", "https://alidocs.dingtalk.com/i/from-split", DateTimeOffset.Now, false)],
+                false, null));
+            var service = new DingTalkGroupDocumentService(dws, root);
+
+            await service.SyncAsync();
+
+            Assert.True(service.HasCompletedInitialSync);
+            Assert.Single(service.Documents);
+            Assert.True(dws.Requests[200].End - dws.Requests[200].Start <
+                dws.Requests[0].End - dws.Requests[0].Start);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
+    [Fact]
+    public async Task SyncAsync_ResumedProgressRetainsCompletedSplitWindows()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            var dws = new FakeDwsClient { FailOnRequestNumber = 403 };
+            for (int page = 0; page < 400; page++)
+                dws.Pages.Enqueue(new DingTalkGroupMessagePage([], true, $"page-{page}"));
+            var first = new DingTalkGroupDocumentService(dws, root);
+            await Assert.ThrowsAsync<IOException>(() => first.SyncAsync());
+
+            dws.FailOnRequestNumber = null;
+            var resumed = new DingTalkGroupDocumentService(dws, root);
+            var progress = new List<DingTalkGroupDocumentSyncProgress>();
+            resumed.ProgressChanged += progress.Add;
+            await resumed.SyncAsync();
+
+            Assert.Equal(2, progress.First(item => item.IsRunning).CompletedSegments);
+            Assert.True(resumed.HasCompletedInitialSync);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
+    [Fact]
+    public async Task SyncAsync_ResumesWithinAWindowAfterTenPages()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            var dws = new FakeDwsClient { FailOnRequestNumber = 11 };
+            for (int page = 0; page < 10; page++)
+                dws.Pages.Enqueue(new DingTalkGroupMessagePage(
+                    page == 0
+                        ? [new("a", "研发群", "https://alidocs.dingtalk.com/i/persisted", DateTimeOffset.Now, false)]
+                        : [],
+                    true, $"page-{page}"));
+            var first = new DingTalkGroupDocumentService(dws, root);
+            await Assert.ThrowsAsync<IOException>(() => first.SyncAsync());
+
+            dws.FailOnRequestNumber = null;
+            var resumed = new DingTalkGroupDocumentService(dws, root);
+            await resumed.SyncAsync();
+
+            Assert.Equal("page-9", dws.Requests[11].Cursor);
+            Assert.Single(resumed.Documents);
+            Assert.EndsWith("/persisted", resumed.Documents[0].Url, StringComparison.Ordinal);
+        }
+        finally { DeleteTempRoot(root); }
+    }
+
+    [Fact]
+    public async Task SyncAsync_ExpiredSavedCursorRereadsOnlyItsCurrentWindow()
+    {
+        string root = CreateTempRoot();
+        try
+        {
+            var dws = new FakeDwsClient { FailOnRequestNumber = 11 };
+            for (int page = 0; page < 10; page++)
+                dws.Pages.Enqueue(new DingTalkGroupMessagePage([], true, $"page-{page}"));
+            var first = new DingTalkGroupDocumentService(dws, root);
+            await Assert.ThrowsAsync<IOException>(() => first.SyncAsync());
+
+            dws.FailOnRequestNumber = null;
+            dws.FailCursorOnce = "page-9";
+            dws.Pages.Enqueue(new DingTalkGroupMessagePage(
+                [new("a", "研发群", "https://alidocs.dingtalk.com/i/retried", DateTimeOffset.Now, false)],
+                false, null));
+            var resumed = new DingTalkGroupDocumentService(dws, root);
+            await resumed.SyncAsync();
+
+            Assert.Equal("page-9", dws.Requests[11].Cursor);
+            Assert.Null(dws.Requests[12].Cursor);
+            Assert.Single(resumed.Documents);
         }
         finally { DeleteTempRoot(root); }
     }
@@ -189,8 +354,10 @@ public sealed class DingTalkGroupDocumentServiceTests
     {
         public string UserId { get; set; } = "account-a";
         public bool SwitchAccountOnNextMessagePage { get; set; }
+        public int? FailOnRequestNumber { get; set; }
+        public string? FailCursorOnce { get; set; }
         public Queue<DingTalkGroupMessagePage> Pages { get; } = new();
-        public List<(DateTimeOffset Start, DateTimeOffset End)> Requests { get; } = [];
+        public List<(DateTimeOffset Start, DateTimeOffset End, string? Cursor)> Requests { get; } = [];
 
         public Task<DingTalkDwsAuthStatus> GetAuthStatusAsync(CancellationToken cancellationToken = default)
             => Task.FromResult(new DingTalkDwsAuthStatus(
@@ -209,7 +376,14 @@ public sealed class DingTalkGroupDocumentServiceTests
             int limit = 50,
             CancellationToken cancellationToken = default)
         {
-            Requests.Add((start, end));
+            Requests.Add((start, end, cursor));
+            if (Requests.Count == FailOnRequestNumber)
+                throw new IOException("Simulated DWS failure after a completed time window.");
+            if (FailCursorOnce is not null && cursor == FailCursorOnce)
+            {
+                FailCursorOnce = null;
+                throw new InvalidDataException("Simulated expired DWS cursor.");
+            }
             if (SwitchAccountOnNextMessagePage)
             {
                 UserId = "account-b";

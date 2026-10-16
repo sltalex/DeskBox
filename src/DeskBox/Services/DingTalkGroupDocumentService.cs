@@ -15,7 +15,25 @@ public sealed record DingTalkGroupDocumentSyncProgress(
     int CompletedSegments,
     int TotalSegments,
     bool IsInitialSync,
-    bool IsRunning);
+    bool IsRunning,
+    int PagesFetched = 0,
+    int CurrentSegmentPages = 0,
+    int DocumentsFound = 0,
+    DateTimeOffset? WindowStart = null,
+    DateTimeOffset? WindowEnd = null)
+{
+    // The total page count is unknown until each window ends. Keep this
+    // estimate below the next completed-window boundary while pages arrive.
+    public double EstimatedCompletion => TotalSegments <= 0 ? 0 : Math.Clamp(
+        (CompletedSegments + Math.Min(0.9, CurrentSegmentPages / (CurrentSegmentPages + 2.0))) /
+        TotalSegments, 0, 1);
+
+    public string FormatDetails(LocalizationService localization) => localization.Format(
+        "DingTalkGroupDocs.Sync.Details", CompletedSegments, TotalSegments,
+        PagesFetched, DocumentsFound,
+        (WindowStart ?? WindowEnd ?? DateTimeOffset.Now).ToLocalTime(),
+        (WindowEnd ?? WindowStart ?? DateTimeOffset.Now).ToLocalTime());
+}
 
 public sealed class DingTalkGroupDocumentService
 {
@@ -34,6 +52,15 @@ public sealed class DingTalkGroupDocumentService
     private string? _loadedAccountKey;
     private string? _statePath;
     private bool _stateLoaded;
+    private DateTimeOffset? _initialScanStart;
+    private DateTimeOffset? _initialScanEnd;
+    private DateTimeOffset? _initialScanNextEnd;
+    private int _initialScanCompletedSegments;
+    private DateTimeOffset? _pendingWindowStart;
+    private DateTimeOffset? _pendingWindowEnd;
+    private string? _pendingCursor;
+    private int _pendingPages;
+    private DingTalkGroupDocument[] _pendingDocuments = [];
 
     public DingTalkGroupDocumentService(IDingTalkDwsClient dws, string? stateDirectory = null)
     {
@@ -82,7 +109,17 @@ public sealed class DingTalkGroupDocumentService
             LastRefresh = store?.LastRefresh;
             LastSyncStartedAt = store?.LastSyncStartedAt;
             LastSyncCompletedAt = store?.LastSyncCompletedAt ?? store?.LastRefresh;
-            HasCompletedInitialSync = store?.HasCompletedInitialSync == true || store?.LastRefresh is not null;
+            HasCompletedInitialSync = store?.HasCompletedInitialSync == true ||
+                (store?.LastRefresh is not null && store.InitialScanNextEnd is null);
+            _initialScanStart = store?.InitialScanStart;
+            _initialScanEnd = store?.InitialScanEnd;
+            _initialScanNextEnd = store?.InitialScanNextEnd;
+            _initialScanCompletedSegments = store?.InitialScanCompletedSegments ?? 0;
+            _pendingWindowStart = store?.PendingWindowStart;
+            _pendingWindowEnd = store?.PendingWindowEnd;
+            _pendingCursor = store?.PendingCursor;
+            _pendingPages = store?.PendingPages ?? 0;
+            _pendingDocuments = store?.PendingDocuments ?? [];
             SyncIntervalHours = NormalizeInterval(store?.SyncIntervalHours ?? 6);
             await LoadIntervalSettingsAsync(cancellationToken);
             _stateLoaded = true;
@@ -114,87 +151,211 @@ public sealed class DingTalkGroupDocumentService
             string syncAccountKey = _loadedAccountKey!;
 
             bool initialSync = !HasCompletedInitialSync;
-            DateTimeOffset end = DateTimeOffset.Now;
-            DateTimeOffset cursorStart = initialSync
-                ? new DateTimeOffset(2015, 1, 1, 0, 0, 0, TimeSpan.Zero)
-                : (LastSyncCompletedAt ?? end.AddDays(-2)).AddDays(-2);
-            if (cursorStart >= end) cursorStart = end.AddHours(-1);
-
-            var segments = new List<(DateTimeOffset Start, DateTimeOffset End)>();
-            while (cursorStart < end)
+            DateTimeOffset now = DateTimeOffset.Now;
+            DateTimeOffset sixMonthFloor = now.AddMonths(-6);
+            DateTimeOffset scanStart = initialSync
+                ? Max(_initialScanStart ?? sixMonthFloor, sixMonthFloor)
+                : Max((LastSyncCompletedAt ?? now.AddDays(-2)).AddDays(-2), sixMonthFloor);
+            DateTimeOffset scanEnd = initialSync ? _initialScanEnd ?? now : now;
+            DateTimeOffset nextEnd = initialSync ? _initialScanNextEnd ?? scanEnd : scanEnd;
+            if (initialSync && nextEnd <= scanStart)
             {
-                DateTimeOffset cursorEnd = cursorStart.AddDays(90);
-                if (cursorEnd > end) cursorEnd = end;
-                segments.Add((cursorStart, cursorEnd));
-                cursorStart = cursorEnd;
+                // A very old interrupted scan no longer covers the rolling
+                // six-month range. Start a fresh backfill without deleting cache.
+                scanStart = sixMonthFloor;
+                scanEnd = now;
+                nextEnd = now;
+                _initialScanCompletedSegments = 0;
+                ClearPendingWindow();
             }
+            if (!initialSync && scanStart >= scanEnd)
+                scanStart = scanEnd.AddHours(-1);
+
+            // Scan newest first. A saved page cursor is retried once; if DWS has
+            // expired it, the current window is safely reread from its start.
+            var segments = new List<(DateTimeOffset Start, DateTimeOffset End)>();
+            DateTimeOffset remainingEnd = nextEnd;
+            if (initialSync && _pendingWindowEnd == nextEnd &&
+                _pendingWindowStart is { } pendingStart && pendingStart >= scanStart && pendingStart < nextEnd)
+            {
+                segments.Add((pendingStart, nextEnd));
+                remainingEnd = pendingStart;
+            }
+            for (DateTimeOffset segmentEnd = remainingEnd; segmentEnd > scanStart;)
+            {
+                DateTimeOffset segmentStart = Max(segmentEnd.AddDays(-14), scanStart);
+                segments.Add((segmentStart, segmentEnd));
+                segmentEnd = segmentStart;
+            }
+            int completed = initialSync ? _initialScanCompletedSegments : 0;
+            int total = completed + segments.Count;
 
             var byGroupAndUrl = _documents.ToDictionary(
                 document => MakeKey(document.GroupName, document.Url),
                 document => document,
                 StringComparer.OrdinalIgnoreCase);
             IsSyncing = true;
-            LastSyncStartedAt = DateTimeOffset.Now;
-            ProgressChanged?.Invoke(new(0, segments.Count, initialSync, true));
-            int completed = 0;
-            foreach ((DateTimeOffset segmentStart, DateTimeOffset segmentEnd) in segments)
+            LastSyncStartedAt = now;
+            int pagesFetched = 0;
+            ProgressChanged?.Invoke(new(completed, total, initialSync, true, 0, 0, byGroupAndUrl.Count,
+                segments[0].Start, segments[0].End));
+
+            async Task VerifyIdentityAsync()
             {
-                string? cursor = null;
-                int pages = 0;
-                do
+                DingTalkDwsAuthStatus status = await _dws.GetAuthStatusAsync(cancellationToken);
+                string accountKey = $"{status.CorpId.Trim()}\u001f{status.UserId.Trim()}";
+                if (!status.Authenticated || !status.TokenValid ||
+                    !string.Equals(syncAccountKey, accountKey, StringComparison.Ordinal))
+                    throw new DingTalkDwsAuthorizationRequiredException("The DWS identity changed during synchronization.");
+                if (canCommit is not null && !canCommit())
+                    throw new OperationCanceledException("The linked account changed during synchronization.", cancellationToken);
+            }
+
+            async Task SavePendingWindowAsync(DateTimeOffset windowStart, DateTimeOffset windowEnd,
+                string? nextCursor, int windowPages,
+                Dictionary<string, DingTalkGroupDocument> windowDocuments)
+            {
+                await VerifyIdentityAsync();
+                DingTalkGroupDocument[] pendingDocuments = SortDocuments(windowDocuments);
+                await SaveAsync(new DingTalkGroupDocumentStore
                 {
-                    DingTalkGroupMessagePage page = await _dws.ListGroupMessagesAsync(
-                        segmentStart, segmentEnd, cursor, 50, cancellationToken);
+                    LastRefresh = LastRefresh,
+                    LastSyncStartedAt = LastSyncStartedAt,
+                    LastSyncCompletedAt = LastSyncCompletedAt,
+                    HasCompletedInitialSync = false,
+                    InitialScanStart = scanStart,
+                    InitialScanEnd = scanEnd,
+                    InitialScanNextEnd = windowEnd,
+                    InitialScanCompletedSegments = completed,
+                    PendingWindowStart = windowStart,
+                    PendingWindowEnd = windowEnd,
+                    PendingCursor = nextCursor,
+                    PendingPages = windowPages,
+                    PendingDocuments = pendingDocuments,
+                    SyncIntervalHours = SyncIntervalHours,
+                    Documents = _documents
+                }, cancellationToken);
+                _initialScanStart = scanStart;
+                _initialScanEnd = scanEnd;
+                _initialScanNextEnd = windowEnd;
+                _initialScanCompletedSegments = completed;
+                _pendingWindowStart = windowStart;
+                _pendingWindowEnd = windowEnd;
+                _pendingCursor = nextCursor;
+                _pendingPages = windowPages;
+                _pendingDocuments = pendingDocuments;
+            }
+
+            for (int segmentIndex = 0; segmentIndex < segments.Count; segmentIndex++)
+            {
+                (DateTimeOffset segmentStart, DateTimeOffset segmentEnd) = segments[segmentIndex];
+                bool pendingWindow = initialSync && _pendingWindowStart == segmentStart &&
+                    _pendingWindowEnd == segmentEnd;
+                var windowDocuments = pendingWindow
+                    ? _pendingDocuments.ToDictionary(document => MakeKey(document.GroupName, document.Url),
+                        document => document, StringComparer.OrdinalIgnoreCase)
+                    : new Dictionary<string, DingTalkGroupDocument>(StringComparer.OrdinalIgnoreCase);
+                string? cursor = pendingWindow ? _pendingCursor : null;
+                int pages = pendingWindow ? _pendingPages : 0;
+                bool retryExpiredCursor = !string.IsNullOrWhiteSpace(cursor);
+                while (true)
+                {
+                    DingTalkGroupMessagePage page;
+                    try
+                    {
+                        page = await _dws.ListGroupMessagesAsync(
+                            segmentStart, segmentEnd, cursor, 50, cancellationToken);
+                    }
+                    catch (Exception ex) when (retryExpiredCursor &&
+                        ex is InvalidOperationException or InvalidDataException)
+                    {
+                        // The stored cursor can expire. Retry this one window
+                        // from page one; other windows and links remain intact.
+                        cursor = null;
+                        pages = 0;
+                        windowDocuments.Clear();
+                        retryExpiredCursor = false;
+                        continue;
+                    }
+                    retryExpiredCursor = false;
                     foreach (DingTalkGroupMessage message in page.Messages)
                     {
                         if (message.IsSingleChat || string.IsNullOrWhiteSpace(message.Content)) continue;
-                        AddDocuments(byGroupAndUrl, message);
+                        AddDocuments(windowDocuments, message);
                     }
 
                     if (page.HasMore && string.IsNullOrWhiteSpace(page.NextCursor))
                         throw new InvalidDataException("DWS returned an incomplete group-message page.");
                     cursor = page.HasMore ? page.NextCursor : null;
                     pages++;
+                    pagesFetched++;
+                    if (initialSync && cursor is not null && pages % 10 == 0)
+                        await SavePendingWindowAsync(segmentStart, segmentEnd, cursor, pages, windowDocuments);
+                    ProgressChanged?.Invoke(new(completed, total, initialSync, true,
+                        pagesFetched, pages, byGroupAndUrl.Count + windowDocuments.Count,
+                        segmentStart, segmentEnd));
+                    if (cursor is null || pages >= 200) break;
                 }
-                while (cursor is not null && pages < 200);
 
                 if (cursor is not null)
-                    throw new InvalidDataException("DWS group-message pagination exceeded the safety limit.");
+                {
+                    TimeSpan duration = segmentEnd - segmentStart;
+                    if (duration <= TimeSpan.FromMinutes(1))
+                        throw new InvalidDataException("DWS group-message pagination exceeded the safety limit.");
+                    DateTimeOffset middle = segmentStart + TimeSpan.FromTicks(duration.Ticks / 2);
+                    segments[segmentIndex] = (middle, segmentEnd);
+                    segments.Insert(segmentIndex + 1, (segmentStart, middle));
+                    total++;
+                    segmentIndex--;
+                    if (initialSync)
+                        await SavePendingWindowAsync(middle, segmentEnd, null, 0,
+                            new Dictionary<string, DingTalkGroupDocument>(StringComparer.OrdinalIgnoreCase));
+                    ProgressChanged?.Invoke(new(completed, total, initialSync, true,
+                        pagesFetched, 0, byGroupAndUrl.Count, middle, segmentEnd));
+                    continue;
+                }
 
-                completed++;
-                ProgressChanged?.Invoke(new(completed, segments.Count, initialSync, true));
+                foreach ((string key, DingTalkGroupDocument document) in windowDocuments)
+                {
+                    if (!byGroupAndUrl.TryGetValue(key, out DingTalkGroupDocument? existing) ||
+                        existing.LastSeenAt < document.LastSeenAt)
+                        byGroupAndUrl[key] = document;
+                }
                 if (byGroupAndUrl.Count >= 50000)
                     throw new InvalidDataException("The group-document index exceeded the safety limit.");
+
+                await VerifyIdentityAsync();
+
+                DingTalkGroupDocument[] checkpointDocuments = SortDocuments(byGroupAndUrl);
+                bool finished = completed + 1 == total;
+                DateTimeOffset? completedAt = finished ? scanEnd : LastSyncCompletedAt;
+                DateTimeOffset? refreshedAt = finished ? DateTimeOffset.Now : LastRefresh;
+                await SaveAsync(new DingTalkGroupDocumentStore
+                {
+                    LastRefresh = refreshedAt,
+                    LastSyncStartedAt = LastSyncStartedAt,
+                    LastSyncCompletedAt = completedAt,
+                    HasCompletedInitialSync = !initialSync || finished,
+                    InitialScanStart = initialSync && !finished ? scanStart : null,
+                    InitialScanEnd = initialSync && !finished ? scanEnd : null,
+                    InitialScanNextEnd = initialSync && !finished ? segmentStart : null,
+                    InitialScanCompletedSegments = initialSync && !finished ? completed + 1 : 0,
+                    SyncIntervalHours = SyncIntervalHours,
+                    Documents = checkpointDocuments
+                }, cancellationToken);
+                _documents = checkpointDocuments;
+                LastRefresh = refreshedAt;
+                LastSyncCompletedAt = completedAt;
+                HasCompletedInitialSync = !initialSync || finished;
+                _initialScanStart = initialSync && !finished ? scanStart : null;
+                _initialScanEnd = initialSync && !finished ? scanEnd : null;
+                _initialScanNextEnd = initialSync && !finished ? segmentStart : null;
+                _initialScanCompletedSegments = initialSync && !finished ? completed + 1 : 0;
+                ClearPendingWindow();
+                completed++;
+                ProgressChanged?.Invoke(new(completed, total, initialSync, true,
+                    pagesFetched, 0, _documents.Length, segmentStart, segmentEnd));
             }
-
-            DingTalkDwsAuthStatus finalStatus = await _dws.GetAuthStatusAsync(cancellationToken);
-            string finalAccountKey = $"{finalStatus.CorpId.Trim()}\u001f{finalStatus.UserId.Trim()}";
-            if (!finalStatus.Authenticated || !finalStatus.TokenValid ||
-                !string.Equals(syncAccountKey, finalAccountKey, StringComparison.Ordinal))
-                throw new DingTalkDwsAuthorizationRequiredException("The DWS identity changed during synchronization.");
-            if (canCommit is not null && !canCommit())
-                throw new OperationCanceledException("The linked account changed during synchronization.", cancellationToken);
-
-            DingTalkGroupDocument[] completedDocuments = byGroupAndUrl.Values
-                .OrderByDescending(document => document.LastSeenAt)
-                .ThenBy(document => document.GroupName, StringComparer.CurrentCultureIgnoreCase)
-                .ThenBy(document => document.Title, StringComparer.CurrentCultureIgnoreCase)
-                .ToArray();
-            DateTimeOffset completedAt = DateTimeOffset.Now;
-            cancellationToken.ThrowIfCancellationRequested();
-            await SaveAsync(new DingTalkGroupDocumentStore
-            {
-                LastRefresh = completedAt,
-                LastSyncStartedAt = LastSyncStartedAt,
-                LastSyncCompletedAt = completedAt,
-                HasCompletedInitialSync = true,
-                SyncIntervalHours = SyncIntervalHours,
-                Documents = completedDocuments
-            }, cancellationToken);
-            _documents = completedDocuments;
-            LastRefresh = completedAt;
-            LastSyncCompletedAt = completedAt;
-            HasCompletedInitialSync = true;
             return _documents;
         }
         finally
@@ -260,6 +421,25 @@ public sealed class DingTalkGroupDocumentService
 
     private static string MakeKey(string groupName, string url) => $"{groupName}\u001f{url}";
 
+    private static DateTimeOffset Max(DateTimeOffset left, DateTimeOffset right)
+        => left >= right ? left : right;
+
+    private static DingTalkGroupDocument[] SortDocuments(
+        Dictionary<string, DingTalkGroupDocument> documents) => documents.Values
+        .OrderByDescending(document => document.LastSeenAt)
+        .ThenBy(document => document.GroupName, StringComparer.CurrentCultureIgnoreCase)
+        .ThenBy(document => document.Title, StringComparer.CurrentCultureIgnoreCase)
+        .ToArray();
+
+    private void ClearPendingWindow()
+    {
+        _pendingWindowStart = null;
+        _pendingWindowEnd = null;
+        _pendingCursor = null;
+        _pendingPages = 0;
+        _pendingDocuments = [];
+    }
+
     private async Task SaveAsync(DingTalkGroupDocumentStore store, CancellationToken cancellationToken)
     {
         if (_statePath is null)
@@ -324,6 +504,9 @@ public sealed class DingTalkGroupDocumentService
         LastSyncStartedAt = null;
         LastSyncCompletedAt = null;
         HasCompletedInitialSync = false;
+        _initialScanStart = _initialScanEnd = _initialScanNextEnd = null;
+        _initialScanCompletedSegments = 0;
+        ClearPendingWindow();
         SyncIntervalHours = 6;
         _stateLoaded = false;
     }
@@ -335,6 +518,15 @@ internal sealed class DingTalkGroupDocumentStore
     public DateTimeOffset? LastSyncStartedAt { get; set; }
     public DateTimeOffset? LastSyncCompletedAt { get; set; }
     public bool HasCompletedInitialSync { get; set; }
+    public DateTimeOffset? InitialScanStart { get; set; }
+    public DateTimeOffset? InitialScanEnd { get; set; }
+    public DateTimeOffset? InitialScanNextEnd { get; set; }
+    public int InitialScanCompletedSegments { get; set; }
+    public DateTimeOffset? PendingWindowStart { get; set; }
+    public DateTimeOffset? PendingWindowEnd { get; set; }
+    public string? PendingCursor { get; set; }
+    public int PendingPages { get; set; }
+    public DingTalkGroupDocument[] PendingDocuments { get; set; } = [];
     public int SyncIntervalHours { get; set; } = 6;
     public DingTalkGroupDocument[] Documents { get; set; } = [];
 }

@@ -121,10 +121,11 @@ public sealed class DingTalkGroupDocsSettingsSection : UserControl
                 return;
             }
             _progress.IsIndeterminate = progress.TotalSegments <= 0;
-            _progress.Value = progress.TotalSegments <= 0 ? 0 : (double)progress.CompletedSegments / progress.TotalSegments;
-            _status.Text = progress.IsInitialSync
+            _progress.Value = progress.EstimatedCompletion;
+            string phase = progress.IsInitialSync
                 ? _localization.T("DingTalkGroupDocs.Sync.InitialProgress")
                 : _localization.T("DingTalkGroupDocs.Sync.Progress");
+            _status.Text = phase + "\n" + progress.FormatDetails(_localization);
             _hint.Text = progress.IsInitialSync
                 ? _localization.T("DingTalkGroupDocs.Sync.InitialHint")
                 : _localization.T("DingTalkGroupDocs.Sync.IncrementalHint");
