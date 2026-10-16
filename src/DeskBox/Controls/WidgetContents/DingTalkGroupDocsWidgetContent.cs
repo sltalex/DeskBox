@@ -8,7 +8,7 @@ using Windows.System;
 
 namespace DeskBox.Controls.WidgetContents;
 
-public sealed class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
+public sealed partial class DingTalkGroupDocsWidgetContent : UserControl, IDisposable
 {
     private readonly LocalizationService _localization;
     private readonly DingTalkGroupDocumentService _service;

@@ -7,7 +7,7 @@ using Microsoft.UI.Xaml.Media;
 namespace DeskBox.Views.SettingsSections;
 
 /// <summary>Compact settings surface for the DingTalk group-document index.</summary>
-public sealed class DingTalkGroupDocsSettingsSection : UserControl
+public sealed partial class DingTalkGroupDocsSettingsSection : UserControl
 {
     private readonly SettingsCard _card = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch };
     private readonly Button _syncButton = new();
